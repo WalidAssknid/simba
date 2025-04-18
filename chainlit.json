@@ -1,0 +1,15 @@
+{
+    "chat_profiles": [
+        {
+            "name": "default",
+            "completion": {
+                "temperature": 0.7,
+                "stream": true
+            }
+        }
+    ],
+    "project": {
+        "name": "SIMBA",
+        "user_env": ["activity_id", "user_id", "username"]
+    }
+}

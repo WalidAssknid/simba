@@ -1,0 +1,92 @@
+{% load static %}
+<div class="modal" id="activityModal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>
+            {% if request.session.lang == 'fr' %}Créer une nouvelle activité
+            {% elif request.session.lang == 'es' %}Crear una nueva actividad
+            {% else %}Create New Activity{% endif %}
+        </h2>
+        <form method="post" action="{% url 'create_activity' course.id %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="activity-title">
+                    {% if request.session.lang == 'fr' %}Titre de l'activité
+                    {% elif request.session.lang == 'es' %}Título de la actividad
+                    {% else %}Activity Title{% endif %}
+                </label>
+                <input type="text" name="activity_title" id="activity-title" class="form-control" required>
+            </div>
+            <button type="submit" class="btn">
+                {% if request.session.lang == 'fr' %}Créer
+                {% elif request.session.lang == 'es' %}Crear
+                {% else %}Create{% endif %}
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    .modal-content {
+        background-color: white;
+        margin: 15% auto;
+        padding: 20px;
+        border-radius: 5px;
+        width: 80%;
+        max-width: 500px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    .close {
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    
+    .close:hover {
+        color: #555;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get modal elements
+        const modal = document.getElementById("activityModal");
+        const btn = document.getElementById("openActivityModal");
+        const closeBtn = modal.querySelector(".close");
+        
+        // Open modal when button is clicked
+        if (btn) {
+            btn.addEventListener("click", function() {
+                modal.style.display = "block";
+            });
+        }
+        
+        // Close modal when X is clicked
+        if (closeBtn) {
+            closeBtn.addEventListener("click", function() {
+                modal.style.display = "none";
+            });
+        }
+        
+        // Close modal when clicking outside
+        window.addEventListener("click", function(event) {
+            if (event.target === modal) {
+                modal.style.display = "none";
+            }
+        });
+    });
+</script>

@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% block title %}{{ course.title }} | SIMBA{% endblock %}
+{% block content %}
+<div class="course-details">
+    <div class="back-link">
+        <a href="{% url 'courses' %}">
+            {% if request.session.lang == 'fr' %}&larr; Retour aux cours
+            {% elif request.session.lang == 'es' %}&larr; Volver a cursos
+            {% else %}&larr; Back to Courses{% endif %}
+        </a>
+    </div>
+    <h2>{{ course.title }}</h2>
+    <p class="course-meta">
+        {% if request.session.lang == 'fr' %}Créé le: 
+        {% elif request.session.lang == 'es' %}Creado el: 
+        {% else %}Created on: {% endif %}
+        {{ course.created_at|date:"d/m/Y H:i" }}
+    </p>
+    <div class="course-description">
+        {% if course.description %}
+            <p>{{ course.description }}</p>
+        {% else %}
+            <p><em>
+                {% if request.session.lang == 'fr' %}Pas de description
+                {% elif request.session.lang == 'es' %}Sin descripción
+                {% else %}No description{% endif %}
+            </em></p>
+        {% endif %}
+    </div>
+    
+    {% if is_teacher %}
+    <div class="course-info">
+        <div class="enrollment-code">
+            <h4>
+                {% if request.session.lang == 'fr' %}Code d'inscription:
+                {% elif request.session.lang == 'es' %}Código de inscripción:
+                {% else %}Enrollment Code:{% endif %}
+            </h4>
+            <p class="code-display">{{ course.enrollment_code }}</p>
+            <p class="code-instructions">
+                {% if request.session.lang == 'fr' %}Partagez ce code avec les étudiants pour qu'ils puissent rejoindre ce cours
+                {% elif request.session.lang == 'es' %}Comparta este código con los estudiantes para que puedan unirse a este curso
+                {% else %}Share this code with students so they can join this course{% endif %}
+            </p>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="participants">
+        <h4>
+            {% if request.session.lang == 'fr' %}Participants
+            {% elif request.session.lang == 'es' %}Participantes
+            {% else %}Participants{% endif %}
+        </h4>
+        <div class="participants-list">
+            <!-- Owner always appears first -->
+            <div class="participant-card">
+                <div class="participant-name">{{ course.owner.username }}</div>
+                <div class="participant-role">
+                    {% if request.session.lang == 'fr' %}Enseignant
+                    {% elif request.session.lang == 'es' %}Profesor
+                    {% else %}Teacher{% endif %}
+                </div>
+            </div>
+            
+            <!-- Other participants -->
+            {% for enrollment in participants %}
+                {% if enrollment.user.id != course.owner.id %}
+                <div class="participant-card">
+                    <div class="participant-name">{{ enrollment.user.username }}</div>
+                    <div class="participant-role">
+                        {% if request.session.lang == 'fr' %}Étudiant
+                        {% elif request.session.lang == 'es' %}Estudiante
+                        {% else %}Student{% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="action-bar">
+        <h3>
+            {% if request.session.lang == 'fr' %}Activités
+            {% elif request.session.lang == 'es' %}Actividades
+            {% else %}Activities{% endif %}
+        </h3>
+        {% if is_teacher %}
+            <button id="openActivityModal" class="btn">
+                {% if request.session.lang == 'fr' %}Créer une nouvelle activité
+                {% elif request.session.lang == 'es' %}Crear nueva actividad
+                {% else %}Create New Activity{% endif %}
+            </button>
+        {% endif %}
+    </div>
+    
+    {% if is_teacher %}
+        {% include 'popup_activity_name.html' %}
+    {% endif %}
+    
+    <div class="activities-container">
+        {% for activity in activities %}
+            <div class="activity-card">
+                <div class="activity-info">
+                    <p>{% if activity.title %}{{ activity.title }}{% else %}{{ request.session.lang|default:"fr"|yesno:"Activité,Actividad,Activity" }} #{{ activity.id }} - {{ course.title }}{% endif %}</p>
+                    <small>
+                        {% if request.session.lang == 'fr' %}Créé par: 
+                        {% elif request.session.lang == 'es' %}Creado por: 
+                        {% else %}Created by: {% endif %}
+                        {{ activity.user.username }} 
+                        {% if request.session.lang == 'fr' %}le 
+                        {% elif request.session.lang == 'es' %}el 
+                        {% else %}on {% endif %}
+                        {{ activity.created_at|date:"d/m/Y H:i" }}
+                    </small>
+                </div>
+                <div class="activity-actions">
+                    <a href="{% url 'chainlit_view' %}?activity_id={{ activity.id }}" class="btn" target="_blank">
+                        {{ request.session.lang|default:"fr"|yesno:"Open Chat,Abrir Chat,Ouvrir Chat" }}
+                    </a>
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-state">
+                <p>
+                    {% if is_teacher %}
+                        {% if request.session.lang == 'fr' %}Aucune activité trouvée. Créez une nouvelle activité pour démarrer une conversation !
+                        {% elif request.session.lang == 'es' %}No se encontraron actividades. ¡Crea una nueva actividad para iniciar una conversación!
+                        {% else %}No activities found. Create a new activity to start a conversation!{% endif %}
+                    {% else %}
+                        {% if request.session.lang == 'fr' %}Aucune activité trouvée pour ce cours pour le moment.
+                        {% elif request.session.lang == 'es' %}No se encontraron actividades para este curso todavía.
+                        {% else %}No activities found for this course yet.{% endif %}
+                    {% endif %}
+                </p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .course-meta {
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .course-description {
+        margin-bottom: 2rem;
+        background: #f9f9f9;
+        padding: 15px;
+        border-radius: 5px;
+    }
+    
+    .action-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .back-link {
+        margin-bottom: 1rem;
+    }
+    
+    .activity-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid #ddd;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        background: white;
+    }
+    
+    .activity-info p {
+        margin-bottom: 0.25rem;
+        font-weight: bold;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 30px;
+        background: #f9f9f9;
+        border-radius: 5px;
+        margin-top: 15px;
+    }
+</style>
+{% endblock %}

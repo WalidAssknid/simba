@@ -1,0 +1,84 @@
+/* Custom Chainlit Theme for SIMBA */
+:root {
+  --primary-color: #fd7e14;
+  --secondary-color: #ff9642;
+  --light-color: #f8f8f8;
+  --text-color: #333333;
+  --background-color: #f4f4f4;
+}
+
+/* Message styling */
+.cl-message-heading {
+  color: var(--primary-color) !important;
+}
+
+/* Button styling */
+.cl-button {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+}
+
+.cl-button:hover {
+  background-color: var(--secondary-color) !important;
+}
+
+/* Main background */
+.cl-main {
+  background-color: var(--light-color) !important;
+}
+
+/* Chat container */
+.cl-chat-container {
+  background-color: white !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* User message bubbles */
+.cl-message-user {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+}
+
+/* Assistant message bubbles */
+.cl-message-assistant {
+  background-color: var(--light-color) !important;
+  color: var(--text-color) !important;
+  border: 1px solid #eaeaea !important;
+}
+
+/* Header */
+.cl-header {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+}
+
+/* Input box */
+.cl-input-box {
+  border-color: var(--primary-color) !important;
+}
+
+.cl-input-box:focus {
+  border-color: var(--secondary-color) !important;
+  box-shadow: 0 0 0 2px rgba(253, 126, 20, 0.2) !important;
+}
+
+/* Sidebar */
+.cl-sidebar {
+  background-color: white !important;
+  border-right: 1px solid #eaeaea !important;
+}
+
+/* Sidebar items */
+.cl-sidebar-item {
+  color: var(--text-color) !important;
+}
+
+.cl-sidebar-item:hover {
+  background-color: var(--light-color) !important;
+}
+
+.cl-sidebar-item-active {
+  color: var(--primary-color) !important;
+  background-color: rgba(253, 126, 20, 0.1) !important;
+}

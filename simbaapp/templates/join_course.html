@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}
+    {% if request.session.lang == 'fr' %}Rejoindre un Cours | SIMBA
+    {% elif request.session.lang == 'es' %}Unirse a un Curso | SIMBA
+    {% else %}Join Course | SIMBA{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .popup-dialog {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        width: 80%;
+        max-width: 500px;
+    }
+    
+    .overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+    }
+    
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .popup-header h3 {
+        margin: 0;
+    }
+    
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="overlay" id="joinOverlay"></div>
+<div class="popup-dialog" id="joinDialog">
+    <div class="popup-header">
+        <h3>
+            {% if request.session.lang == 'fr' %}Rejoindre un Cours
+            {% elif request.session.lang == 'es' %}Unirse a un Curso
+            {% else %}Join Course{% endif %}
+        </h3>
+        <button class="close-btn" id="closeBtn">&times;</button>
+    </div>
+    
+    <form id="joinForm" action="{% url 'join_course' %}" method="POST">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="enrollment_code">
+                {% if request.session.lang == 'fr' %}Code d'inscription:
+                {% elif request.session.lang == 'es' %}Código de inscripción:
+                {% else %}Enrollment Code:{% endif %}
+            </label>
+            <input type="text" id="enrollment_code" name="enrollment_code" class="form-control" required>
+            <small>
+                {% if request.session.lang == 'fr' %}Entrez le code fourni par votre enseignant
+                {% elif request.session.lang == 'es' %}Ingrese el código proporcionado por su profesor
+                {% else %}Enter the code provided by your teacher{% endif %}
+            </small>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                {% if request.session.lang == 'fr' %}Rejoindre
+                {% elif request.session.lang == 'es' %}Unirse
+                {% else %}Join{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="form-container">
+    <h2>
+        {% if request.session.lang == 'fr' %}Rejoindre un Cours
+        {% elif request.session.lang == 'es' %}Unirse a un Curso
+        {% else %}Join Course{% endif %}
+    </h2>
+    <form method="post" action="{% url 'join_course' %}">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="enrollment_code_main">
+                {% if request.session.lang == 'fr' %}Code d'inscription:
+                {% elif request.session.lang == 'es' %}Código de inscripción:
+                {% else %}Enrollment Code:{% endif %}
+            </label>
+            <input type="text" name="enrollment_code" id="enrollment_code_main" class="form-control" required>
+            <small>
+                {% if request.session.lang == 'fr' %}Entrez le code fourni par votre enseignant
+                {% elif request.session.lang == 'es' %}Ingrese el código proporcionado por su profesor
+                {% else %}Enter the code provided by your teacher{% endif %}
+            </small>
+        </div>
+        
+        <div class="form-actions">
+            <a href="{% url 'courses' %}" class="btn btn-secondary">
+                {% if request.session.lang == 'fr' %}Annuler
+                {% elif request.session.lang == 'es' %}Cancelar
+                {% else %}Cancel{% endif %}
+            </a>
+            <button type="submit" class="btn btn-primary">
+                {% if request.session.lang == 'fr' %}Rejoindre
+                {% elif request.session.lang == 'es' %}Unirse
+                {% else %}Join{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // When the page loads, check if we should show the popup automatically
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('popup') === 'true') {
+            document.getElementById('joinDialog').style.display = 'block';
+            document.getElementById('joinOverlay').style.display = 'block';
+        }
+        
+        // Close button functionality
+        document.getElementById('closeBtn').addEventListener('click', function() {
+            document.getElementById('joinDialog').style.display = 'none';
+            document.getElementById('joinOverlay').style.display = 'none';
+            window.history.replaceState({}, document.title, window.location.pathname);
+        });
+    });
+</script>
+{% endblock %}

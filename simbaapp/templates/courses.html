@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}
+    {% if request.session.lang == 'fr' %}Mes Cours | SIMBA
+    {% elif request.session.lang == 'es' %}Mis Cursos | SIMBA
+    {% else %}My Courses | SIMBA{% endif %}
+{% endblock %}
+{% block content %}
+<div class="course-header">
+    <h2>
+        {% if request.session.lang == 'fr' %}Mes Cours
+        {% elif request.session.lang == 'es' %}Mis Cursos
+        {% else %}My Courses{% endif %}
+    </h2>
+    {% if request.session.role == 'teacher' %}
+    <div class="teacher-actions">
+        <a href="{% url 'create_course' %}" class="btn btn-primary">
+            <span>+</span> 
+            {% if request.session.lang == 'fr' %}Créer un Cours
+            {% elif request.session.lang == 'es' %}Crear Curso
+            {% else %}Create Course{% endif %}
+        </a>
+        <a href="{% url 'join_course' %}" class="btn btn-secondary">
+            <span>+</span> 
+            {% if request.session.lang == 'fr' %}Rejoindre un Cours
+            {% elif request.session.lang == 'es' %}Unirse a un Curso
+            {% else %}Join Course{% endif %}
+        </a>
+    </div>
+    {% else %}
+    <a href="{% url 'join_course' %}" id="joinCourseBtn" class="btn btn-secondary">
+        <span>+</span> 
+        {% if request.session.lang == 'fr' %}Rejoindre un Cours
+        {% elif request.session.lang == 'es' %}Unirse a un Curso
+        {% else %}Join Course{% endif %}
+    </a>
+    {% endif %}
+</div>
+
+<div class="courses-container">
+    {% for course in courses %}
+        <div class="course-card">
+            <h3>{{ course.title }}</h3>
+            <p>{{ course.description|truncatechars:100 }}</p>
+            <small>
+                {% if request.session.lang == 'fr' %}Créé le: 
+                {% elif request.session.lang == 'es' %}Creado el: 
+                {% else %}Created on: {% endif %}
+                {{ course.created_at|date:"d/m/Y H:i" }}
+            </small>
+            <div class="course-actions">
+                <a href="{% url 'course_detail' course.id %}" class="btn">
+                    {% if request.session.lang == 'fr' %}Afficher
+                    {% elif request.session.lang == 'es' %}Ver
+                    {% else %}View{% endif %}
+                </a>
+            </div>
+        </div>
+    {% empty %}
+        <div class="empty-state">
+            <h3>
+                {% if request.session.lang == 'fr' %}Aucun cours trouvé
+                {% elif request.session.lang == 'es' %}No se encontraron cursos
+                {% else %}No courses found{% endif %}
+            </h3>
+            <p>
+                {% if request.session.role == 'teacher' %}
+                    {% if request.session.lang == 'fr' %}Cliquez sur "Créer un Cours" pour commencer!
+                    {% elif request.session.lang == 'es' %}¡Haga clic en "Crear Curso" para comenzar!
+                    {% else %}Click on "Create Course" to get started!{% endif %}
+                {% else %}
+                    {% if request.session.lang == 'fr' %}Cliquez sur "Rejoindre un Cours" pour participer!
+                    {% elif request.session.lang == 'es' %}¡Haga clic en "Unirse a un Curso" para participar!
+                    {% else %}Click on "Join Course" to participate!{% endif %}
+                {% endif %}
+            </p>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .course-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+    
+    .teacher-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .courses-container {
+        display: grid;
+        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+    
+    .course-card {
+        border: 1px solid #ddd;
+        padding: 1.5rem;
+        border-radius: 8px;
+        background-color: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .course-card h3 {
+        margin-top: 0;
+        color: #333;
+    }
+    
+    .course-card p {
+        flex-grow: 1;
+        color: #666;
+    }
+    
+    .course-card small {
+        color: #888;
+        display: block;
+        margin-bottom: 1rem;
+    }
+    
+    .course-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+    
+    .empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3rem;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+    }
+    
+    .empty-state h3 {
+        margin-top: 0;
+        color: #666;
+    }
+    
+    .empty-state p {
+        color: #888;
+    }
+</style>
+{% endblock %}

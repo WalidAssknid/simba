@@ -1,0 +1,13 @@
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const joinCourseBtn = document.getElementById('joinCourseBtn');
+        if (joinCourseBtn) {
+            joinCourseBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = "{% url 'join_course' %}";
+            });
+        }
+    });
+</script>
+{% endblock %}

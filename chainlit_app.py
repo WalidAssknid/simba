@@ -20,33 +20,6 @@ from simbaapp.models import Activity, Message, Topic, Course, User
 # OpenAI client
 client = AsyncOpenAI()
 
-# Define custom CSS
-custom_css = """
-:root {
-  --primary-color: #fd7e14;
-  --secondary-color: #ff9642;
-  --neutral-color: #f8f8f8;
-  --accent-color: #fd7e14;
-}
-
-.cl-chat-message-agent {
-  background-color: var(--neutral-color);
-}
-
-.cl-button {
-  background-color: var(--primary-color);
-}
-
-.cl-button:hover {
-  background-color: var(--secondary-color);
-}
-
-.cl-header {
-  background-color: var(--primary-color);
-  color: white;
-}
-"""
-
 settings = {
     "model": "gpt-4o-mini",
     "temperature": 0.7,
@@ -138,19 +111,15 @@ async def on_chat_start():
         raise Exception("Parâmetros inválidos")
     
     try:
-        # Busca a atividade pelo ID
         activity = await get_activity_by_id(activity_id)
         
-        # Configuração da sessão
         cl.user_session.set("activity_id", activity_id)
         cl.user_session.set("user_id", user_id)
         cl.user_session.set("username", username)
         cl.user_session.set("lang", lang)
         
-        # Carrega mensagens anteriores
         previous_messages = await get_messages_for_activity(activity_id)
         
-        # Adiciona mensagens anteriores ao histórico
         for msg in previous_messages:
             if msg.role == "user":
                 await cl.Message(
@@ -160,10 +129,8 @@ async def on_chat_start():
             else:
                 await cl.Message(content=msg.content).send()
                 
-        # Obtém o título do curso
         course_title = await get_course_title(activity)
         
-        # Configura o título do chat
         await cl.Message(
             content=f"Bem-vindo ao SIMBA! Você está no curso: **{course_title}**"
         ).send()
@@ -174,7 +141,6 @@ async def on_chat_start():
 
 @cl.on_message
 async def on_message(message: cl.Message):
-    # Recupera dados da sessão
     activity_id = cl.user_session.get("activity_id")
     user_id = cl.user_session.get("user_id")
     username = cl.user_session.get("username")

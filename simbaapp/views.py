@@ -310,18 +310,15 @@ def course_detail_view(request, course_id):
 def create_activity_view(request, course_id):
     if not request.session.get('user_id'):
         return redirect('login')
-        
     try:
         course = Course.objects.get(id=course_id)
         user_id = request.session.get('user_id')
         user = User.objects.get(id=user_id)
-        
         can_create_activity = False
         if course.owner_id == user_id and user.role == 'teacher':
-             can_create_activity = True
+            can_create_activity = True
         elif hasattr(course, 'topic') and course.topic and user.role == 'teacher' and course.topic.classroom.teacher_id == user_id:
-             can_create_activity = True
-
+            can_create_activity = True
         if not can_create_activity:
             lang = request.session.get('lang', 'fr')
             error_messages = {
@@ -330,18 +327,34 @@ def create_activity_view(request, course_id):
                 'fr': "Seuls les enseignants peuvent créer des activités dans ce cours."
             }
             messages.error(request, error_messages.get(lang, error_messages['fr']))
-            return redirect('course_detail', course_id=course.id) 
-            
-        activity_title = None
+            return redirect('course_detail', course_id=course.id)
         if request.method == 'POST':
-            activity_title = request.POST.get('activity_title', '')  
-            
+            activity_title = request.POST.get('activity_title', '')
+            description = request.POST.get('activity_description', '')
+            expert_mode = request.POST.get('expert_mode') == 'on'
+            custom_prompt = request.POST.get('custom_prompt', '') if expert_mode else ''
+            questions = request.POST.getlist('questions[]') or []
+            agent_attitude = request.POST.get('agent_attitude', 'friendly')
+            subjects = request.POST.get('subjects', '')
+            restrict_to_subject = request.POST.get('restrict_to_subject') == 'on'
+            allow_questions = request.POST.get('allow_questions') == 'on'
+            allow_emojis = request.POST.get('allow_emojis') == 'on'
+            trust_document = request.POST.get('trust_document') == 'on'
             activity = Activity.objects.create(
-                course=course, 
+                course=course,
                 user=user,
-                title=activity_title if activity_title else f"Activity for {course.title}"
+                title=activity_title if activity_title else f"Activity for {course.title}",
+                description=description,
+                expert_mode=expert_mode,
+                custom_prompt=custom_prompt,
+                questions=questions,
+                agent_attitude=agent_attitude,
+                subjects=subjects,
+                restrict_to_subject=restrict_to_subject,
+                allow_questions=allow_questions,
+                allow_emojis=allow_emojis,
+                trust_document=trust_document
             )
-            
             lang = request.session.get('lang', 'fr')
             success_messages = {
                 'en': "Activity created successfully!",
@@ -351,9 +364,7 @@ def create_activity_view(request, course_id):
             messages.success(request, success_messages.get(lang, success_messages['fr']))
             return redirect('course_detail', course_id=course.id)
         else:
-             return redirect('course_detail', course_id=course.id)
-
-            
+            return redirect('course_detail', course_id=course.id)
     except Course.DoesNotExist:
         lang = request.session.get('lang', 'fr')
         error_messages = {
@@ -641,4 +652,4 @@ def join_course_view(request):
             messages.error(request, error_messages.get(lang, error_messages['fr']))
             return render(request, 'join_course.html') 
             
-    return render(request, 'join_course.html') 
+    return render(request, 'join_course.html')

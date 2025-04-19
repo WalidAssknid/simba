@@ -122,9 +122,27 @@ async def on_chat_start():
         
         course_title = await get_course_title(activity)
 
-        await cl.Message(
-            content=f"Bem-vindo ao SIMBA! Você está na atividade: **{activity.title}**, do curso: **{course_title}**"
-        ).send()
+        questions = getattr(activity, 'questions', [])
+        main_question = None
+        if questions and isinstance(questions, list) and len(questions) > 0:
+            main_question = questions[0]
+        else:
+            main_question = getattr(activity, 'title', None)
+
+        welcome_msgs = {
+            'en': f"Welcome to SIMBA! You are in the activity: **{activity.title}**, course: **{course_title}**",
+            'fr': f"Bienvenue sur SIMBA ! Vous êtes dans l'activité : **{activity.title}**, du cours : **{course_title}**",
+            'es': f"¡Bienvenido a SIMBA! Estás en la actividad: **{activity.title}**, del curso: **{course_title}**"
+        }
+        await cl.Message(content=welcome_msgs.get(lang, welcome_msgs['en'])).send()
+
+        if main_question:
+            question_msgs = {
+                'en': f"Main question for this activity: **{main_question}**",
+                'fr': f"Question principale de cette activité : **{main_question}**",
+                'es': f"Pregunta principal de esta actividad: **{main_question}**"
+            }
+            await cl.Message(content=question_msgs.get(lang, question_msgs['en'])).send()
         
     except Activity.DoesNotExist:
         await cl.Message(content="Atividade não encontrada. Verifique o ID fornecido.").send()
@@ -164,6 +182,12 @@ async def on_message(message: cl.Message):
         description = getattr(activity, 'description', '')
         questions = getattr(activity, 'questions', [])
 
+        main_question = None
+        if questions and isinstance(questions, list) and len(questions) > 0:
+            main_question = questions[0]
+        else:
+            main_question = getattr(activity, 'title', None)
+
         base_prompts = {
             'en': "You are an intelligent study assistant for students and teachers.",
             'fr': "Vous êtes un assistant d'étude intelligent pour les étudiants et les enseignants.",
@@ -173,20 +197,59 @@ async def on_message(message: cl.Message):
         system_prompt += f" Your attitude should be {attitude_str}."
         if description:
             system_prompt += f" Activity description: {description}."
+        if main_question:
+            if lang == 'fr':
+                system_prompt += f" La question principale de cette activité est : {main_question}."
+            elif lang == 'es':
+                system_prompt += f" La pregunta principal de esta actividad es: {main_question}."
+            else:
+                system_prompt += f" The main question for this activity is: {main_question}."
         if subjects:
             system_prompt += f" Subjects: {subjects}."
         if restrict:
-            system_prompt += " Only answer questions related to the course subjects."
+            if lang == 'fr':
+                system_prompt += " Ne répondez qu'aux questions liées aux sujets du cours."
+            elif lang == 'es':
+                system_prompt += " Solo responde preguntas relacionadas con los temas del curso."
+            else:
+                system_prompt += " Only answer questions related to the course subjects."
         if not allow_questions:
-            system_prompt += " Do not provide questions to the student unless explicitly asked."
+            if lang == 'fr':
+                system_prompt += " Ne proposez pas de questions à l'étudiant sauf si cela est explicitement demandé."
+            elif lang == 'es':
+                system_prompt += " No propongas preguntas al estudiante a menos que se solicite explícitamente."
+            else:
+                system_prompt += " Do not provide questions to the student unless explicitly asked."
         if not allow_emojis:
-            system_prompt += " Do not use emojis in your responses."
+            if lang == 'fr':
+                system_prompt += " N'utilisez pas d'emojis dans vos réponses."
+            elif lang == 'es':
+                system_prompt += " No uses emojis en tus respuestas."
+            else:
+                system_prompt += " Do not use emojis in your responses."
+        else:
+            if lang == 'fr':
+                system_prompt += " Vous pouvez utiliser des emojis pour rendre la conversation plus engageante."
+            elif lang == 'es':
+                system_prompt += " Puedes usar emojis para hacer la conversación más atractiva."
+            else:
+                system_prompt += " You can use emojis to make the conversation more engaging."
         if trust_document:
-            system_prompt += " Trust the provided document to help answer questions."
+            if lang == 'fr':
+                system_prompt += " Faites confiance au document fourni pour aider à répondre aux questions."
+            elif lang == 'es':
+                system_prompt += " Confía en el documento proporcionado para ayudar a responder preguntas."
+            else:
+                system_prompt += " Trust the provided document to help answer questions."
         if expert_mode and custom_prompt:
             system_prompt += f" {custom_prompt}"
         if questions:
-            system_prompt += f" Example questions for this activity: {', '.join(questions)}."
+            if lang == 'fr':
+                system_prompt += f" Exemples de questions pour cette activité : {', '.join(questions)}."
+            elif lang == 'es':
+                system_prompt += f" Ejemplos de preguntas para esta actividad: {', '.join(questions)}."
+            else:
+                system_prompt += f" Example questions for this activity: {', '.join(questions)}."
 
         openai_messages.append({"role": "system", "content": system_prompt})
         for msg in messages:

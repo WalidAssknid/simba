@@ -6,16 +6,16 @@ import json
 import logging
 import urllib.parse
 from asgiref.sync import sync_to_async
+from django.db.models import Max
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configure Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
 django.setup()
 
-from simbaapp.models import Activity, Message, Topic, Course, User
+from simbaapp.models import Activity, Message, Thread
 
 # OpenAI client
 client = AsyncOpenAI()
@@ -30,9 +30,6 @@ settings = {
 def get_activity_by_id(activity_id):
     return Activity.objects.get(id=activity_id)
 
-@sync_to_async
-def get_topic_by_id(topic_id):
-    return Topic.objects.get(id=topic_id)
 
 @sync_to_async
 def get_course_from_activity(activity):
@@ -47,26 +44,27 @@ def get_activity_title(activity):
     return activity.title
 
 @sync_to_async
-def get_messages_for_activity(activity_id):
-    return list(Message.objects.filter(activity_id=activity_id).order_by('timestamp'))
-
-@sync_to_async
-def create_user_message(activity, content, user_id, username):
+def create_user_message(thread, content, user_id, username):
+    last_num = Message.objects.filter(thread=thread).aggregate(Max('message_number')).get('message_number__max') or 0
     return Message.objects.create(
-        activity=activity,
+        thread=thread,
         content=content,
         role="user",
+        message_number=last_num + 1,
         metadata={
             "user_id": user_id,
             "author": username
         }
     )
+
 @sync_to_async
-def create_assistant_message(activity, content, model, user_id):
+def create_assistant_message(thread, content, model, user_id):
+    last_num = Message.objects.filter(thread=thread).aggregate(Max('message_number')).get('message_number__max') or 0
     return Message.objects.create(
-        activity=activity,
+        thread=thread,
         content=content,
         role="assistant",
+        message_number=last_num + 1,
         metadata={
             "model": model,
             "user_id": user_id
@@ -74,8 +72,29 @@ def create_assistant_message(activity, content, model, user_id):
     )
 
 @sync_to_async
-def get_topic_from_course(course):
-    return course.topic
+def create_thread(activity, user_id):
+    return Thread.objects.create(activity=activity, user_id=user_id)
+
+@sync_to_async
+def get_thread_by_id(thread_id):
+    return Thread.objects.get(id=thread_id)
+
+@sync_to_async
+def get_messages_for_thread(thread_id):
+    return list(Message.objects.filter(thread_id=thread_id).order_by('message_number'))
+
+@sync_to_async
+def get_or_create_thread(activity, user_id):
+    thread, created = Thread.objects.get_or_create(
+        activity=activity,
+        user_id=user_id,
+    )
+    if not created:
+        thread.save(update_fields=['updated_at'])
+        logger.info(f"Existing thread found and updated: {thread.id}")
+    else:
+        logger.info(f"New thread created: {thread.id}")
+    return thread
 
 @cl.on_chat_start
 async def on_chat_start():
@@ -103,22 +122,12 @@ async def on_chat_start():
     
     try:
         activity = await get_activity_by_id(activity_id)
-        
+        thread = await get_or_create_thread(activity, user_id) 
+        cl.user_session.set("thread_id", thread.id)
         cl.user_session.set("activity_id", activity_id)
         cl.user_session.set("user_id", user_id)
         cl.user_session.set("username", username)
         cl.user_session.set("lang", lang)
-        
-        previous_messages = await get_messages_for_activity(activity_id)
-        
-        for msg in previous_messages:
-            if msg.role == "user":
-                await cl.Message(
-                    content=msg.content,
-                    author=msg.metadata.get('author', username) if msg.metadata else username
-                ).send()
-            else:
-                await cl.Message(content=msg.content).send()
         
         course_title = await get_course_title(activity)
 
@@ -144,6 +153,8 @@ async def on_chat_start():
             }
             await cl.Message(content=question_msgs.get(lang, question_msgs['en'])).send()
         
+        previous_messages = await get_messages_for_thread(thread.id)
+        
     except Activity.DoesNotExist:
         await cl.Message(content="Atividade não encontrada. Verifique o ID fornecido.").send()
         raise Exception("Atividade não encontrada")
@@ -159,9 +170,10 @@ async def on_message(message: cl.Message):
         return
 
     try:
-        activity = await get_activity_by_id(activity_id)
-        await create_user_message(activity, message.content, user_id, username)
-        messages = await get_messages_for_activity(activity_id)
+        thread_id = cl.user_session.get("thread_id")
+        thread = await get_thread_by_id(thread_id)
+        activity = await get_activity_by_id(activity_id) 
+        messages = await get_messages_for_thread(thread_id)
         openai_messages = []
 
         lang = cl.user_session.get("lang", "fr")
@@ -170,6 +182,7 @@ async def on_message(message: cl.Message):
             'informal': {'en': 'informal', 'fr': 'informel', 'es': 'informal'},
             'formal': {'en': 'formal', 'fr': 'formel', 'es': 'formal'}
         }
+        
         attitude = getattr(activity, 'agent_attitude', 'friendly')
         attitude_str = attitude_map.get(attitude, attitude_map['friendly'])[lang]
         subjects = getattr(activity, 'subjects', '')
@@ -260,7 +273,7 @@ async def on_message(message: cl.Message):
             temperature=settings["temperature"],
         )
         ai_response = response.choices[0].message.content
-        await create_assistant_message(activity, ai_response, settings["model"], user_id)
+        await create_assistant_message(thread, ai_response, settings["model"], user_id)
         await cl.Message(content=ai_response).send()
     except Activity.DoesNotExist:
         await cl.Message(content="Atividade não encontrada. Verifique o ID fornecido.").send()

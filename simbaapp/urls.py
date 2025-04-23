@@ -10,12 +10,5 @@ urlpatterns = [
     path('course/create/', views.create_course_view, name='create_course'), 
     path('course/<int:course_id>/', views.course_detail_view, name='course_detail'),  
     path('course/<int:course_id>/activity/create/', views.create_activity_view, name='create_activity'),  
-    
-    # Classroom routes
-    path('classrooms/', views.classrooms_view, name='classrooms'),
-    path('classroom/create/', views.create_classroom_view, name='create_classroom'),
-    path('classroom/<int:classroom_id>/', views.classroom_detail_view, name='classroom_detail'),
-    path('classroom/<int:classroom_id>/topic/create/', views.create_topic_view, name='create_topic'),
-    path('classroom/enroll/', views.enroll_classroom_view, name='enroll_classroom'),
     path('course/join/', views.join_course_view, name='join_course'),  
 ]

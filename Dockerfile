@@ -13,8 +13,10 @@ RUN pip install --upgrade pip \
     && pip install -r requirements.txt
 
 COPY . /code/
+COPY entrypoint.sh /code/
+RUN chmod +x /code/entrypoint.sh
 
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
-CMD ["gunicorn", "simba.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["sh", "/code/entrypoint.sh"]

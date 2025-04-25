@@ -2,7 +2,6 @@ import os
 import django
 from openai import AsyncOpenAI
 import chainlit as cl
-import json
 import logging
 import urllib.parse
 from asgiref.sync import sync_to_async
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
 django.setup()
 
-from simbaapp.models import Activity, Message, Thread
+from simbaapp.models import Activity, Message, Thread, User
 
 # OpenAI client
 client = AsyncOpenAI()
@@ -44,16 +43,22 @@ def get_activity_title(activity):
     return activity.title
 
 @sync_to_async
+def get_user_by_id(user_id):
+    return User.objects.get(id=user_id)
+
+@sync_to_async
 def create_user_message(thread, content, user_id, username):
+    user = User.objects.get(id=user_id)
     last_num = Message.objects.filter(thread=thread).aggregate(Max('message_number')).get('message_number__max') or 0
     return Message.objects.create(
         thread=thread,
         content=content,
-        role="user",
+        role=user.role,  
         message_number=last_num + 1,
         metadata={
             "user_id": user_id,
-            "author": username
+            "author": username,
+            "role": user.role
         }
     )
 
@@ -110,15 +115,14 @@ async def on_chat_start():
     
     activity_id = query_params.get('activity_id')
     user_id = query_params.get('user_id')
-    username = query_params.get('username', 'Usuário')
-    lang = query_params.get('lang', 'fr')
+    username = query_params.get('username', 'User')
     
     logger.info(f"activity_id: {activity_id}")
     logger.info(f"user_id: {user_id}")
     
     if not activity_id or not user_id:
-        await cl.Message(content=f"Parâmetros inválidos. Activity ID e User ID são necessários. Params recebidos: {query_params}").send()
-        raise Exception("Parâmetros inválidos")
+        await cl.Message(content=f"Invalid parameters. Activity ID and User ID are required. Received params: {query_params}").send()
+        raise Exception("Invalid parameters")
     
     try:
         activity = await get_activity_by_id(activity_id)
@@ -127,7 +131,6 @@ async def on_chat_start():
         cl.user_session.set("activity_id", activity_id)
         cl.user_session.set("user_id", user_id)
         cl.user_session.set("username", username)
-        cl.user_session.set("lang", lang)
         
         course_title = await get_course_title(activity)
 
@@ -138,26 +141,24 @@ async def on_chat_start():
         else:
             main_question = getattr(activity, 'title', None)
 
-        welcome_msgs = {
-            'en': f"Welcome to SIMBA! You are in the activity: **{activity.title}**, course: **{course_title}**",
-            'fr': f"Bienvenue sur SIMBA ! Vous êtes dans l'activité : **{activity.title}**, du cours : **{course_title}**",
-            'es': f"¡Bienvenido a SIMBA! Estás en la actividad: **{activity.title}**, del curso: **{course_title}**"
-        }
-        await cl.Message(content=welcome_msgs.get(lang, welcome_msgs['en'])).send()
+        welcome_message = f"Welcome to SIMBA! You are in the activity: **{activity.title}**, course: **{course_title}**"
+        await cl.Message(content=welcome_message).send()
 
         if main_question:
-            question_msgs = {
-                'en': f"Main question for this activity: **{main_question}**",
-                'fr': f"Question principale de cette activité : **{main_question}**",
-                'es': f"Pregunta principal de esta actividad: **{main_question}**"
-            }
-            await cl.Message(content=question_msgs.get(lang, question_msgs['en'])).send()
+            question_message = f"Main question for this activity: **{main_question}**"
+            await cl.Message(content=question_message).send()
         
         previous_messages = await get_messages_for_thread(thread.id)
+        for msg in previous_messages:
+            author = msg.metadata.get('author') if msg.metadata else None
+            if msg.role == 'assistant':
+                await cl.Message(content=msg.content, author='Assistant').send()
+            else:
+                await cl.Message(content=msg.content, author=author, type="user_message").send()
         
     except Activity.DoesNotExist:
-        await cl.Message(content="Atividade não encontrada. Verifique o ID fornecido.").send()
-        raise Exception("Atividade não encontrada")
+        await cl.Message(content="Activity not found. Please check the provided ID.").send()
+        raise Exception("Activity not found")
 
 @cl.on_message
 async def on_message(message: cl.Message):
@@ -166,25 +167,18 @@ async def on_message(message: cl.Message):
     username = cl.user_session.get("username")
 
     if not activity_id or not user_id:
-        await cl.Message(content="Sessão inválida. Atualize a página.").send()
+        await cl.Message(content="Invalid session. Please refresh the page.").send()
         return
 
     try:
         thread_id = cl.user_session.get("thread_id")
         thread = await get_thread_by_id(thread_id)
         activity = await get_activity_by_id(activity_id) 
+        await create_user_message(thread, message.content, user_id, username)
         messages = await get_messages_for_thread(thread_id)
         openai_messages = []
 
-        lang = cl.user_session.get("lang", "fr")
-        attitude_map = {
-            'friendly': {'en': 'friendly', 'fr': 'amical', 'es': 'amistoso'},
-            'informal': {'en': 'informal', 'fr': 'informel', 'es': 'informal'},
-            'formal': {'en': 'formal', 'fr': 'formel', 'es': 'formal'}
-        }
-        
         attitude = getattr(activity, 'agent_attitude', 'friendly')
-        attitude_str = attitude_map.get(attitude, attitude_map['friendly'])[lang]
         subjects = getattr(activity, 'subjects', '')
         restrict = getattr(activity, 'restrict_to_subject', False)
         allow_questions = getattr(activity, 'allow_questions', True)
@@ -201,72 +195,36 @@ async def on_message(message: cl.Message):
         else:
             main_question = getattr(activity, 'title', None)
 
-        base_prompts = {
-            'en': "You are an intelligent study assistant for students and teachers.",
-            'fr': "Vous êtes un assistant d'étude intelligent pour les étudiants et les enseignants.",
-            'es': "Eres un asistente de estudio inteligente para estudiantes y profesores."
-        }
-        system_prompt = base_prompts.get(lang, base_prompts['en'])
-        system_prompt += f" Your attitude should be {attitude_str}."
+        system_prompt = "You are an intelligent study assistant for students and teachers."
+        system_prompt += f" Your attitude should be {attitude}."
         if description:
             system_prompt += f" Activity description: {description}."
         if main_question:
-            if lang == 'fr':
-                system_prompt += f" La question principale de cette activité est : {main_question}."
-            elif lang == 'es':
-                system_prompt += f" La pregunta principal de esta actividad es: {main_question}."
-            else:
-                system_prompt += f" The main question for this activity is: {main_question}."
+            system_prompt += f" The main question for this activity is: {main_question}."
         if subjects:
             system_prompt += f" Subjects: {subjects}."
         if restrict:
-            if lang == 'fr':
-                system_prompt += " Ne répondez qu'aux questions liées aux sujets du cours."
-            elif lang == 'es':
-                system_prompt += " Solo responde preguntas relacionadas con los temas del curso."
-            else:
-                system_prompt += " Only answer questions related to the course subjects."
+            system_prompt += " Only answer questions related to the course subjects."
         if not allow_questions:
-            if lang == 'fr':
-                system_prompt += " Ne proposez pas de questions à l'étudiant sauf si cela est explicitement demandé."
-            elif lang == 'es':
-                system_prompt += " No propongas preguntas al estudiante a menos que se solicite explícitamente."
-            else:
-                system_prompt += " Do not provide questions to the student unless explicitly asked."
+            system_prompt += " Do not provide questions to the student unless explicitly asked."
         if not allow_emojis:
-            if lang == 'fr':
-                system_prompt += " N'utilisez pas d'emojis dans vos réponses."
-            elif lang == 'es':
-                system_prompt += " No uses emojis en tus respuestas."
-            else:
-                system_prompt += " Do not use emojis in your responses."
+            system_prompt += " Do not use emojis in your responses."
         else:
-            if lang == 'fr':
-                system_prompt += " Vous pouvez utiliser des emojis pour rendre la conversation plus engageante."
-            elif lang == 'es':
-                system_prompt += " Puedes usar emojis para hacer la conversación más atractiva."
-            else:
-                system_prompt += " You can use emojis to make the conversation more engaging."
+            system_prompt += " You can use emojis to make the conversation more engaging."
         if trust_document:
-            if lang == 'fr':
-                system_prompt += " Faites confiance au document fourni pour aider à répondre aux questions."
-            elif lang == 'es':
-                system_prompt += " Confía en el documento proporcionado para ayudar a responder preguntas."
-            else:
-                system_prompt += " Trust the provided document to help answer questions."
+            system_prompt += " Trust the provided document to help answer questions."
         if expert_mode and custom_prompt:
             system_prompt += f" {custom_prompt}"
         if questions:
-            if lang == 'fr':
-                system_prompt += f" Exemples de questions pour cette activité : {', '.join(questions)}."
-            elif lang == 'es':
-                system_prompt += f" Ejemplos de preguntas para esta actividad: {', '.join(questions)}."
-            else:
-                system_prompt += f" Example questions for this activity: {', '.join(questions)}."
+            system_prompt += f" Example questions for this activity: {', '.join(questions)}."
 
         openai_messages.append({"role": "system", "content": system_prompt})
         for msg in messages:
-            openai_messages.append({"role": msg.role, "content": msg.content})
+            if msg.role in ["assistant", "user"]:
+                openai_role = msg.role
+            else:
+                openai_role = "user"
+            openai_messages.append({"role": openai_role, "content": msg.content})
         response = await client.chat.completions.create(
             model=settings["model"],
             messages=openai_messages,
@@ -276,8 +234,8 @@ async def on_message(message: cl.Message):
         await create_assistant_message(thread, ai_response, settings["model"], user_id)
         await cl.Message(content=ai_response).send()
     except Activity.DoesNotExist:
-        await cl.Message(content="Atividade não encontrada. Verifique o ID fornecido.").send()
+        await cl.Message(content="Activity not found. Please check the provided ID.").send()
     except Exception as e:
-        logger.error(f"Erro ao processar mensagem: {str(e)}")
-        await cl.Message(content=f"Ocorreu um erro ao processar sua mensagem. Detalhes: {str(e)}").send()
+        logger.error(f"Error processing message: {str(e)}")
+        await cl.Message(content=f"An error occurred while processing your message. Details: {str(e)}").send()
 

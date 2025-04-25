@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="{{ request.session.lang|default:'fr' }}">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,48 +13,23 @@
         <div class="container">
             <div class="brand-container">
                 <div class="language-selector">
-                    <span>
-                        {% if request.session.lang == 'fr' %}🇫🇷
-                        {% elif request.session.lang == 'es' %}🇪🇸
-                        {% else %}🇬🇧{% endif %}
-                    </span>
-                    <div class="language-menu">
-                        <a href="?lang=en">English 🇬🇧</a>
-                        <a href="?lang=fr">Français 🇫🇷</a>
-                        <a href="?lang=es">Español 🇪🇸</a>
-                    </div>
+                    <span>🇬🇧</span>
                 </div>
                 <h1>SIMBA</h1>
             </div>
             <div class="nav-links">
                 {% if request.session.user_id %}
-                    <a href="{% url 'courses' %}" style="margin-right: 15px;">
-                        {% if request.session.lang == 'fr' %}Mes Cours
-                        {% elif request.session.lang == 'es' %}Mis Cursos
-                        {% else %}My Courses{% endif %}
-                    </a>
+                    <a href="{% url 'courses' %}" style="margin-right: 15px;">My Courses</a>
                     <div class="user-menu">
                         <span>{{ request.session.username }}</span>
                         <div class="user-menu-content">
-                            <a href="{% url 'courses' %}">
-                                {% if request.session.lang == 'fr' %}Tableau de bord
-                                {% elif request.session.lang == 'es' %}Panel de control
-                                {% else %}Dashboard{% endif %}
-                            </a>
-                            <a href="{% url 'logout' %}">
-                                {% if request.session.lang == 'fr' %}Déconnexion
-                                {% elif request.session.lang == 'es' %}Salir
-                                {% else %}Logout{% endif %}
-                            </a>
+                            <a href="{% url 'courses' %}">Dashboard</a>
+                            <a href="{% url 'logout' %}">Logout</a>
                         </div>
                     </div>
                 {% else %}
                     <a href="{% url 'login' %}">Login</a>
-                    <a href="{% url 'register' %}">
-                        {% if request.session.lang == 'fr' %}Inscription
-                        {% elif request.session.lang == 'es' %}Registro
-                        {% else %}Register{% endif %}
-                    </a>
+                    <a href="{% url 'register' %}">Register</a>
                 {% endif %}
             </div>
         </div>

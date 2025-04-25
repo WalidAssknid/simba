@@ -1,44 +1,20 @@
 {% extends 'base.html' %}
-{% block title %}
-    {% if request.session.lang == 'fr' %}Inscription | SIMBA
-    {% elif request.session.lang == 'es' %}Registro | SIMBA
-    {% else %}Register | SIMBA{% endif %}
-{% endblock %}
+{% block title %}Register | SIMBA{% endblock %}
 {% block content %}
 <div class="form-container">
-    <h2>
-        {% if request.session.lang == 'fr' %}Créer un nouveau compte
-        {% elif request.session.lang == 'es' %}Crear una nueva cuenta
-        {% else %}Create a new account{% endif %}
-    </h2>
+    <h2>Create a new account</h2>
     <form method="post" action="{% url 'register' %}">
         {% csrf_token %}
         <div class="form-group">
-            <label for="user-type">
-                {% if request.session.lang == 'fr' %}Type d'utilisateur :
-                {% elif request.session.lang == 'es' %}Tipo de usuario:
-                {% else %}User type:{% endif %}
-            </label>
+            <label for="user-type">User type:</label>
             <select name="role" id="user-type" class="form-control">
-                <option value="student">
-                    {% if request.session.lang == 'fr' %}Étudiant
-                    {% elif request.session.lang == 'es' %}Estudiante
-                    {% else %}Student{% endif %}
-                </option>
-                <option value="teacher">
-                    {% if request.session.lang == 'fr' %}Professeur
-                    {% elif request.session.lang == 'es' %}Profesor
-                    {% else %}Teacher{% endif %}
-                </option>
+                <option value="student">Student</option>
+                <option value="teacher">Teacher</option>
             </select>
         </div>
         
         <div class="form-group">
-            <label for="username">
-                {% if request.session.lang == 'fr' %}Nom d'utilisateur :
-                {% elif request.session.lang == 'es' %}Nombre de usuario:
-                {% else %}Username:{% endif %}
-            </label>
+            <label for="username">Username:</label>
             <input type="text" name="username" id="username" class="form-control" required>
         </div>
         
@@ -48,33 +24,19 @@
         </div>
         
         <div class="form-group">
-            <label for="password">
-                {% if request.session.lang == 'fr' %}Mot de passe :
-                {% elif request.session.lang == 'es' %}Contraseña:
-                {% else %}Password:{% endif %}
-            </label>
+            <label for="password">Password:</label>
             <input type="password" name="password" id="password" class="form-control" required>
         </div>
         
         <div class="form-group">
-            <label for="password_confirm">
-                {% if request.session.lang == 'fr' %}Confirmez le mot de passe :
-                {% elif request.session.lang == 'es' %}Confirmar contraseña:
-                {% else %}Confirm password:{% endif %}
-            </label>
+            <label for="password_confirm">Confirm password:</label>
             <input type="password" name="password_confirm" id="password_confirm" class="form-control" required>
         </div>
         
-        <button type="submit" class="btn btn-success btn-block">
-            {% if request.session.lang == 'fr' %}S'inscrire
-            {% elif request.session.lang == 'es' %}Registrarse
-            {% else %}Register{% endif %}
-        </button>
+        <button type="submit" class="btn btn-success btn-block">Register</button>
     </form>
     <p class="text-center mt-3">
-        {% if request.session.lang == 'fr' %}Vous avez déjà un compte ? <a href="{% url 'login' %}">Connectez-vous</a>
-        {% elif request.session.lang == 'es' %}¿Ya tienes una cuenta? <a href="{% url 'login' %}">Inicia sesión</a>
-        {% else %}Already have an account? <a href="{% url 'login' %}">Log in</a>{% endif %}
+        Already have an account? <a href="{% url 'login' %}">Log in</a>
     </p>
 </div>
 {% endblock %}

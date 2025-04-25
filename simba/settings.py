@@ -31,7 +31,7 @@ SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'db').split(',')
 
 
 # Application definition

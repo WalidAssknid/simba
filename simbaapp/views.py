@@ -1,3 +1,4 @@
+# filepath: /Users/lenonanthony/Documents/simba-2025/simbaapp/views.py
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
@@ -16,32 +17,14 @@ def login_view(request):
                 request.session['role'] = user.role
                 return redirect('courses')
             else:
-                lang = request.session.get('lang', 'fr')
-                error_messages = {
-                    'en': "Invalid credentials.",
-                    'es': "Credenciales inválidas.",
-                    'fr': "Identifiants invalides."
-                }
-                messages.error(request, error_messages.get(lang, error_messages['fr']))
+                messages.error(request, "Invalid credentials.")
         except User.DoesNotExist:
-            lang = request.session.get('lang', 'fr')
-            error_messages = {
-                'en': "User does not exist.",
-                'es': "El usuario no existe.",
-                'fr': "L'utilisateur n'existe pas."
-            }
-            messages.error(request, error_messages.get(lang, error_messages['fr']))
+            messages.error(request, "User does not exist.")
     return render(request, 'login.html')
 
 def logout_view(request):
     request.session.flush()
-    lang = request.session.get('lang', 'fr')
-    success_messages = {
-        'en': "Successfully logged out!",
-        'es': "¡Sesión cerrada con éxito!",
-        'fr': "Déconnexion réussie !"
-    }
-    messages.success(request, success_messages.get(lang, success_messages['fr']))
+    messages.success(request, "Successfully logged out!")
     return redirect('login')
 
 def register_view(request):
@@ -50,35 +33,18 @@ def register_view(request):
         email = request.POST.get('email')
         password = request.POST.get('password')
         password_confirm = request.POST.get('password_confirm')
-        role = request.POST.get('role', 'student')  # Captura o papel selecionado pelo usuário
-        
-        lang = request.session.get('lang', 'fr')
+        role = request.POST.get('role', 'student')
         
         if password != password_confirm:
-            error_messages = {
-                'en': "Passwords do not match.",
-                'es': "Las contraseñas no coinciden.",
-                'fr': "Les mots de passe ne correspondent pas."
-            }
-            messages.error(request, error_messages.get(lang, error_messages['fr']))
+            messages.error(request, "Passwords do not match.")
             return render(request, 'register.html')
         
         if User.objects.filter(username=username).exists():
-            error_messages = {
-                'en': "Username already exists.",
-                'es': "El nombre de usuario ya existe.",
-                'fr': "Le nom d'utilisateur existe déjà."
-            }
-            messages.error(request, error_messages.get(lang, error_messages['fr']))
+            messages.error(request, "Username already exists.")
             return render(request, 'register.html')
         
         if User.objects.filter(email=email).exists():
-            error_messages = {
-                'en': "Email is already registered.",
-                'es': "El correo electrónico ya está registrado.",
-                'fr': "L'email est déjà enregistré."
-            }
-            messages.error(request, error_messages.get(lang, error_messages['fr']))
+            messages.error(request, "Email is already registered.")
             return render(request, 'register.html')
         
         hashed_password = make_password(password)
@@ -88,12 +54,7 @@ def register_view(request):
             password_hash=hashed_password,
             role=role  
         )
-        success_messages = {
-            'en': "Registration successful!",
-            'es': "¡Registro exitoso!",
-            'fr': "Inscription réussie !"
-        }
-        messages.success(request, success_messages.get(lang, success_messages['fr']))
+        messages.success(request, "Registration successful!")
         
         request.session['user_id'] = user.id
         request.session['username'] = user.username
@@ -124,17 +85,11 @@ def chainlit_view(request):
             'activity_id': activity_id,
             'user_id': user_id,
             'username': request.session.get('username'),
-            'chainlit_url': f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(request.session.get('username', 'User'))}&lang={request.session.get('lang', 'fr')}"
+            'chainlit_url': f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(request.session.get('username', 'User'))}&lang=en"
         }
         return render(request, 'chainlit.html', context)
     except Activity.DoesNotExist:
-        lang = request.session.get('lang', 'fr')
-        error_messages = {
-            'en': "Activity not found.",
-            'es': "Actividad no encontrada.",
-            'fr': "Activité non trouvée."
-        }
-        messages.error(request, error_messages.get(lang, error_messages['fr']))
+        messages.error(request, "Activity not found.")
         return redirect('courses')
 
 def courses_view(request):
@@ -148,13 +103,7 @@ def courses_view(request):
         user = User.objects.get(id=user_id)
         courses = Course.objects.filter(owner_id=user_id).order_by('-created_at')
         
-        lang = request.session.get('lang', 'fr')
-        debug_messages = {
-            'en': f"Logged in as teacher: {user.username}",
-            'es': f"Conectado como profesor: {user.username}",
-            'fr': f"Connecté en tant que professeur: {user.username}"
-        }
-        messages.info(request, debug_messages.get(lang, debug_messages['fr']))
+        messages.info(request, f"Logged in as teacher: {user.username}")
         
         context = {
             'courses': courses,
@@ -178,13 +127,7 @@ def create_course_view(request):
     user = User.objects.get(id=user_id)
     
     if user.role != 'teacher':
-        lang = request.session.get('lang', 'fr')
-        error_messages = {
-            'en': "Only teachers can create courses.",
-            'es': "Solo los profesores pueden crear cursos.",
-            'fr': "Seuls les enseignants peuvent créer des cours."
-        }
-        messages.error(request, error_messages.get(lang, error_messages['fr']))
+        messages.error(request, "Only teachers can create courses.")
         return redirect('courses')
     
     if request.method == 'POST':
@@ -192,25 +135,13 @@ def create_course_view(request):
         description = request.POST.get('description')
         
         if not title:
-            lang = request.session.get('lang', 'fr')
-            error_messages = {
-                'en': "Title is required.",
-                'es': "El título es obligatorio.",
-                'fr': "Le titre est obligatoire."
-            }
-            messages.error(request, error_messages.get(lang, error_messages['fr']))
+            messages.error(request, "Title is required.")
             return render(request, 'create_course.html')
             
         course = Course(title=title, description=description, owner=user)
         course.save()
         
-        lang = request.session.get('lang', 'fr')
-        success_messages = {
-            'en': f"Course created successfully! Enrollment code: {course.enrollment_code}",
-            'es': f"¡Curso creado con éxito! Código de inscripción: {course.enrollment_code}",
-            'fr': f"Cours créé avec succès ! Code d'inscription : {course.enrollment_code}"
-        }
-        messages.success(request, success_messages.get(lang, success_messages['fr']))
+        messages.success(request, f"Course created successfully! Enrollment code: {course.enrollment_code}")
         
         return redirect('course_detail', course_id=course.id)
         
@@ -224,13 +155,7 @@ def course_detail_view(request, course_id):
         user_id = request.session.get('user_id')
         user = User.objects.get(id=user_id)
     except Course.DoesNotExist:
-        lang = request.session.get('lang', 'fr')
-        error_messages = {
-            'en': "Course not found.",
-            'es': "Curso no encontrado.",
-            'fr': "Cours non trouvé."
-        }
-        messages.error(request, error_messages.get(lang, error_messages['fr']))
+        messages.error(request, "Course not found.")
         return redirect('courses')
         
     has_access = False
@@ -243,13 +168,7 @@ def course_detail_view(request, course_id):
         has_access = True
 
     if not has_access:
-        lang = request.session.get('lang', 'fr')
-        error_messages = {
-            'en': "You do not have permission to access this course.",
-            'es': "No tienes permiso para acceder a este curso.",
-            'fr': "Vous n'avez pas la permission d'accéder à ce cours."
-        }
-        messages.error(request, error_messages.get(lang, error_messages['fr']))
+        messages.error(request, "You do not have permission to access this course.")
         return redirect('courses')
     
     activities = Activity.objects.filter(course=course).order_by('-created_at')
@@ -272,13 +191,7 @@ def create_activity_view(request, course_id):
         user = User.objects.get(id=user_id)
         can_create_activity = course.owner_id == user_id and user.role == 'teacher'
         if not can_create_activity:
-            lang = request.session.get('lang', 'fr')
-            error_messages = {
-                'en': "Only teachers can create activities in this course.",
-                'es': "Solo los profesores pueden crear actividades en este curso.",
-                'fr': "Seuls les enseignants peuvent créer des activités dans ce cours."
-            }
-            messages.error(request, error_messages.get(lang, error_messages['fr']))
+            messages.error(request, "Only teachers can create activities in this course.")
             return redirect('course_detail', course_id=course.id)
         if request.method == 'POST':
             activity_title = request.POST.get('activity_title', '')
@@ -307,24 +220,12 @@ def create_activity_view(request, course_id):
                 allow_emojis=allow_emojis,
                 trust_document=trust_document
             )
-            lang = request.session.get('lang', 'fr')
-            success_messages = {
-                'en': "Activity created successfully!",
-                'es': "¡Actividad creada con éxito!",
-                'fr': "Activité créée avec succès !"
-            }
-            messages.success(request, success_messages.get(lang, success_messages['fr']))
+            messages.success(request, "Activity created successfully!")
             return redirect('course_detail', course_id=course.id)
         else:
             return redirect('course_detail', course_id=course.id)
     except Course.DoesNotExist:
-        lang = request.session.get('lang', 'fr')
-        error_messages = {
-            'en': "Course not found.",
-            'es': "Curso no encontrado.",
-            'fr': "Cours non trouvé."
-        }
-        messages.error(request, error_messages.get(lang, error_messages['fr']))
+        messages.error(request, "Course not found.")
         return redirect('courses')
 
 
@@ -340,13 +241,7 @@ def join_course_view(request):
         enrollment_code = request.POST.get('enrollment_code')
         
         if not enrollment_code:
-            lang = request.session.get('lang', 'fr')
-            error_messages = {
-                'en': "Enrollment code is required.",
-                'es': "Se requiere el código de inscripción.",
-                'fr': "Le code d'inscription est requis."
-            }
-            messages.error(request, error_messages.get(lang, error_messages['fr']))
+            messages.error(request, "Enrollment code is required.")
             return render(request, 'join_course.html') 
             
         try:
@@ -354,13 +249,7 @@ def join_course_view(request):
             
             # Check if already enrolled
             if CourseEnrollment.objects.filter(user=user, course=course).exists():
-                lang = request.session.get('lang', 'fr')
-                warning_messages = {
-                    'en': f"You are already enrolled in the course '{course.title}'.",
-                    'es': f"Ya estás inscrito en el curso '{course.title}'.",
-                    'fr': f"Vous êtes déjà inscrit au cours '{course.title}'."
-                }
-                messages.warning(request, warning_messages.get(lang, warning_messages['fr']))
+                messages.warning(request, f"You are already enrolled in the course '{course.title}'.")
             else:
                 # Create enrollment
                 CourseEnrollment.objects.create(
@@ -368,24 +257,12 @@ def join_course_view(request):
                     course=course
                 )
                 
-                lang = request.session.get('lang', 'fr')
-                success_messages = {
-                    'en': f"Successfully enrolled in course '{course.title}'!",
-                    'es': f"¡Inscrito con éxito en el curso '{course.title}'!",
-                    'fr': f"Inscrit avec succès au cours '{course.title}' !"
-                }
-                messages.success(request, success_messages.get(lang, success_messages['fr']))
+                messages.success(request, f"Successfully enrolled in course '{course.title}'!")
             
             return redirect('course_detail', course_id=course.id)
             
         except Course.DoesNotExist:
-            lang = request.session.get('lang', 'fr')
-            error_messages = {
-                'en': "Invalid enrollment code.",
-                'es': "Código de inscripción inválido.",
-                'fr': "Code d'inscription invalide."
-            }
-            messages.error(request, error_messages.get(lang, error_messages['fr']))
+            messages.error(request, "Invalid enrollment code.")
             return render(request, 'join_course.html') 
             
     return render(request, 'join_course.html')

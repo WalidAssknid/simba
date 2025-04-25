@@ -1,37 +1,20 @@
 {% extends 'base.html' %}
-{% block title %}
-    {% if request.session.lang == 'fr' %}Mes Cours | SIMBA
-    {% elif request.session.lang == 'es' %}Mis Cursos | SIMBA
-    {% else %}My Courses | SIMBA{% endif %}
-{% endblock %}
+{% block title %}My Courses | SIMBA{% endblock %}
 {% block content %}
 <div class="course-header">
-    <h2>
-        {% if request.session.lang == 'fr' %}Mes Cours
-        {% elif request.session.lang == 'es' %}Mis Cursos
-        {% else %}My Courses{% endif %}
-    </h2>
+    <h2>My Courses</h2>
     {% if request.session.role == 'teacher' %}
     <div class="teacher-actions">
         <a href="{% url 'create_course' %}" class="btn btn-primary">
-            <span>+</span> 
-            {% if request.session.lang == 'fr' %}Créer un Cours
-            {% elif request.session.lang == 'es' %}Crear Curso
-            {% else %}Create Course{% endif %}
+            <span>+</span> Create Course
         </a>
         <a href="{% url 'join_course' %}" class="btn btn-secondary">
-            <span>+</span> 
-            {% if request.session.lang == 'fr' %}Rejoindre un Cours
-            {% elif request.session.lang == 'es' %}Unirse a un Curso
-            {% else %}Join Course{% endif %}
+            <span>+</span> Join Course
         </a>
     </div>
     {% else %}
     <a href="{% url 'join_course' %}" id="joinCourseBtn" class="btn btn-secondary">
-        <span>+</span> 
-        {% if request.session.lang == 'fr' %}Rejoindre un Cours
-        {% elif request.session.lang == 'es' %}Unirse a un Curso
-        {% else %}Join Course{% endif %}
+        <span>+</span> Join Course
     </a>
     {% endif %}
 </div>
@@ -41,36 +24,19 @@
         <div class="course-card">
             <h3>{{ course.title }}</h3>
             <p>{{ course.description|truncatechars:100 }}</p>
-            <small>
-                {% if request.session.lang == 'fr' %}Créé le: 
-                {% elif request.session.lang == 'es' %}Creado el: 
-                {% else %}Created on: {% endif %}
-                {{ course.created_at|date:"d/m/Y H:i" }}
-            </small>
+            <small>Created on: {{ course.created_at|date:"d/m/Y H:i" }}</small>
             <div class="course-actions">
-                <a href="{% url 'course_detail' course.id %}" class="btn">
-                    {% if request.session.lang == 'fr' %}Afficher
-                    {% elif request.session.lang == 'es' %}Ver
-                    {% else %}View{% endif %}
-                </a>
+                <a href="{% url 'course_detail' course.id %}" class="btn">View</a>
             </div>
         </div>
     {% empty %}
         <div class="empty-state">
-            <h3>
-                {% if request.session.lang == 'fr' %}Aucun cours trouvé
-                {% elif request.session.lang == 'es' %}No se encontraron cursos
-                {% else %}No courses found{% endif %}
-            </h3>
+            <h3>No courses found</h3>
             <p>
                 {% if request.session.role == 'teacher' %}
-                    {% if request.session.lang == 'fr' %}Cliquez sur "Créer un Cours" pour commencer!
-                    {% elif request.session.lang == 'es' %}¡Haga clic en "Crear Curso" para comenzar!
-                    {% else %}Click on "Create Course" to get started!{% endif %}
+                    Click on "Create Course" to get started!
                 {% else %}
-                    {% if request.session.lang == 'fr' %}Cliquez sur "Rejoindre un Cours" pour participer!
-                    {% elif request.session.lang == 'es' %}¡Haga clic en "Unirse a un Curso" para participar!
-                    {% else %}Click on "Join Course" to participate!{% endif %}
+                    Click on "Join Course" to participate!
                 {% endif %}
             </p>
         </div>

@@ -1,47 +1,23 @@
 {% extends 'base.html' %}
-{% block title %}
-    {% if request.session.lang == 'fr' %}Créer un Cours | SIMBA
-    {% elif request.session.lang == 'es' %}Crear Curso | SIMBA
-    {% else %}Create Course | SIMBA{% endif %}
-{% endblock %}
+{% block title %}Create Course | SIMBA{% endblock %}
 {% block content %}
 <div class="form-container">
-    <h2>
-        {% if request.session.lang == 'fr' %}Créer un Nouveau Cours
-        {% elif request.session.lang == 'es' %}Crear Nuevo Curso
-        {% else %}Create New Course{% endif %}
-    </h2>
+    <h2>Create New Course</h2>
     <form method="post" action="{% url 'create_course' %}">
         {% csrf_token %}
         <div class="form-group">
-            <label for="title">
-                {% if request.session.lang == 'fr' %}Titre:
-                {% elif request.session.lang == 'es' %}Título:
-                {% else %}Title:{% endif %}
-            </label>
+            <label for="title">Title:</label>
             <input type="text" name="title" id="title" class="form-control" required>
         </div>
         
         <div class="form-group">
-            <label for="description">
-                {% if request.session.lang == 'fr' %}Description:
-                {% elif request.session.lang == 'es' %}Descripción:
-                {% else %}Description:{% endif %}
-            </label>
+            <label for="description">Description:</label>
             <textarea name="description" id="description" rows="5" class="form-control"></textarea>
         </div>
         
         <div class="form-actions">
-            <a href="{% url 'courses' %}" class="btn btn-danger">
-                {% if request.session.lang == 'fr' %}Annuler
-                {% elif request.session.lang == 'es' %}Cancelar
-                {% else %}Cancel{% endif %}
-            </a>
-            <button type="submit" class="btn btn-success">
-                {% if request.session.lang == 'fr' %}Créer le Cours
-                {% elif request.session.lang == 'es' %}Crear Curso
-                {% else %}Create Course{% endif %}
-            </button>
+            <a href="{% url 'courses' %}" class="btn btn-danger">Cancel</a>
+            <button type="submit" class="btn btn-success">Create Course</button>
         </div>
     </form>
 </div>

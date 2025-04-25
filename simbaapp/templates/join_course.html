@@ -1,9 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}
-    {% if request.session.lang == 'fr' %}Rejoindre un Cours | SIMBA
-    {% elif request.session.lang == 'es' %}Unirse a un Curso | SIMBA
-    {% else %}Join Course | SIMBA{% endif %}
-{% endblock %}
+{% block title %}Join Course | SIMBA{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -57,72 +53,38 @@
 <div class="overlay" id="joinOverlay"></div>
 <div class="popup-dialog" id="joinDialog">
     <div class="popup-header">
-        <h3>
-            {% if request.session.lang == 'fr' %}Rejoindre un Cours
-            {% elif request.session.lang == 'es' %}Unirse a un Curso
-            {% else %}Join Course{% endif %}
-        </h3>
+        <h3>Join Course</h3>
         <button class="close-btn" id="closeBtn">&times;</button>
     </div>
     
     <form id="joinForm" action="{% url 'join_course' %}" method="POST">
         {% csrf_token %}
         <div class="form-group">
-            <label for="enrollment_code">
-                {% if request.session.lang == 'fr' %}Code d'inscription:
-                {% elif request.session.lang == 'es' %}Código de inscripción:
-                {% else %}Enrollment Code:{% endif %}
-            </label>
+            <label for="enrollment_code">Enrollment Code:</label>
             <input type="text" id="enrollment_code" name="enrollment_code" class="form-control" required>
-            <small>
-                {% if request.session.lang == 'fr' %}Entrez le code fourni par votre enseignant
-                {% elif request.session.lang == 'es' %}Ingrese el código proporcionado por su profesor
-                {% else %}Enter the code provided by your teacher{% endif %}
-            </small>
+            <small>Enter the code provided by your teacher</small>
         </div>
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">
-                {% if request.session.lang == 'fr' %}Rejoindre
-                {% elif request.session.lang == 'es' %}Unirse
-                {% else %}Join{% endif %}
-            </button>
+            <button type="submit" class="btn btn-primary">Join</button>
+                </button>
         </div>
     </form>
 </div>
 
 <div class="form-container">
-    <h2>
-        {% if request.session.lang == 'fr' %}Rejoindre un Cours
-        {% elif request.session.lang == 'es' %}Unirse a un Curso
-        {% else %}Join Course{% endif %}
-    </h2>
+    <h2>Join Course</h2>
     <form method="post" action="{% url 'join_course' %}">
         {% csrf_token %}
         <div class="form-group">
-            <label for="enrollment_code_main">
-                {% if request.session.lang == 'fr' %}Code d'inscription:
-                {% elif request.session.lang == 'es' %}Código de inscripción:
-                {% else %}Enrollment Code:{% endif %}
-            </label>
+            <label for="enrollment_code_main">Enrollment Code:</label>
             <input type="text" name="enrollment_code" id="enrollment_code_main" class="form-control" required>
-            <small>
-                {% if request.session.lang == 'fr' %}Entrez le code fourni par votre enseignant
-                {% elif request.session.lang == 'es' %}Ingrese el código proporcionado por su profesor
-                {% else %}Enter the code provided by your teacher{% endif %}
-            </small>
+            <small>Enter the code provided by your teacher</small>
         </div>
         
         <div class="form-actions">
-            <a href="{% url 'courses' %}" class="btn btn-secondary">
-                {% if request.session.lang == 'fr' %}Annuler
-                {% elif request.session.lang == 'es' %}Cancelar
-                {% else %}Cancel{% endif %}
-            </a>
-            <button type="submit" class="btn btn-primary">
-                {% if request.session.lang == 'fr' %}Rejoindre
-                {% elif request.session.lang == 'es' %}Unirse
-                {% else %}Join{% endif %}
-            </button>
+            <a href="{% url 'courses' %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Join</button>
+        </div>
         </div>
     </form>
 </div>

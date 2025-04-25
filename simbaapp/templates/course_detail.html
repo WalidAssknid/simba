@@ -4,63 +4,40 @@
 <div class="course-details">
     <div class="back-link">
         <a href="{% url 'courses' %}">
-            {% if request.session.lang == 'fr' %}&larr; Retour aux cours
-            {% elif request.session.lang == 'es' %}&larr; Volver a cursos
-            {% else %}&larr; Back to Courses{% endif %}
+            &larr; Back to Courses
         </a>
     </div>
     <h2>{{ course.title }}</h2>
     <p class="course-meta">
-        {% if request.session.lang == 'fr' %}Créé le: 
-        {% elif request.session.lang == 'es' %}Creado el: 
-        {% else %}Created on: {% endif %}
-        {{ course.created_at|date:"d/m/Y H:i" }}
+        Created on: {{ course.created_at|date:"d/m/Y H:i" }}
     </p>
     <div class="course-description">
         {% if course.description %}
             <p>{{ course.description }}</p>
         {% else %}
-            <p><em>
-                {% if request.session.lang == 'fr' %}Pas de description
-                {% elif request.session.lang == 'es' %}Sin descripción
-                {% else %}No description{% endif %}
-            </em></p>
+            <p><em>No description</em></p>
         {% endif %}
     </div>
     
     {% if is_teacher %}
     <div class="course-info">
         <div class="enrollment-code">
-            <h4>
-                {% if request.session.lang == 'fr' %}Code d'inscription:
-                {% elif request.session.lang == 'es' %}Código de inscripción:
-                {% else %}Enrollment Code:{% endif %}
-            </h4>
+            <h4>Enrollment Code:</h4>
             <p class="code-display">{{ course.enrollment_code }}</p>
             <p class="code-instructions">
-                {% if request.session.lang == 'fr' %}Partagez ce code avec les étudiants pour qu'ils puissent rejoindre ce cours
-                {% elif request.session.lang == 'es' %}Comparta este código con los estudiantes para que puedan unirse a este curso
-                {% else %}Share this code with students so they can join this course{% endif %}
+                Share this code with students so they can join this course
             </p>
         </div>
     </div>
     {% endif %}
     
     <div class="participants">
-        <h4>
-            {% if request.session.lang == 'fr' %}Participants
-            {% elif request.session.lang == 'es' %}Participantes
-            {% else %}Participants{% endif %}
-        </h4>
+        <h4>Participants</h4>
         <div class="participants-list">
             <!-- Owner always appears first -->
             <div class="participant-card">
                 <div class="participant-name">{{ course.owner.username }}</div>
-                <div class="participant-role">
-                    {% if request.session.lang == 'fr' %}Enseignant
-                    {% elif request.session.lang == 'es' %}Profesor
-                    {% else %}Teacher{% endif %}
-                </div>
+                <div class="participant-role">Teacher</div>
             </div>
             
             <!-- Other participants -->
@@ -68,11 +45,7 @@
                 {% if enrollment.user.id != course.owner.id %}
                 <div class="participant-card">
                     <div class="participant-name">{{ enrollment.user.username }}</div>
-                    <div class="participant-role">
-                        {% if request.session.lang == 'fr' %}Étudiant
-                        {% elif request.session.lang == 'es' %}Estudiante
-                        {% else %}Student{% endif %}
-                    </div>
+                    <div class="participant-role">Student</div>
                 </div>
                 {% endif %}
             {% endfor %}
@@ -80,17 +53,9 @@
     </div>
     
     <div class="action-bar">
-        <h3>
-            {% if request.session.lang == 'fr' %}Activités
-            {% elif request.session.lang == 'es' %}Actividades
-            {% else %}Activities{% endif %}
-        </h3>
+        <h3>Activities</h3>
         {% if is_teacher %}
-            <button id="openActivityModal" class="btn">
-                {% if request.session.lang == 'fr' %}Créer une nouvelle activité
-                {% elif request.session.lang == 'es' %}Crear nueva actividad
-                {% else %}Create New Activity{% endif %}
-            </button>
+            <button id="openActivityModal" class="btn">Create New Activity</button>
         {% endif %}
     </div>
     
@@ -102,21 +67,14 @@
         {% for activity in activities %}
             <div class="activity-card">
                 <div class="activity-info">
-                    <p>{% if activity.title %}{{ activity.title }}{% else %}{{ request.session.lang|default:"fr"|yesno:"Activité,Actividad,Activity" }} #{{ activity.id }} - {{ course.title }}{% endif %}</p>
+                    <p>{% if activity.title %}{{ activity.title }}{% else %}Activity #{{ activity.id }} - {{ course.title }}{% endif %}</p>
                     <small>
-                        {% if request.session.lang == 'fr' %}Créé par: 
-                        {% elif request.session.lang == 'es' %}Creado por: 
-                        {% else %}Created by: {% endif %}
-                        {{ activity.user.username }} 
-                        {% if request.session.lang == 'fr' %}le 
-                        {% elif request.session.lang == 'es' %}el 
-                        {% else %}on {% endif %}
-                        {{ activity.created_at|date:"d/m/Y H:i" }}
+                        Created by: {{ activity.user.username }} on {{ activity.created_at|date:"d/m/Y H:i" }}
                     </small>
                 </div>
                 <div class="activity-actions">
                     <a href="{% url 'chainlit_view' %}?activity_id={{ activity.id }}" class="btn" target="_blank">
-                        {{ request.session.lang|default:"fr"|yesno:"Open Chat,Abrir Chat,Ouvrir Chat" }}
+                        Open Chat
                     </a>
                 </div>
             </div>
@@ -124,13 +82,9 @@
             <div class="empty-state">
                 <p>
                     {% if is_teacher %}
-                        {% if request.session.lang == 'fr' %}Aucune activité trouvée. Créez une nouvelle activité pour démarrer une conversation !
-                        {% elif request.session.lang == 'es' %}No se encontraron actividades. ¡Crea una nueva actividad para iniciar una conversación!
-                        {% else %}No activities found. Create a new activity to start a conversation!{% endif %}
+                        No activities found. Create a new activity to start a conversation!
                     {% else %}
-                        {% if request.session.lang == 'fr' %}Aucune activité trouvée pour ce cours pour le moment.
-                        {% elif request.session.lang == 'es' %}No se encontraron actividades para este curso todavía.
-                        {% else %}No activities found for this course yet.{% endif %}
+                        No activities found for this course yet.
                     {% endif %}
                 </p>
             </div>

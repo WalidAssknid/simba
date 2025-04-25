@@ -2,136 +2,112 @@
 <div class="modal" id="activityModal">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <h2 class="modal-title">
-            {% if request.session.lang == 'fr' %}Créer une nouvelle activité
-            {% elif request.session.lang == 'es' %}Crear una nueva actividad
-            {% else %}Create New Activity{% endif %}
-        </h2>
+        <h2 class="modal-title">Create New Activity</h2>
         <form method="post" action="{% url 'create_activity' course.id %}">
             {% csrf_token %}
             <div class="form-group">
-                <label for="activity-title">
-                    {% if request.session.lang == 'fr' %}Titre de l'activité{% elif request.session.lang == 'es' %}Título de la actividad{% else %}Activity Title{% endif %}
-                </label>
+                <label for="activity-title">Activity Title</label>
                 <input type="text" name="activity_title" id="activity-title" class="form-control" required>
-                <small class="form-text">
-                    {% if request.session.lang == 'fr' %}Le nom de votre activité.{% elif request.session.lang == 'es' %}El nombre de la actividad.{% else %}The name of your activity.{% endif %}
-                </small>
+                <small class="form-text">The name of your activity.</small>
             </div>
             <div class="form-group">
-                <label for="activity-description">
-                    {% if request.session.lang == 'fr' %}Description de l'activité{% elif request.session.lang == 'es' %}Descripción de la actividad{% else %}Activity Description{% endif %}
-                </label>
+                <label for="activity-description">Activity Description</label>
                 <textarea name="activity_description" id="activity-description" class="form-control" required></textarea>
-                <small class="form-text">
-                    {% if request.session.lang == 'fr' %}Expliquez brièvement le but ou le contexte de cette activité.{% elif request.session.lang == 'es' %}Explique brevemente el propósito o contexto de esta actividad.{% else %}Briefly explain the purpose or context of this activity.{% endif %}
-                </small>
+                <small class="form-text">Briefly explain the purpose or context of this activity.</small>
             </div>
             <div class="form-group">
-                <label for="activity-expert-mode">
-                    {% if request.session.lang == 'fr' %}Mode expert{% elif request.session.lang == 'es' %}Modo experto{% else %}Expert Mode{% endif %}
-                </label>
+                <label for="activity-expert-mode">Expert Mode</label>
                 <input type="checkbox" name="expert_mode" id="activity-expert-mode">
-                <small class="form-text">
-                    {% if request.session.lang == 'fr' %}Permet de personnaliser les instructions de l'assistant pour cette activité.{% elif request.session.lang == 'es' %}Permite personalizar las instrucciones del asistente para esta actividad.{% else %}Allows you to customize the assistant's instructions for this activity.{% endif %}
-                </small>
+                <small class="form-text">Allows you to customize the assistant's instructions for this activity.</small>
             </div>
             <div class="form-group" id="custom-prompt-group" style="display:none;">
-                <label for="custom-prompt">
-                    {% if request.session.lang == 'fr' %}Instructions personnalisées pour l'assistant{% elif request.session.lang == 'es' %}Instrucciones personalizadas para el asistente{% else %}Assistant's custom instructions{% endif %}
-                </label>
+                <label for="custom-prompt">Assistant's custom instructions</label>
                 <textarea name="custom_prompt" id="custom-prompt" class="form-control"></textarea>
-                <small class="form-text">
-                    {% if request.session.lang == 'fr' %}Décrivez comment l'assistant doit se comporter dans cette activité.{% elif request.session.lang == 'es' %}Describe cómo debe comportarse el asistente en esta actividad.{% else %}Describe how the assistant should behave in this activity.{% endif %}
-                </small>
+                <small class="form-text">Describe how the assistant should behave in this activity.</small>
             </div>
             <div class="form-group">
-                <label>
-                    {% if request.session.lang == 'fr' %}Questions de l'activité{% elif request.session.lang == 'es' %}Preguntas de la actividad{% else %}Activity Questions{% endif %}
-                </label>
+                <label>Activity Questions</label>
                 <div id="questions-list"></div>
-                <input type="text" id="new-question" class="form-control" placeholder="{% if request.session.lang == 'fr' %}Ajouter une question...{% elif request.session.lang == 'es' %}Agregar una pregunta...{% else %}Add a question...{% endif %}">
+                <input type="text" id="new-question" class="form-control" placeholder="Add a question...">
                 <button type="button" id="add-question" class="btn btn-secondary" style="margin-top:5px;">
-                    {% if request.session.lang == 'fr' %}Ajouter{% elif request.session.lang == 'es' %}Agregar{% else %}Add{% endif %}
+                    Add
                 </button>
                 <input type="hidden" name="questions[]" id="questions-hidden">
                 <small class="form-text">
-                    {% if request.session.lang == 'fr' %}Ajoutez des questions que l'assistant pourra utiliser pour guider les étudiants (ex: Qu'est-ce que la lumière ?).{% elif request.session.lang == 'es' %}Agrega preguntas que el asistente podrá usar para guiar a los estudiantes (ej: ¿Qué es la luz?).{% else %}Add questions the assistant can use to guide students (e.g., What is light?).{% endif %}
+                    Add questions the assistant can use to guide students (e.g., What is light?).
                 </small>
             </div>
             <hr>
-            <h3 class="section-title">
-                {% if request.session.lang == 'fr' %}Options avancées de l'assistant{% elif request.session.lang == 'es' %}Opciones avanzadas del asistente{% else %}Advanced Assistant Options{% endif %}
-            </h3>
+            <h3 class="section-title">Advanced Assistant Options</h3>
             <div class="form-group">
                 <label for="agent-attitude">
-                    {% if request.session.lang == 'fr' %}Quelle attitude l'assistant doit-il avoir envers les étudiants ?{% elif request.session.lang == 'es' %}¿Qué actitud debe tener el asistente hacia los estudiantes?{% else %}What attitude should the assistant have toward the students?{% endif %}
+                    What attitude should the assistant have toward the students?
                 </label>
                 <select name="agent_attitude" id="agent-attitude" class="form-control">
-                    <option value="friendly">{% if request.session.lang == 'fr' %}Amical{% elif request.session.lang == 'es' %}Amistoso{% else %}Friendly{% endif %}</option>
-                    <option value="informal">{% if request.session.lang == 'fr' %}Informel{% elif request.session.lang == 'es' %}Informal{% else %}Informal{% endif %}</option>
-                    <option value="formal">{% if request.session.lang == 'fr' %}Formel{% elif request.session.lang == 'es' %}Formal{% else %}Formal{% endif %}</option>
+                    <option value="friendly">Friendly</option>
+                    <option value="informal">Informal</option>
+                    <option value="formal">Formal</option>
                 </select>
                 <small class="form-text">
-                    {% if request.session.lang == 'fr' %}Choisissez le ton de l'assistant pour cette activité.{% elif request.session.lang == 'es' %}Elige el tono del asistente para esta actividad.{% else %}Choose the assistant's tone for this activity.{% endif %}
+                    Choose the assistant's tone for this activity.
                 </small>
             </div>
             <div class="form-group">
                 <label for="subjects">
-                    {% if request.session.lang == 'fr' %}Sujets du cours ou de l'activité (séparés par des virgules){% elif request.session.lang == 'es' %}Temas del curso o actividad (separados por comas){% else %}Course or activity subjects (comma separated){% endif %}
+                    Course or activity subjects (comma separated)
                 </label>
                 <input type="text" name="subjects" id="subjects" class="form-control">
                 <small class="form-text">
-                    {% if request.session.lang == 'fr' %}Listez les sujets pour guider l'assistant (ex: optique, énergie).{% elif request.session.lang == 'es' %}Enumera los temas para guiar al asistente (ej: óptica, energía).{% else %}List subjects to guide the assistant (e.g., optics, energy).{% endif %}
+                    List subjects to guide the assistant (e.g., optics, energy).
                 </small>
             </div>
             <div class="form-group">
                 <label for="restrict-to-subject">
-                    {% if request.session.lang == 'fr' %}Restreindre l'assistant aux sujets du cours ?{% elif request.session.lang == 'es' %}¿Restringir el asistente a los temas del curso?{% else %}Restrict assistant to course subjects?{% endif %}
+                    Restrict assistant to course subjects?
                 </label>
                 <input type="checkbox" name="restrict_to_subject" id="restrict-to-subject">
                 <small class="form-text">
-                    {% if request.session.lang == 'fr' %}L'assistant ne répondra qu'aux questions liées aux sujets listés ci-dessus.{% elif request.session.lang == 'es' %}El asistente solo responderá preguntas relacionadas con los temas listados arriba.{% else %}The assistant will only answer questions related to the subjects above.{% endif %}
+                    The assistant will only answer questions related to the subjects above.
                 </small>
             </div>
             <div class="form-group">
                 <label for="allow-questions">
-                    {% if request.session.lang == 'fr' %}L'assistant peut-il donner les questions à l'étudiant ?{% elif request.session.lang == 'es' %}¿El asistente puede dar las preguntas al estudiante?{% else %}Can the assistant give questions to the student?{% endif %}
+                    Can the assistant give questions to the student?
                 </label>
                 <input type="checkbox" name="allow_questions" id="allow-questions" checked>
                 <small class="form-text">
-                    {% if request.session.lang == 'fr' %}Si activé, l'assistant pourra proposer des questions aux étudiants.{% elif request.session.lang == 'es' %}Si está activado, el asistente podrá proponer preguntas a los estudiantes.{% else %}If enabled, the assistant can suggest questions to students.{% endif %}
+                    If enabled, the assistant can suggest questions to students.
                 </small>
             </div>
             <div class="form-group">
                 <label for="allow-emojis">
-                    {% if request.session.lang == 'fr' %}L'assistant peut-il utiliser des emojis ?{% elif request.session.lang == 'es' %}¿El asistente puede usar emojis?{% else %}Can the assistant use emojis?{% endif %}
+                    Can the assistant use emojis?
                 </label>
                 <input type="checkbox" name="allow_emojis" id="allow-emojis" checked>
                 <small class="form-text">
-                    {% if request.session.lang == 'fr' %}Si activé, l'assistant pourra utiliser des emojis dans ses réponses.{% elif request.session.lang == 'es' %}Si está activado, el asistente podrá usar emojis en sus respuestas.{% else %}If enabled, the assistant can use emojis in its answers.{% endif %}
+                    If enabled, the assistant can use emojis in its answers.
                 </small>
             </div>
             <div class="form-group">
                 <label for="trust-document">
-                    {% if request.session.lang == 'fr' %}L'assistant doit-il faire confiance au document fourni ?{% elif request.session.lang == 'es' %}¿El asistente debe confiar en el documento proporcionado?{% else %}Should the assistant trust the provided document?{% endif %}
+                    Should the assistant trust the provided document?
                 </label>
                 <input type="checkbox" name="trust_document" id="trust-document" checked>
                 <small class="form-text">
-                    {% if request.session.lang == 'fr' %}Si activé, l'assistant utilisera le document fourni comme source fiable.{% elif request.session.lang == 'es' %}Si está activado, el asistente usará el documento proporcionado como fuente confiable.{% else %}If enabled, the assistant will use the provided document as a trusted source.{% endif %}
+                    If enabled, the assistant will use the provided document as a trusted source.
                 </small>
             </div>
             <div class="form-group">
                 <label for="word-limit">
-                    {% if request.session.lang == 'fr' %}Limiter le nombre de mots dans la réponse de l'assistant ? (0 = pas de limite){% elif request.session.lang == 'es' %}¿Limitar el número de palabras en la respuesta del asistente? (0 = sin límite){% else %}Limit the number of words in the assistant's answer? (0 = no limit){% endif %}
+                    Limit the number of words in the assistant's answer? (0 = no limit)
                 </label>
                 <input type="number" name="word_limit" id="word-limit" class="form-control" min="0" value="0">
                 <small class="form-text">
-                    {% if request.session.lang == 'fr' %}Définissez une limite de mots pour chaque réponse de l'assistant. 0 signifie aucune limite.{% elif request.session.lang == 'es' %}Establece un límite de palabras para cada respuesta del asistente. 0 significa sin límite.{% else %}Set a word limit for each assistant answer. 0 means no limit.{% endif %}
+                    Set a word limit for each assistant answer. 0 means no limit.
                 </small>
             </div>
             <button type="submit" class="btn btn-primary btn-block" style="margin-top: 1.5rem;">
-                {% if request.session.lang == 'fr' %}Créer{% elif request.session.lang == 'es' %}Crear{% else %}Create{% endif %}
+                Create
             </button>
         </form>
     </div>

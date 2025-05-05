@@ -21,27 +21,29 @@
                 <small class="form-text">Allows you to customize the assistant's instructions for this activity.</small>
             </div>
             <div class="form-group" id="custom-prompt-group" style="display:none;">
-                <label for="custom-prompt">Assistant's custom instructions</label>
+                <label for="custom-prompt">Custom assistant instructions</label>
                 <textarea name="custom_prompt" id="custom-prompt" class="form-control"></textarea>
                 <small class="form-text">Describe how the assistant should behave in this activity.</small>
             </div>
             <div class="form-group">
                 <label>Activity Questions</label>
-                <div id="questions-list"></div>
-                <input type="text" id="new-question" class="form-control" placeholder="Add a question...">
-                <button type="button" id="add-question" class="btn btn-secondary" style="margin-top:5px;">
-                    Add
-                </button>
+                <div id="questions-list" class="questions-list"></div>
+                <div class="question-input-group">
+                    <input type="text" id="new-question" class="form-control" placeholder="Add a question...">
+                    <button type="button" id="add-question" class="btn btn-secondary">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
                 <input type="hidden" name="questions[]" id="questions-hidden">
                 <small class="form-text">
-                    Add questions the assistant can use to guide students (e.g., What is light?).
+                    Add questions that the assistant can use to guide students (for example, "What is light?").
                 </small>
             </div>
             <hr>
             <h3 class="section-title">Advanced Assistant Options</h3>
             <div class="form-group">
                 <label for="agent-attitude">
-                    What attitude should the assistant have toward the students?
+                    What attitude should the assistant have toward students?
                 </label>
                 <select name="agent_attitude" id="agent-attitude" class="form-control">
                     <option value="friendly">Friendly</option>
@@ -58,253 +60,248 @@
                 </label>
                 <input type="text" name="subjects" id="subjects" class="form-control">
                 <small class="form-text">
-                    List subjects to guide the assistant (e.g., optics, energy).
+                    List subjects to guide the assistant (for example, optics, energy).
                 </small>
             </div>
-            <div class="form-group">
-                <label for="restrict-to-subject">
-                    Restrict assistant to course subjects?
-                </label>
-                <input type="checkbox" name="restrict_to_subject" id="restrict-to-subject">
-                <small class="form-text">
-                    The assistant will only answer questions related to the subjects above.
-                </small>
+            <div class="advanced-options">
+                <div class="form-group checkbox-group">
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" name="restrict_to_subject" id="restrict-to-subject">
+                        <label for="restrict-to-subject">
+                            Restrict assistant to course subjects?
+                        </label>
+                    </div>
+                    <small class="form-text">
+                        The assistant will only answer questions related to the subjects above.
+                    </small>
+                </div>
+                <div class="form-group checkbox-group">
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" name="allow_questions" id="allow-questions" checked>
+                        <label for="allow-questions">
+                            Can the assistant ask questions to the student?
+                        </label>
+                    </div>
+                    <small class="form-text">
+                        If enabled, the assistant can suggest questions to students.
+                    </small>
+                </div>
+                <div class="form-group checkbox-group">
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" name="allow_emojis" id="allow-emojis" checked>
+                        <label for="allow-emojis">
+                            Can the assistant use emojis?
+                        </label>
+                    </div>
+                    <small class="form-text">
+                        If enabled, the assistant can use emojis in its answers.
+                    </small>
+                </div>
+                <div class="form-group checkbox-group">
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" name="trust_document" id="trust-document" checked>
+                        <label for="trust-document">
+                            Should the assistant trust the provided document?
+                        </label>
+                    </div>
+                    <small class="form-text">
+                        If enabled, the assistant will use the provided document as a trusted source.
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="word-limit">
+                        Word limit for assistant responses
+                    </label>
+                    <input type="number" name="word_limit" id="word-limit" class="form-control" min="0" step="50" value="0">
+                    <small class="form-text">
+                        0 = no limit. Set a value to limit responses.
+                    </small>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="allow-questions">
-                    Can the assistant give questions to the student?
-                </label>
-                <input type="checkbox" name="allow_questions" id="allow-questions" checked>
-                <small class="form-text">
-                    If enabled, the assistant can suggest questions to students.
-                </small>
+            <div class="form-actions">
+                <button type="submit" class="btn">Create Activity</button>
             </div>
-            <div class="form-group">
-                <label for="allow-emojis">
-                    Can the assistant use emojis?
-                </label>
-                <input type="checkbox" name="allow_emojis" id="allow-emojis" checked>
-                <small class="form-text">
-                    If enabled, the assistant can use emojis in its answers.
-                </small>
-            </div>
-            <div class="form-group">
-                <label for="trust-document">
-                    Should the assistant trust the provided document?
-                </label>
-                <input type="checkbox" name="trust_document" id="trust-document" checked>
-                <small class="form-text">
-                    If enabled, the assistant will use the provided document as a trusted source.
-                </small>
-            </div>
-            <div class="form-group">
-                <label for="word-limit">
-                    Limit the number of words in the assistant's answer? (0 = no limit)
-                </label>
-                <input type="number" name="word_limit" id="word-limit" class="form-control" min="0" value="0">
-                <small class="form-text">
-                    Set a word limit for each assistant answer. 0 means no limit.
-                </small>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 1.5rem;">
-                Create
-            </button>
         </form>
     </div>
 </div>
 
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100vw;
-        height: 100vh;
-        background-color: rgba(0, 0, 0, 0.5);
-        overflow: auto;
-    }
-    .modal-content {
-        background-color: white;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        padding: 32px 32px 28px 32px;
-        border-radius: 12px;
-        width: 99vw;
-        max-width: 700px;
-        max-height: 92vh;
-        overflow-y: auto;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-        font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-        border: 1.5px solid #eee;
-    }
-    .modal-title {
-        margin-bottom: 1.5rem;
-        font-size: 2.1rem;
-        color: #d64000;
-        text-align: center;
-        font-weight: 700;
-        font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-    }
-    .section-title {
-        margin-top: 2rem;
-        margin-bottom: 1rem;
-        font-size: 1.2rem;
-        color: #d64000;
-        font-weight: 600;
-    }
-    .form-group {
-        margin-bottom: 1.2rem;
-    }
-    .form-group label {
-        font-weight: 600;
-        margin-bottom: 0.3rem;
-        display: block;
-        font-size: 1.08rem;
-    }
-    .form-control {
-        width: 100%;
-        padding: 12px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        font-size: 1.05rem;
-        margin-top: 0.2rem;
-        font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-        resize: vertical;
-        min-height: 40px;
-        box-sizing: border-box;
-    }
-    #activity-description.form-control {
-        min-height: 60px;
-        max-height: 220px;
-        overflow-y: auto;
-    }
-    .form-text {
-        color: #888;
-        font-size: 0.97rem;
-        margin-top: 0.2rem;
-        display: block;
-    }
-    .btn {
-        background: #d64000;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        padding: 12px 24px;
-        font-size: 1.08rem;
-        cursor: pointer;
-        transition: background 0.2s;
-        font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-    }
-    .btn:hover {
-        background: #b33600;
-    }
-    .btn-block {
-        width: 100%;
-    }
-    .btn-secondary {
-        background: #e0e0e0;
-        color: #333;
-    }
-    .btn-secondary:hover {
-        background: #ccc;
-    }
-    .question-item {
-        background: #f8f8f8;
-        border-radius: 4px;
-        padding: 6px 10px;
-        margin-bottom: 5px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        font-size: 1.01rem;
-    }
-    .question-item button {
-        background: none;
-        border: none;
-        color: #d64000;
-        font-size: 1.1rem;
-        cursor: pointer;
-        margin-left: 8px;
-    }
-    .close {
-        float: right;
-        font-size: 28px;
-        font-weight: bold;
-        cursor: pointer;
-        color: #d64000;
-        margin-top: -10px;
-        margin-right: -10px;
-    }
-    .close:hover {
-        color: #b33600;
-    }
-</style>
 <script>
+    // JavaScript to handle the modal
     document.addEventListener('DOMContentLoaded', function() {
-        const modal = document.getElementById("activityModal");
-        const btn = document.getElementById("openActivityModal");
-        const closeBtn = modal.querySelector(".close");
-        const expertModeCheckbox = document.getElementById("activity-expert-mode");
-        const customPromptGroup = document.getElementById("custom-prompt-group");
-        const questionsList = document.getElementById("questions-list");
-        const newQuestionInput = document.getElementById("new-question");
-        const addQuestionBtn = document.getElementById("add-question");
-        const questionsHidden = document.getElementById("questions-hidden");
+        const modal = document.getElementById('activityModal');
+        const openModalBtn = document.getElementById('openActivityModal');
+        const closeBtn = modal.querySelector('.close');
+        const expertMode = document.getElementById('activity-expert-mode');
+        const customPromptGroup = document.getElementById('custom-prompt-group');
+        const questionsList = document.getElementById('questions-list');
+        const newQuestion = document.getElementById('new-question');
+        const addQuestionBtn = document.getElementById('add-question');
+        const questionsHidden = document.getElementById('questions-hidden');
         let questions = [];
-        function lockBodyScroll() { document.body.style.overflow = 'hidden'; }
-        function unlockBodyScroll() { document.body.style.overflow = ''; }
-        if (btn) {
-            btn.addEventListener("click", function() {
-                modal.style.display = "block";
-                lockBodyScroll();
+
+        // Open modal
+        if (openModalBtn) {
+            openModalBtn.addEventListener('click', function() {
+                modal.style.display = 'block';
             });
         }
-        if (closeBtn) {
-            closeBtn.addEventListener("click", function() {
-                modal.style.display = "none";
-                unlockBodyScroll();
-            });
-        }
-        window.addEventListener("click", function(event) {
+
+        // Close modal
+        closeBtn.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+
+        // Close when clicking outside
+        window.addEventListener('click', function(event) {
             if (event.target === modal) {
-                modal.style.display = "none";
-                unlockBodyScroll();
+                modal.style.display = 'none';
             }
         });
-        if (expertModeCheckbox) {
-            expertModeCheckbox.addEventListener("change", function() {
-                customPromptGroup.style.display = this.checked ? "block" : "none";
+
+        // Expert mode toggle
+        expertMode.addEventListener('change', function() {
+            customPromptGroup.style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Add question
+        addQuestionBtn.addEventListener('click', function() {
+            const questionText = newQuestion.value.trim();
+            if (questionText) {
+                addQuestion(questionText);
+                newQuestion.value = '';
+                newQuestion.focus();
+            }
+        });
+
+        // Enter key for adding questions
+        newQuestion.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addQuestionBtn.click();
+            }
+        });
+
+        // Add a question to the list
+        function addQuestion(text) {
+            questions.push(text);
+            updateQuestionsList();
+            updateHiddenField();
+        }
+
+        // Remove a question from the list
+        function removeQuestion(index) {
+            questions.splice(index, 1);
+            updateQuestionsList();
+            updateHiddenField();
+        }
+
+        // Update the questions list display
+        function updateQuestionsList() {
+            questionsList.innerHTML = '';
+            questions.forEach((question, index) => {
+                const questionItem = document.createElement('div');
+                questionItem.className = 'question-item';
+                
+                const questionText = document.createElement('span');
+                questionText.className = 'question-text';
+                questionText.textContent = question;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-question';
+                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                removeBtn.type = 'button';
+                removeBtn.addEventListener('click', function() {
+                    removeQuestion(index);
+                });
+                
+                questionItem.appendChild(questionText);
+                questionItem.appendChild(removeBtn);
+                questionsList.appendChild(questionItem);
             });
         }
-        function renderQuestions() {
-            questionsList.innerHTML = '';
-            questions.forEach((q, idx) => {
-                const div = document.createElement('div');
-                div.className = 'question-item';
-                div.innerHTML = `${q} <button type='button' data-idx='${idx}' class='remove-question'>✕</button>`;
-                questionsList.appendChild(div);
-            });
+
+        // Update the hidden field with JSON
+        function updateHiddenField() {
             questionsHidden.value = JSON.stringify(questions);
         }
-        addQuestionBtn.addEventListener('click', function() {
-            const val = newQuestionInput.value.trim();
-            if (val) {
-                questions.push(val);
-                newQuestionInput.value = '';
-                renderQuestions();
-            }
-        });
-        questionsList.addEventListener('click', function(e) {
-            if (e.target.classList.contains('remove-question')) {
-                const idx = parseInt(e.target.getAttribute('data-idx'));
-                questions.splice(idx, 1);
-                renderQuestions();
-            }
-        });
     });
 </script>
+
+<style>
+    /* Estilos específicos para o modal de atividades */
+    .questions-list {
+        margin-bottom: 12px;
+    }
+    
+    .question-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--background-light);
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+    }
+    
+    .question-text {
+        flex-grow: 1;
+    }
+    
+    .remove-question {
+        background: none;
+        border: none;
+        color: #999;
+        cursor: pointer;
+        padding: 4px;
+        font-size: 14px;
+        transition: color 0.2s ease;
+    }
+    
+    .remove-question:hover {
+        color: var(--danger-color);
+    }
+    
+    .question-input-group {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    
+    .question-input-group .form-control {
+        flex-grow: 1;
+    }
+    
+    .question-input-group .btn {
+        flex-shrink: 0;
+    }
+    
+    .section-title {
+        font-size: 1.2rem;
+        font-weight: 500;
+        color: var(--text-color);
+        margin: 24px 0 16px 0;
+    }
+    
+    .advanced-options {
+        background-color: var(--background-light);
+        padding: 16px;
+        border-radius: 8px;
+        margin-top: 16px;
+    }
+    
+    .checkbox-group {
+        margin-bottom: 16px;
+    }
+    
+    .checkbox-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .form-actions {
+        margin-top: 24px;
+        display: flex;
+        justify-content: flex-end;
+    }
+</style>

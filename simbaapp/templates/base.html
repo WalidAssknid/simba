@@ -5,34 +5,91 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SIMBA{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/simba.css' %}">
+    <link rel="stylesheet" href="{% static 'css/button-adjustments.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="shortcut icon" href="{% static 'images/icons/favicon.ico' %}" type="image/x-icon" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="{% if request.resolver_match.url_name == 'login' or request.resolver_match.url_name == 'register' %}auth-page{% endif %}">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <span>SIMBA</span>
+        </div>
+        <div class="sidebar-nav">
+            {% if request.session.user_id %}
+                {% if active_course %}
+                    <!-- Course navigation -->
+                    <div class="sidebar-section">
+                        <div class="sidebar-section-title">Courses</div>
+                        <a href="{% url 'courses' %}" class="sidebar-item {% if request.resolver_match.url_name == 'courses' %}active{% endif %}">
+                            <i class="fas fa-th"></i> All Courses
+                        </a>
+                    </div>
+                    <div class="sidebar-section">
+                        <div class="sidebar-section-title">My Courses</div>
+                        {% for enrolled_course in enrolled_courses %}
+                            <a href="{% url 'course_detail' enrolled_course.id %}" 
+                               class="sidebar-item {% if active_course.id == enrolled_course.id %}active{% endif %}">
+                                <i class="fas fa-book"></i> {{ enrolled_course.title }}
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <!-- Main navigation -->
+                    <a href="{% url 'courses' %}" class="sidebar-item {% if request.resolver_match.url_name == 'courses' %}active{% endif %}">
+                        <i class="fas fa-th"></i> Courses
+                    </a>
+                    {% if request.session.role == 'teacher' %}
+                        <a href="{% url 'dashboard' %}" class="sidebar-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        </a>
+                    {% endif %}
+                {% endif %}
+            {% else %}
+                <a href="{% url 'login' %}" class="sidebar-item {% if request.resolver_match.url_name == 'login' %}active{% endif %}">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </a>
+                <a href="{% url 'register' %}" class="sidebar-item {% if request.resolver_match.url_name == 'register' %}active{% endif %}">
+                    <i class="fas fa-user-plus"></i> Register
+                </a>
+            {% endif %}
+        </div>
+    </nav>
+    
+    <!-- Header -->
     <header class="header">
         <div class="container">
-            <div class="brand-container">
-                <div class="language-selector">
-                    <span>🇬🇧</span>
-                </div>
-                <h1>SIMBA</h1>
+            <div class="header-brand">
+                <span>SIMBA</span>
             </div>
-            <div class="nav-links">
+            <div class="header-actions">
                 {% if request.session.user_id %}
-                    <a href="{% url 'courses' %}" style="margin-right: 15px;">My Courses</a>
-                    {% if request.session.role == 'teacher' %}
-                        <a href="{% url 'dashboard' %}" style="margin-right: 15px;">Dashboard</a>
-                    {% endif %}
-                    <div class="user-menu">
-                        <span>{{ request.session.username }}</span>
+                    {% block action_button %}
+                        {% if request.resolver_match.url_name == 'courses' and request.session.role == 'teacher' %}
+                            <a href="{% url 'create_course' %}" class="add-button" title="Create Course">
+                                <i class="fas fa-plus"></i>
+                            </a>
+                        {% elif request.resolver_match.url_name == 'courses' and request.session.role == 'student' %}
+                            <a href="{% url 'join_course' %}" class="add-button" title="Join a Course">
+                                <i class="fas fa-plus"></i>
+                            </a>
+                        {% elif request.resolver_match.url_name == 'course_detail' and request.session.role == 'teacher' %}
+                            <button id="openActivityModal" class="add-button" title="Create Activity">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        {% endif %}
+                    {% endblock %}
+                    
+                    <div class="user-profile" id="userMenu">
+                        {{ request.session.username|first|upper }}
                         <div class="user-menu-content">
+                            <a href="#">My Account</a>
                             <a href="{% url 'logout' %}">Logout</a>
                         </div>
                     </div>
-                {% else %}
-                    <a href="{% url 'login' %}">Login</a>
-                    <a href="{% url 'register' %}">Register</a>
                 {% endif %}
             </div>
         </div>
@@ -50,17 +107,12 @@
         {% block content %}{% endblock %}
     </main>
     
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; </p>
-        </div>
-    </footer>
-    
     {% block scripts %}{% endblock %}
 
-    {# Add script to fade out messages after 3 seconds #}
+    {# Script for menus and interactions #}
     <script>
         document.addEventListener('DOMContentLoaded', (event) => {
+            // Fade out alerts
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(alert => {
                 setTimeout(() => {
@@ -70,28 +122,81 @@
                            alert.remove();
                         }
                     });
-                }, 3000); // 3000 milliseconds = 3 seconds
+                }, 3000);
             });
             
-            const userMenu = document.querySelector('.user-menu');
+            // User menu
+            const userMenu = document.getElementById('userMenu');
             if (userMenu) {
-                userMenu.addEventListener('mouseenter', () => {
-                    userMenu.classList.add('active');
+                userMenu.addEventListener('click', () => {
+                    const content = userMenu.querySelector('.user-menu-content');
+                    content.style.display = content.style.display === 'block' ? 'none' : 'block';
                 });
                 
-                userMenu.addEventListener('mouseleave', () => {
-                    setTimeout(() => {
-                        userMenu.classList.remove('active');
-                    }, 300);
+                // Close menu when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (userMenu && !userMenu.contains(e.target)) {
+                        const content = userMenu.querySelector('.user-menu-content');
+                        if (content) content.style.display = 'none';
+                    }
+                });
+            }
+
+            // Toggle for mobile menu
+            const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', () => {
+                    const sidebar = document.querySelector('.sidebar');
+                    sidebar.classList.toggle('active');
                 });
             }
         });
     </script>
-    
-    <style>
-        .user-menu.active .user-menu-content {
-            display: block;
-        }
-    </style>
+</body>
+</html>
+
+    {# Script para menus e interações #}
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            // Fade out para alertas
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    alert.classList.add('fade-out');
+                    alert.addEventListener('transitionend', () => {
+                        if (alert.style.opacity == 0 || alert.classList.contains('fade-out')) { 
+                           alert.remove();
+                        }
+                    });
+                }, 3000);
+            });
+            
+            // Menu do usuário
+            const userMenu = document.getElementById('userMenu');
+            if (userMenu) {
+                userMenu.addEventListener('click', () => {
+                    const content = userMenu.querySelector('.user-menu-content');
+                    content.style.display = content.style.display === 'block' ? 'none' : 'block';
+                });
+                
+                // Fechar menu ao clicar fora
+                document.addEventListener('click', (e) => {
+                    if (userMenu && !userMenu.contains(e.target)) {
+                        const content = userMenu.querySelector('.user-menu-content');
+                        if (content) content.style.display = 'none';
+                    }
+                });
+            }
+
+            // Toggle para menu mobile
+            const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', () => {
+                    const sidebar = document.querySelector('.sidebar');
+                    sidebar.classList.toggle('active');
+                });
+            }
+        });
+    </script>
 </body>
 </html>

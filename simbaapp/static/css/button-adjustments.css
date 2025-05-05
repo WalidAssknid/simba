@@ -1,0 +1,17 @@
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 24px; 
+  position: absolute;
+  right: calc(var(--sidebar-width) / 3);
+}
+
+.add-button {
+  position: relative;
+  top: 2px; 
+}
+
+.header-brand {
+  left: calc(var(--sidebar-width) / 2);
+  transform: translateX(-50%);
+}

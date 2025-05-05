@@ -1,23 +1,101 @@
 {% extends 'base.html' %}
-{% block title %}Join Course | SIMBA{% endblock %}
+{% block title %}Join a Course | SIMBA{% endblock %}
+
+{% block header_title %}
+<h2>Join a Course</h2>
+{% endblock %}
+
+{% block content %}
+<div class="join-course-container">
+    <div class="card">
+        <div class="card-header">
+            <h3>Enter the course code</h3>
+        </div>
+        <div class="card-body">
+            <p class="card-description">Ask your teacher for the course code and enter it below.</p>
+            <form method="post" action="{% url 'join_course' %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="enrollment_code_main">Enrollment code:</label>
+                    <input type="text" name="enrollment_code" id="enrollment_code_main" class="form-control" required>
+                    <small>Enter the code provided by your teacher</small>
+                </div>
+                
+                <div class="form-actions">
+                    <a href="{% url 'courses' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn">Join</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Overlay and popup dialog -->
+<div class="overlay" id="joinOverlay"></div>
+<div class="modal" id="joinDialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Join a Course</h3>
+            <span class="close" id="closeBtn">&times;</span>
+        </div>
+        
+        <form id="joinForm" action="{% url 'join_course' %}" method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="enrollment_code">Enrollment code:</label>
+                <input type="text" id="enrollment_code" name="enrollment_code" class="form-control" required>
+                <small>Enter the code provided by your teacher</small>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn">Join</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
 
 {% block extra_css %}
 <style>
-    .popup-dialog {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: white;
-        padding: 20px;
-        border-radius: 5px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-        z-index: 1000;
-        width: 80%;
-        max-width: 500px;
+    .join-course-container {
+        max-width: 600px;
+        margin: 40px auto;
     }
     
+    .card {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+    }
+    
+    .card-header {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 24px;
+    }
+    
+    .card-header h3 {
+        margin: 0;
+        font-weight: 500;
+    }
+    
+    .card-body {
+        padding: 24px;
+    }
+    
+    .card-description {
+        margin-bottom: 24px;
+        color: #666;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 24px;
+    }
+    
+    /* Modal and overlay styles that already exist in new_style.css */
     .overlay {
         display: none;
         position: fixed;
@@ -28,66 +106,7 @@
         background: rgba(0, 0, 0, 0.5);
         z-index: 999;
     }
-    
-    .popup-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-    
-    .popup-header h3 {
-        margin: 0;
-    }
-    
-    .close-btn {
-        background: none;
-        border: none;
-        font-size: 20px;
-        cursor: pointer;
-    }
 </style>
-{% endblock %}
-
-{% block content %}
-<div class="overlay" id="joinOverlay"></div>
-<div class="popup-dialog" id="joinDialog">
-    <div class="popup-header">
-        <h3>Join Course</h3>
-        <button class="close-btn" id="closeBtn">&times;</button>
-    </div>
-    
-    <form id="joinForm" action="{% url 'join_course' %}" method="POST">
-        {% csrf_token %}
-        <div class="form-group">
-            <label for="enrollment_code">Enrollment Code:</label>
-            <input type="text" id="enrollment_code" name="enrollment_code" class="form-control" required>
-            <small>Enter the code provided by your teacher</small>
-        </div>
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Join</button>
-                </button>
-        </div>
-    </form>
-</div>
-
-<div class="form-container">
-    <h2>Join Course</h2>
-    <form method="post" action="{% url 'join_course' %}">
-        {% csrf_token %}
-        <div class="form-group">
-            <label for="enrollment_code_main">Enrollment Code:</label>
-            <input type="text" name="enrollment_code" id="enrollment_code_main" class="form-control" required>
-            <small>Enter the code provided by your teacher</small>
-        </div>
-        
-        <div class="form-actions">
-            <a href="{% url 'courses' %}" class="btn btn-secondary">Cancel</a>
-            <button type="submit" class="btn btn-primary">Join</button>
-        </div>
-        </div>
-    </form>
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -101,11 +120,24 @@
         }
         
         // Close button functionality
-        document.getElementById('closeBtn').addEventListener('click', function() {
-            document.getElementById('joinDialog').style.display = 'none';
-            document.getElementById('joinOverlay').style.display = 'none';
-            window.history.replaceState({}, document.title, window.location.pathname);
-        });
+        const closeBtn = document.getElementById('closeBtn');
+        const overlay = document.getElementById('joinOverlay');
+        const dialog = document.getElementById('joinDialog');
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                dialog.style.display = 'none';
+                overlay.style.display = 'none';
+            });
+        }
+        
+        // Close when clicking on overlay
+        if (overlay) {
+            overlay.addEventListener('click', function() {
+                dialog.style.display = 'none';
+                overlay.style.display = 'none';
+            });
+        }
     });
 </script>
 {% endblock %}

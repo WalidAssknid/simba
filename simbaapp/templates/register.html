@@ -1,42 +1,128 @@
 {% extends 'base.html' %}
 {% block title %}Register | SIMBA{% endblock %}
+
 {% block content %}
-<div class="form-container">
-    <h2>Create a new account</h2>
-    <form method="post" action="{% url 'register' %}">
-        {% csrf_token %}
-        <div class="form-group">
-            <label for="user-type">User type:</label>
-            <select name="role" id="user-type" class="form-control">
-                <option value="student">Student</option>
-                <option value="teacher">Teacher</option>
-            </select>
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2>Create your account</h2>
+            <p>Join SIMBA and start learning</p>
         </div>
         
-        <div class="form-group">
-            <label for="username">Username:</label>
-            <input type="text" name="username" id="username" class="form-control" required>
+        <div class="auth-body">
+            <form method="post" action="{% url 'register' %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="user-type">User type:</label>
+                    <select name="role" id="user-type" class="form-control">
+                        <option value="student">Student</option>
+                        <option value="teacher">Teacher</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" name="username" id="username" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" name="email" id="email" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" name="password" id="password" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password_confirm">Confirm password:</label>
+                    <input type="password" name="password_confirm" id="password_confirm" class="form-control" required>
+                </div>
+                
+                <button type="submit" class="btn btn-block">Register</button>
+            </form>
         </div>
         
-        <div class="form-group">
-            <label for="email">Email:</label>
-            <input type="email" name="email" id="email" class="form-control" required>
+        <div class="auth-footer">
+            <p>Already have an account? <a href="{% url 'login' %}">Login</a></p>
         </div>
-        
-        <div class="form-group">
-            <label for="password">Password:</label>
-            <input type="password" name="password" id="password" class="form-control" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="password_confirm">Confirm password:</label>
-            <input type="password" name="password_confirm" id="password_confirm" class="form-control" required>
-        </div>
-        
-        <button type="submit" class="btn btn-success btn-block">Register</button>
-    </form>
-    <p class="text-center mt-3">
-        Already have an account? <a href="{% url 'login' %}">Log in</a>
-    </p>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background-color: #f8f8f8;
+        padding-left: 0 !important;
+    }
+    
+    .sidebar, .header {
+        display: none;
+    }
+    
+    .container {
+        padding: 0;
+        max-width: 100%;
+    }
+    
+    .auth-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 20px;
+    }
+    
+    .auth-card {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 400px;
+        overflow: hidden;
+    }
+    
+    .auth-header {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 30px 24px;
+        text-align: center;
+    }
+    
+    .auth-header h2 {
+        margin: 0 0 8px 0;
+        font-weight: 500;
+        font-size: 1.8rem;
+    }
+    
+    .auth-header p {
+        margin: 0;
+        opacity: 0.9;
+        font-size: 1rem;
+    }
+    
+    .auth-body {
+        padding: 30px 24px;
+    }
+    
+    .auth-footer {
+        padding: 16px 24px;
+        background-color: #f8f8f8;
+        text-align: center;
+        border-top: 1px solid #eee;
+    }
+    
+    .auth-footer p {
+        margin: 0;
+        color: #666;
+    }
+    
+    .btn-block {
+        width: 100%;
+        margin-top: 24px;
+        padding: 12px;
+    }
+</style>
 {% endblock %}

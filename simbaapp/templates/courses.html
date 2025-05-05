@@ -1,32 +1,23 @@
 {% extends 'base.html' %}
-{% block title %}My Courses | SIMBA{% endblock %}
-{% block content %}
-<div class="course-header">
-    <h2>My Courses</h2>
-    {% if request.session.role == 'teacher' %}
-    <div class="teacher-actions">
-        <a href="{% url 'create_course' %}" class="btn btn-primary">
-            <span>+</span> Create Course
-        </a>
-        <a href="{% url 'join_course' %}" class="btn btn-secondary">
-            <span>+</span> Join Course
-        </a>
-    </div>
-    {% else %}
-    <a href="{% url 'join_course' %}" id="joinCourseBtn" class="btn btn-secondary">
-        <span>+</span> Join Course
-    </a>
-    {% endif %}
-</div>
+{% block title %}Courses | SIMBA{% endblock %}
 
+{% block header_title %}
+<h2>Courses</h2>
+{% endblock %}
+
+{% block content %}
 <div class="courses-container">
     {% for course in courses %}
         <div class="course-card">
-            <h3>{{ course.title }}</h3>
-            <p>{{ course.description|truncatechars:100 }}</p>
-            <small>Created on: {{ course.created_at|date:"d/m/Y H:i" }}</small>
-            <div class="course-actions">
-                <a href="{% url 'course_detail' course.id %}" class="btn">View</a>
+            <div class="course-card-header course-color-{% cycle '1' '2' '3' '4' %}">
+            </div>
+            <div class="course-card-content">
+                <h3>{{ course.title }}</h3>
+                <p>{{ course.description|truncatechars:100 }}</p>
+                <small>Created on: {{ course.created_at|date:"d/m/Y" }}</small>
+                <div class="course-actions">
+                    <a href="{% url 'course_detail' course.id %}" class="btn btn-secondary">View course</a>
+                </div>
             </div>
         </div>
     {% empty %}
@@ -34,9 +25,9 @@
             <h3>No courses found</h3>
             <p>
                 {% if request.session.role == 'teacher' %}
-                    Click on "Create Course" to get started!
+                    Click the <i class="fas fa-plus"></i> button to create a new course!
                 {% else %}
-                    Click on "Join Course" to participate!
+                    Click the <i class="fas fa-plus"></i> button to join a course!
                 {% endif %}
             </p>
         </div>
@@ -66,12 +57,36 @@
     
     .course-card {
         border: 1px solid #ddd;
-        padding: 1.5rem;
         border-radius: 8px;
         background-color: white;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         display: flex;
         flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .course-card-header {
+        height: 100px;
+    }
+    
+    .course-color-1 {
+        background-color: #FF7043;
+    }
+    
+    .course-color-2 {
+        background-color: #FF5722;
+    }
+    
+    .course-color-3 {
+        background-color: #E64A19;
+    }
+    
+    .course-color-4 {
+        background-color: #D84315;
+    }
+    
+    .course-card-content {
+        padding: 1.5rem;
     }
     
     .course-card h3 {

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SIMBA{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="shortcut icon" href="{% static 'images/icons/favicon.ico' %}" type="image/x-icon" />
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -20,10 +21,12 @@
             <div class="nav-links">
                 {% if request.session.user_id %}
                     <a href="{% url 'courses' %}" style="margin-right: 15px;">My Courses</a>
+                    {% if request.session.role == 'teacher' %}
+                        <a href="{% url 'dashboard' %}" style="margin-right: 15px;">Dashboard</a>
+                    {% endif %}
                     <div class="user-menu">
                         <span>{{ request.session.username }}</span>
                         <div class="user-menu-content">
-                            <a href="{% url 'courses' %}">Dashboard</a>
                             <a href="{% url 'logout' %}">Logout</a>
                         </div>
                     </div>

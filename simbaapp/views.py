@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 import urllib
-from .models import User, Course, Activity, CourseEnrollment
+from .models import User, Course, Activity, CourseEnrollment, Message
 
 def login_view(request):
     if request.method == 'POST':
@@ -266,3 +266,64 @@ def join_course_view(request):
             return render(request, 'join_course.html') 
             
     return render(request, 'join_course.html')
+
+def dashboard_view(request):
+    # Ensure user is logged in and is a teacher
+    if not request.session.get('user_id'):
+        return redirect('login')
+    user_id = request.session.get('user_id')
+    user = User.objects.get(id=user_id)
+    if user.role != 'teacher':
+        messages.error(request, "Only teachers can access the dashboard.")
+        return redirect('courses')
+
+    # Get teacher's courses and selected course
+    courses = Course.objects.filter(owner=user).order_by('-created_at')
+    selected_course_id = request.GET.get('course_id')
+    if selected_course_id:
+        selected_course = courses.filter(id=selected_course_id).first()
+    else:
+        selected_course = courses.first()
+    if not selected_course:
+        messages.info(request, "No courses found. Create one first.")
+        return redirect('create_course')
+
+    # Compute stats for the selected course
+    students = CourseEnrollment.objects.filter(course=selected_course).select_related('user')
+    activities_count = Activity.objects.filter(course=selected_course).count()
+    student_messages_qs = Message.objects.filter(
+        thread__activity__course=selected_course,
+        role='student'
+    ).select_related('thread__user')
+    total_messages = student_messages_qs.count()
+
+    # Aggregate per-student message counts and average lengths
+    counts = {}
+    lengths = {}
+    for msg in student_messages_qs:
+        username = msg.thread.user.username
+        counts[username] = counts.get(username, 0) + 1
+        lengths[username] = lengths.get(username, 0) + len(msg.content)
+    stats_per_student = []
+    for username, count in counts.items():
+        avg_len = lengths[username] / count if count else 0
+        stats_per_student.append({
+            'username': username,
+            'message_count': count,
+            'avg_length': round(avg_len, 2)
+        })
+
+    # Recent messages preview
+    last_messages = student_messages_qs.order_by('-timestamp')[:10]
+
+    # Prepare context and render template
+    context = {
+        'courses': courses,
+        'selected_course': selected_course,
+        'students_count': students.count(),
+        'activities_count': activities_count,
+        'total_messages': total_messages,
+        'stats_per_student': stats_per_student,
+        'last_messages': last_messages,
+    }
+    return render(request, 'dashboard.html', context)

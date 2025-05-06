@@ -9,16 +9,28 @@
 <div class="courses-container">
     {% for course in courses %}
         <div class="course-card">
-            <div class="course-card-header course-color-{% cycle '1' '2' '3' '4' %}">
-            </div>
-            <div class="course-card-content">
-                <h3>{{ course.title }}</h3>
-                <p>{{ course.description|truncatechars:100 }}</p>
-                <small>Created on: {{ course.created_at|date:"d/m/Y" }}</small>
-                <div class="course-actions">
-                    <a href="{% url 'course_detail' course.id %}" class="btn btn-secondary">View course</a>
+            <a href="{% url 'course_detail' course.id %}" class="course-card-link">
+                <div class="card-header course-color-{% cycle '1' '2' '3' '4' %}">
+                    {% if request.session.role == 'teacher' and request.session.user_id == course.owner.id %}
+                    <div class="card-options">
+                        <button class="dropdown-toggle"><i class="fas fa-angle-down"></i></button>
+                        <div class="dropdown-menu">
+                            <a href="{% url 'edit_course' course.id %}" class="dropdown-item">Edit course</a>
+                            <a href="#" class="dropdown-item delete-course" data-course-id="{{ course.id }}">Delete course</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="course-info">
+                        <h3 class="course-title">{{ course.title }}</h3>
+                        <p class="teacher-name">{{ course.owner.username }}</p>
+                    </div>
                 </div>
-            </div>
+                <div class="card-body">
+                    <div class="profile-circle">
+                        {{ course.owner.username|first|upper }}
+                    </div>
+                </div>
+            </a>
         </div>
     {% empty %}
         <div class="empty-state">
@@ -37,94 +49,191 @@
 
 {% block extra_css %}
 <style>
-    .course-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-    }
-    
-    .teacher-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-    
-    .courses-container {
-        display: grid;
-        gap: 1.5rem;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    }
-    
-    .course-card {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        background-color: white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-    
-    .course-card-header {
-        height: 100px;
-    }
-    
-    .course-color-1 {
-        background-color: #FF7043;
-    }
-    
-    .course-color-2 {
-        background-color: #FF5722;
-    }
-    
-    .course-color-3 {
-        background-color: #E64A19;
-    }
-    
-    .course-color-4 {
-        background-color: #D84315;
-    }
-    
-    .course-card-content {
-        padding: 1.5rem;
-    }
-    
-    .course-card h3 {
-        margin-top: 0;
-        color: #333;
-    }
-    
-    .course-card p {
-        flex-grow: 1;
-        color: #666;
-    }
-    
-    .course-card small {
-        color: #888;
-        display: block;
-        margin-bottom: 1rem;
-    }
-    
-    .course-actions {
-        display: flex;
-        justify-content: flex-end;
-    }
-    
-    .empty-state {
-        grid-column: 1 / -1;
-        text-align: center;
-        padding: 3rem;
-        background-color: #f9f9f9;
-        border-radius: 8px;
-    }
-    
-    .empty-state h3 {
-        margin-top: 0;
-        color: #666;
-    }
-    
-    .empty-state p {
-        color: #888;
-    }
+/* Course Cards */
+.courses-container {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+  margin-top: 24px;
+}
+
+.course-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  height: 320px; 
+  transition: box-shadow 0.2s ease;
+}
+
+.course-card:hover {
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.course-card-link {
+  text-decoration: none;
+  color: inherit;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+}
+
+.card-header {
+  height: 120px;
+  position: relative;
+  padding: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; 
+}
+
+/* Course color variations */
+.course-color-1 {
+  background-color: #FF7043;
+}
+
+.course-color-2 {
+  background-color: #FF5722;
+}
+
+.course-color-3 {
+  background-color: #E64A19;
+}
+
+.course-color-4 {
+  background-color: #D84315;
+}
+
+.course-info {
+  display: flex;
+  flex-direction: column;
+  z-index: 11;
+  width: 100%;
+  padding-right: 70px;
+}
+
+.course-title {
+  font-size: 1.5rem;
+  color: white !important;
+  margin: 0 0 8px 0;
+  font-weight: 500;
+  text-align: left;
+}
+
+.teacher-name {
+  font-size: 1rem;
+  color: white !important;
+  font-weight: normal;
+  margin: 0;
+  text-align: left;
+}
+
+.card-options {
+  position: absolute;
+  top: 15px;
+  right: 50px;
+  z-index: 25;
+  display: block;
+}
+
+.dropdown-toggle {
+  background: transparent;
+  border: none;
+  font-size: 1.4rem;
+  color: white;
+  cursor: pointer;
+  padding: 8px;
+  opacity: 0.9;
+}
+
+.dropdown-toggle:hover {
+  opacity: 1;
+  background-color: rgba(255,255,255,0.1);
+  border-radius: 50%;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  min-width: 160px;
+  z-index: 30;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.card-options:hover .dropdown-menu {
+  display: block;
+}
+
+.dropdown-item {
+  display: block;
+  padding: 10px 15px;
+  text-decoration: none;
+  color: #333;
+}
+
+.dropdown-item:hover {
+  background-color: #f5f5f5;
+}
+
+.card-body {
+  flex-grow: 1;
+  position: relative;
+  padding: 16px;
+}
+
+.profile-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: white;
+  border: 2px solid rgba(255,255,255,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #333;
+  font-weight: bold;
+  position: absolute;
+  right: 16px;
+  top: -32px; /* Metade para cima no header */
+  z-index: 15;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  margin: 32px auto;
+  max-width: 600px;
+  grid-column: 1 / -1; /* Garante que ocupe toda a largura da grid */
+}
+
+.empty-state h3 {
+  font-size: 1.5rem;
+  margin-bottom: 16px;
+  color: #333;
+  text-align: center;
+}
+
+.empty-state p {
+  color: #666;
+  margin-bottom: 24px;
+  text-align: center;
+}
 </style>
 {% endblock %}

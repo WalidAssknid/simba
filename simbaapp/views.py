@@ -299,6 +299,48 @@ def dashboard_view(request):
 
     # Aggregate per-student message counts and average lengths
     counts = {}
+    
+def edit_course_view(request, course_id):
+    """View for teachers to edit their courses"""
+    if not request.session.get('user_id'):
+        return redirect('login')
+        
+    user_id = request.session.get('user_id')
+    user = User.objects.get(id=user_id)
+    
+    # Only teachers can edit courses
+    if user.role != 'teacher':
+        messages.error(request, "Only teachers can edit courses.")
+        return redirect('courses')
+    
+    try:
+        course = Course.objects.get(id=course_id)
+        
+        # Only the owner of the course can edit it
+        if course.owner.id != user_id:
+            messages.error(request, "You can only edit your own courses.")
+            return redirect('courses')
+            
+        if request.method == 'POST':
+            title = request.POST.get('title')
+            description = request.POST.get('description')
+            
+            if not title:
+                messages.error(request, "Title is required.")
+                return render(request, 'create_course.html', {'course': course, 'edit_mode': True})
+                
+            course.title = title
+            course.description = description
+            course.save()
+            
+            messages.success(request, "Course updated successfully!")
+            return redirect('course_detail', course_id=course.id)
+            
+        return render(request, 'create_course.html', {'course': course, 'edit_mode': True})
+        
+    except Course.DoesNotExist:
+        messages.error(request, "Course not found.")
+        return redirect('courses')
     lengths = {}
     for msg in student_messages_qs:
         username = msg.thread.user.username

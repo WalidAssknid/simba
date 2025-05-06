@@ -25,7 +25,7 @@
                     <div class="sidebar-section">
                         <div class="sidebar-section-title">Courses</div>
                         <a href="{% url 'courses' %}" class="sidebar-item {% if request.resolver_match.url_name == 'courses' %}active{% endif %}">
-                            <i class="fas fa-th"></i> All Courses
+                            All Courses
                         </a>
                     </div>
                     <div class="sidebar-section">
@@ -33,18 +33,18 @@
                         {% for enrolled_course in enrolled_courses %}
                             <a href="{% url 'course_detail' enrolled_course.id %}" 
                                class="sidebar-item {% if active_course.id == enrolled_course.id %}active{% endif %}">
-                                <i class="fas fa-book"></i> {{ enrolled_course.title }}
+                                {{ enrolled_course.title }}
                             </a>
                         {% endfor %}
                     </div>
                 {% else %}
                     <!-- Main navigation -->
                     <a href="{% url 'courses' %}" class="sidebar-item {% if request.resolver_match.url_name == 'courses' %}active{% endif %}">
-                        <i class="fas fa-th"></i> Courses
+                        Courses
                     </a>
                     {% if request.session.role == 'teacher' %}
                         <a href="{% url 'dashboard' %}" class="sidebar-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                            Dashboard
                         </a>
                     {% endif %}
                 {% endif %}
@@ -96,7 +96,7 @@
     </header>
     
     <main class="container">
-        {% if messages %}
+        {% if messages and request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'register' %}
             {% for message in messages %}
                 <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-warning{% endif %}">
                     {{ message }}

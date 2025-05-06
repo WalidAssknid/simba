@@ -9,6 +9,7 @@ urlpatterns = [
     path('chainlit/', views.chainlit_view, name='chainlit_view'),
     path('course/create/', views.create_course_view, name='create_course'), 
     path('course/<int:course_id>/', views.course_detail_view, name='course_detail'),  
+    path('course/<int:course_id>/edit/', views.edit_course_view, name='edit_course'),  
     path('course/<int:course_id>/activity/create/', views.create_activity_view, name='create_activity'),  
     path('course/join/', views.join_course_view, name='join_course'),  
     path('dashboard/', views.dashboard_view, name='dashboard'),

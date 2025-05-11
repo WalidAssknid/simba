@@ -13,11 +13,11 @@
   --text-color: #333333;
   --background-color: #ffffff;
   --background-light: #f5f5f5;
-  --border-color: #d1d1d1; /* Slightly darker border color */
+  --border-color: #333333; /* Changed to black */
   --hover-color: #f8f8f8;
-  --sidebar-width: 280px; /* Increased from 240px */
+  --sidebar-width: 280px;
   --header-height: 64px;
-  --card-shadow: none; /* Removed shadow */
+  --card-shadow: none;
   --transition-speed: 0.3s;
 }
 
@@ -28,8 +28,9 @@
 }
 
 body {
-  font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   line-height: 1.6;
+  letter-spacing: -0.06em; /* -6% letter spacing conforme solicitado */
   background-color: white; /* Changed to white */
   color: var(--text-color);
   min-height: 100vh;
@@ -44,6 +45,7 @@ a {
   text-decoration: none;
   color: var(--primary-color);
   transition: color var(--transition-speed) ease;
+  letter-spacing: -0.06em; /* Consistência no letter spacing */
 }
 
 a:hover {
@@ -76,7 +78,7 @@ main.container {
   background: white;
   color: var(--text-color);
   box-shadow: none; 
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid black; /* Thin black border */
   position: fixed;
   top: 0;
   left: 0;
@@ -84,14 +86,16 @@ main.container {
   height: var(--header-height);
   z-index: 100;
   padding: 0;
+  letter-spacing: -0.06em; /* Consistência no letter spacing */
 }
 
 .header .container {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  padding: 0 20px 0 calc(var(--sidebar-width) + 16px);
+  padding: 0 20px 0 calc(var(--sidebar-width) + 24px); /* Increased padding for wider hero */
   height: 100%;
+  max-width: 1300px; /* Increased max-width */
 }
 
 .header-brand {
@@ -100,9 +104,10 @@ main.container {
   color: var(--primary-color);
   margin-right: auto;
   position: absolute;
-  left: calc(var(--sidebar-width) / 2);
+  left: calc(var(--sidebar-width) + 40px); /* Increased for better centering */
   transform: translateX(-50%);
   z-index: 102;
+  letter-spacing: -0.06em; /* Consistência no letter spacing */
 }
 
 .header-title {
@@ -123,9 +128,10 @@ main.container {
   right: calc(var(--sidebar-width) / 5);
 }
 
+/* Button styles - consolidated from button-adjustments.css */
 .add-button {
   background-color: var(--primary-color);
-  color: white !important; /* Force white color */
+  color: white;
   width: 36px;
   height: 36px;
   border-radius: 4px;
@@ -134,24 +140,22 @@ main.container {
   justify-content: center;
   font-size: 1.2rem;
   cursor: pointer;
-  border: 1px solid transparent;
-  box-shadow: none;
-  transition: background-color 0.2s ease;
-  position: relative;
-  top: 2px;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
 }
 
 .add-button:hover {
   background-color: var(--primary-light);
-  color: white !important; /* Keep color white on hover */
-  border-color: #b1b1b1;
-  transform: none; /* Remove transform that might cause issues */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
 }
 
 .add-button i {
   color: white !important; /* Force icon to be white */
 }
 
+/* User profile button */
 .user-profile {
   width: 40px;
   height: 40px;
@@ -164,12 +168,14 @@ main.container {
   cursor: pointer;
   font-weight: bold;
   position: relative;
-  border: 1px solid var(--border-color);
-  box-shadow: none;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
 }
 
 .user-profile:hover {
   background-color: var(--primary-dark);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
 }
 
 /* Sidebar */
@@ -181,20 +187,25 @@ main.container {
   width: var(--sidebar-width);
   background-color: white;
   box-shadow: none;
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid black; /* Thin black border */
   z-index: 99;
   padding-top: var(--header-height);
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
+/* Sidebar Brand */
 .sidebar-brand {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 16px;
+  justify-content: center;
+  padding: 12px 16px;
   color: var(--primary-color);
   font-size: 1.5rem;
   font-weight: bold;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid black; /* Única borda inferior da marca */
   position: fixed;
   top: 0;
   left: 0;
@@ -202,6 +213,14 @@ main.container {
   height: var(--header-height);
   background-color: white;
   z-index: 101;
+  letter-spacing: -0.06em; /* Consistência no letter spacing */
+}
+
+.sidebar-tagline {
+  font-size: 0.8rem;
+  font-weight: normal;
+  color: #666;
+  margin-top: -2px;
 }
 
 .sidebar-brand img {
@@ -211,23 +230,70 @@ main.container {
 }
 
 .sidebar-nav {
-  padding: 16px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-top: 0; /* Remove margem superior da nav */
+  border-top: none; /* Garantir que não haja borda superior na nav */
 }
 
+/* Sidebar item styles */
 .sidebar-item {
-  padding: 12px 16px;
+  padding: 16px;
   display: flex;
   align-items: center;
+  justify-content: center;
   color: var(--text-color);
   transition: background-color 0.2s ease;
   cursor: pointer;
-  margin: 4px 8px;
-  border-radius: 4px;
+  margin: 0;
+  border-radius: 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  position: relative;
+  border-bottom: 1px solid black; /* Apenas borda inferior */
+  border-top: none; /* Remover borda superior */
+  letter-spacing: -0.06em; /* Consistência no letter spacing */
+}
+
+/* O primeiro item do menu não deve ter borda superior */
+.sidebar-nav > .sidebar-item:first-child {
+  border-top: none; /* Remover borda superior do primeiro item */
+  margin-top: 0;
 }
 
 .sidebar-item.active {
   background-color: var(--primary-light);
   color: white;
+  font-weight: 600;
+}
+
+/* Styles for course subitems */
+.sidebar-item.course-subitem {
+  padding: 12px 12px 12px 35px;
+  font-size: 0.9rem;
+  background-color: #f8f8f8;
+  color: #333333; /* Ensure text is black */
+  justify-content: flex-start; /* Align text to the left */
+  text-align: left;
+  width: 100%;
+}
+
+/* Limpa qualquer borda entre o último subitem de curso e o próximo item do menu */
+.sidebar-item.course-subitem:last-of-type {
+  border-bottom: none; /* Remove a borda inferior do último subitem */
+}
+
+/* O item após o último subitem mantém sua borda superior */
+.sidebar-item.course-subitem:last-of-type + .sidebar-item {
+  border-top: 1px solid black; /* Garante que haja apenas uma borda entre eles */
+}
+
+.sidebar-item.course-subitem.active {
+  background-color: var(--primary-light); /* Orange highlight for active course */
+  color: white;
+  font-weight: 600;
 }
 
 .sidebar-item:hover:not(.active) {
@@ -245,12 +311,11 @@ main.container {
 
 .sidebar-section-title {
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   color: #777;
-  margin-bottom: 8px;
-  padding: 0 8px;
+  margin: 16px 0 8px 16px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: -0.03em;
 }
 
 /* User menu */
@@ -294,39 +359,73 @@ main.container {
 /* Course Cards */
 .courses-container {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 24px;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  margin-top: 24px;
+  padding: 24px 16px;
 }
 
 .course-card {
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border: 1px solid #d1d1d1; /* Borda fina cinza para dar destaque */
+  border-radius: 4px;
+  overflow: hidden;
   background-color: white;
-  box-shadow: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  transition: border-color 0.2s ease;
-  height: 100%;
-  position: relative; 
+  height: 220px; /* Reduced height to match wireframe */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Sombra sutil para mais destaque */
 }
 
 .course-card:hover {
-  transform: none;
-  box-shadow: none;
-  border-color: #b1b1b1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  border-color: #b1b1b1; /* Borda mais escura no hover */
 }
 
 .course-card-header {
-  height: 100px;
-  background-color: var(--primary-color);
-  position: absolute; /* Posicionamento absoluto para cobrir toda a largura */
-  top: 0;
-  left: 0;
-  right: 0; /* Estende até a extremidade direita */
+  padding: 16px;
+  border-bottom: 1px solid #e5e5e5; /* Borda mais clara para o cabeçalho */
+  position: relative;
+}
+
+.course-card-header .dropdown-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.course-card h3 {
+  font-size: 1.25rem;
+  margin: 0 0 8px 0;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.course-card p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.course-card-content {
+  padding: 16px;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.profile-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: white;
+  border: 1px solid #e5e5e5; /* Borda cinza clara para o círculo de perfil */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--text-color);
 }
 
 /* Course color variations */
@@ -403,8 +502,8 @@ main.container {
   padding: 48px 24px;
   background-color: white;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
-  box-shadow: none;
+  border: 1px solid #d1d1d1; /* Borda fina cinza para dar destaque */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Sombra sutil */
   margin: 32px auto;
   max-width: 600px;
 }
@@ -431,18 +530,18 @@ main.container {
 .activity-card {
   background-color: white;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
-  box-shadow: none;
+  border: 1px solid #d1d1d1; /* Borda fina cinza para dar destaque */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Sombra sutil */
   padding: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .activity-card:hover {
   transform: none;
-  box-shadow: none;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
   border-color: #b1b1b1;
 }
 
@@ -469,8 +568,8 @@ main.container {
 .activity-details {
   background: white;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
-  box-shadow: none;
+  border: 1px solid #d1d1d1; /* Borda fina cinza para dar destaque */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Sombra sutil */
   padding: 20px;
   margin-bottom: 20px;
 }
@@ -489,8 +588,8 @@ main.container {
 .course-details {
   background-color: white;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
-  box-shadow: none;
+  border: 1px solid #d1d1d1; /* Borda fina cinza para dar destaque */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Sombra sutil */
   padding: 24px;
   margin-bottom: 24px;
 }
@@ -940,4 +1039,143 @@ body.auth-page .header {
   .participants-list {
     grid-template-columns: 1fr;
   }
+}
+
+/* Activities page styling */
+.activities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.activity-item {
+  background-color: white;
+  border: 1px solid black;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  min-height: 100px; /* Aumentado para ficar mais alto */
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.activity-options {
+  min-width: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  position: relative;
+  border-right: 1px solid #eee;
+}
+
+.activity-menu-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  font-size: 1.2rem;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.activity-menu-toggle:hover {
+  color: var(--primary-color);
+}
+
+.activity-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: white;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  width: 200px;
+  z-index: 10;
+  display: none;
+}
+
+.activity-menu.active {
+  display: block;
+}
+
+.activity-menu-item {
+  display: block;
+  padding: 10px 16px;
+  color: var(--text-color);
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+.activity-menu-item:hover {
+  background-color: var(--hover-color);
+  color: var(--primary-color);
+}
+
+.activity-menu-item i {
+  width: 20px;
+  margin-right: 8px;
+  text-align: center;
+}
+
+.activity-content {
+  flex: 1;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; /* Alinha o conteúdo à direita */
+  text-align: right; /* Alinha o texto à direita */
+}
+
+.activity-title {
+  font-size: 1.2rem;
+  margin: 0 0 8px 0;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.activity-course {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0;
+}
+
+.course-selector {
+  max-width: 300px;
+  margin-right: auto;
+  margin-left: 16px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid black;
+}
+
+.action-bar h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+/* Certifique-se de que o último item ativo ainda tenha a borda inferior */
+.sidebar-item.active:last-child {
+  border-bottom: 1px solid black;
+}
+
+.sidebar-item.course-subitem.active:last-child {
+  border-bottom: 1px solid black;
 }

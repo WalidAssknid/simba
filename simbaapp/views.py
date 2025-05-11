@@ -107,14 +107,16 @@ def courses_view(request):
         
         context = {
             'courses': courses,
-            'is_teacher': True
+            'is_teacher': True,
+            'enrolled_courses': courses
         }
     else:
         user = User.objects.get(id=user_id)
         courses = Course.objects.filter(enrollments__user=user).order_by('-created_at')
         context = {
             'courses': courses,
-            'is_teacher': False
+            'is_teacher': False,
+            'enrolled_courses': courses
         }
     
     return render(request, 'courses.html', context) 
@@ -130,22 +132,25 @@ def create_course_view(request):
         messages.error(request, "Only teachers can create courses.")
         return redirect('courses')
     
+    # Get enrolled courses for sidebar
+    enrolled_courses = Course.objects.filter(owner=user).order_by('-created_at')
+    
     if request.method == 'POST':
         title = request.POST.get('title')
         description = request.POST.get('description')
         
         if not title:
             messages.error(request, "Title is required.")
-            return render(request, 'create_course.html')
+            return render(request, 'create_course.html', {'enrolled_courses': enrolled_courses})
             
         course = Course(title=title, description=description, owner=user)
         course.save()
         
         messages.success(request, f"Course created successfully! Enrollment code: {course.enrollment_code}")
         
-        return redirect('course_detail', course_id=course.id)
+        return redirect('courses')
         
-    return render(request, 'create_course.html')
+    return render(request, 'create_course.html', {'enrolled_courses': enrolled_courses})
 
 def course_detail_view(request, course_id):
     if not request.session.get('user_id'):
@@ -175,11 +180,19 @@ def course_detail_view(request, course_id):
     
     participants = CourseEnrollment.objects.filter(course=course).select_related('user')
     
+    # Get all enrolled courses for the sidebar
+    if user.role == 'teacher':
+        enrolled_courses = Course.objects.filter(owner=user)
+    else:
+        enrolled_courses = Course.objects.filter(enrollments__user=user)
+    
     return render(request, 'course_detail.html', { 
         'course': course, 
         'activities': activities,
         'is_teacher': is_teacher_of_course,
-        'participants': participants
+        'participants': participants,
+        'enrolled_courses': enrolled_courses,
+        'active_course': course  # Mark the current course as active
     })
 
 def create_activity_view(request, course_id):
@@ -192,7 +205,7 @@ def create_activity_view(request, course_id):
         can_create_activity = course.owner_id == user_id and user.role == 'teacher'
         if not can_create_activity:
             messages.error(request, "Only teachers can create activities in this course.")
-            return redirect('course_detail', course_id=course.id)
+            return redirect('activities')
         if request.method == 'POST':
             activity_title = request.POST.get('activity_title', '')
             description = request.POST.get('activity_description', '')
@@ -221,9 +234,9 @@ def create_activity_view(request, course_id):
                 trust_document=trust_document
             )
             messages.success(request, "Activity created successfully!")
-            return redirect('course_detail', course_id=course.id)
+            return redirect('activities')
         else:
-            return redirect('course_detail', course_id=course.id)
+            return redirect('activities')
     except Course.DoesNotExist:
         messages.error(request, "Course not found.")
         return redirect('courses')
@@ -237,12 +250,15 @@ def join_course_view(request):
     user_id = request.session.get('user_id')
     user = User.objects.get(id=user_id)
     
+    # Get enrolled courses for sidebar
+    enrolled_courses = Course.objects.filter(enrollments__user=user).order_by('-created_at')
+    
     if request.method == 'POST':
         enrollment_code = request.POST.get('enrollment_code')
         
         if not enrollment_code:
             messages.error(request, "Enrollment code is required.")
-            return render(request, 'join_course.html') 
+            return render(request, 'join_course.html', {'enrolled_courses': enrolled_courses}) 
             
         try:
             course = Course.objects.get(enrollment_code=enrollment_code)
@@ -259,13 +275,13 @@ def join_course_view(request):
                 
                 messages.success(request, f"Successfully enrolled in course '{course.title}'!")
             
-            return redirect('course_detail', course_id=course.id)
+            return redirect('activities')
             
         except Course.DoesNotExist:
             messages.error(request, "Invalid enrollment code.")
-            return render(request, 'join_course.html') 
+            return render(request, 'join_course.html', {'enrolled_courses': enrolled_courses}) 
             
-    return render(request, 'join_course.html')
+    return render(request, 'join_course.html', {'enrolled_courses': enrolled_courses})
 
 def dashboard_view(request):
     # Ensure user is logged in and is a teacher
@@ -299,53 +315,12 @@ def dashboard_view(request):
 
     # Aggregate per-student message counts and average lengths
     counts = {}
-    
-def edit_course_view(request, course_id):
-    """View for teachers to edit their courses"""
-    if not request.session.get('user_id'):
-        return redirect('login')
-        
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)
-    
-    # Only teachers can edit courses
-    if user.role != 'teacher':
-        messages.error(request, "Only teachers can edit courses.")
-        return redirect('courses')
-    
-    try:
-        course = Course.objects.get(id=course_id)
-        
-        # Only the owner of the course can edit it
-        if course.owner.id != user_id:
-            messages.error(request, "You can only edit your own courses.")
-            return redirect('courses')
-            
-        if request.method == 'POST':
-            title = request.POST.get('title')
-            description = request.POST.get('description')
-            
-            if not title:
-                messages.error(request, "Title is required.")
-                return render(request, 'create_course.html', {'course': course, 'edit_mode': True})
-                
-            course.title = title
-            course.description = description
-            course.save()
-            
-            messages.success(request, "Course updated successfully!")
-            return redirect('course_detail', course_id=course.id)
-            
-        return render(request, 'create_course.html', {'course': course, 'edit_mode': True})
-        
-    except Course.DoesNotExist:
-        messages.error(request, "Course not found.")
-        return redirect('courses')
     lengths = {}
     for msg in student_messages_qs:
         username = msg.thread.user.username
         counts[username] = counts.get(username, 0) + 1
         lengths[username] = lengths.get(username, 0) + len(msg.content)
+    
     stats_per_student = []
     for username, count in counts.items():
         avg_len = lengths[username] / count if count else 0
@@ -367,5 +342,91 @@ def edit_course_view(request, course_id):
         'total_messages': total_messages,
         'stats_per_student': stats_per_student,
         'last_messages': last_messages,
+        'enrolled_courses': courses  # Add enrolled_courses to context
     }
     return render(request, 'dashboard.html', context)
+    
+def edit_course_view(request, course_id):
+    """View for teachers to edit their courses"""
+    if not request.session.get('user_id'):
+        return redirect('login')
+        
+    user_id = request.session.get('user_id')
+    user = User.objects.get(id=user_id)
+    
+    # Only teachers can edit courses
+    if user.role != 'teacher':
+        messages.error(request, "Only teachers can edit courses.")
+        return redirect('courses')
+    
+    # Get enrolled courses for sidebar
+    enrolled_courses = Course.objects.filter(owner=user).order_by('-created_at')
+    
+    try:
+        course = Course.objects.get(id=course_id)
+        
+        # Only the owner of the course can edit it
+        if course.owner.id != user_id:
+            messages.error(request, "You can only edit your own courses.")
+            return redirect('courses')
+            
+        if request.method == 'POST':
+            title = request.POST.get('title')
+            description = request.POST.get('description')
+            
+            if not title:
+                messages.error(request, "Title is required.")
+                return render(request, 'create_course.html', {
+                    'course': course, 
+                    'edit_mode': True,
+                    'enrolled_courses': enrolled_courses
+                })
+                
+            course.title = title
+            course.description = description
+            course.save()
+            
+            messages.success(request, "Course updated successfully!")
+            return redirect('course_detail', course_id=course.id)
+            
+        return render(request, 'create_course.html', {
+            'course': course, 
+            'edit_mode': True,
+            'enrolled_courses': enrolled_courses
+        })
+        
+    except Course.DoesNotExist:
+        messages.error(request, "Course not found.")
+        return redirect('courses')
+
+def activities_view(request):
+    """View for displaying all activities"""
+    if not request.session.get('user_id'):
+        return redirect('login')
+    
+    user_id = request.session.get('user_id')
+    role = request.session.get('role')
+    user = User.objects.get(id=user_id)
+    
+    if role == 'teacher':
+        # For teachers, show activities they created
+        teacher_courses = Course.objects.filter(owner_id=user_id)
+        activities = Activity.objects.filter(course__in=teacher_courses).order_by('-created_at')
+        context = {
+            'activities': activities,
+            'is_teacher': True,
+            'courses': teacher_courses,
+            'enrolled_courses': teacher_courses
+        }
+    else:
+        # For students, show activities from enrolled courses
+        enrolled_courses = Course.objects.filter(enrollments__user=user)
+        activities = Activity.objects.filter(course__in=enrolled_courses).order_by('-created_at')
+        context = {
+            'activities': activities,
+            'is_teacher': False,
+            'courses': enrolled_courses,
+            'enrolled_courses': enrolled_courses
+        }
+    
+    return render(request, 'activities.html', context)

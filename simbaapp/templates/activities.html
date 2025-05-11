@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% block title %}Activities | SIMBA{% endblock %}
+
+{% block content %}
+<div class="action-bar">
+    <h3>Activities</h3>
+    {% if is_teacher %}
+    <select id="courseSelector" class="form-control course-selector">
+        <option value="">All Courses</option>
+        {% for course in courses %}
+        <option value="{{ course.id }}">{{ course.title }}</option>
+        {% endfor %}
+    </select>
+    <div class="action-buttons">
+        <button id="showEnrollmentCode" class="btn btn-secondary">
+            <i class="fas fa-key"></i> Show Enrollment Code
+        </button>
+        <button id="showParticipants" class="btn btn-secondary">
+            <i class="fas fa-users"></i> Show Participants
+        </button>
+        {% if is_teacher %}
+        <a href="#" id="createActivityBtn" class="add-button" title="Create Activity">
+            <i class="fas fa-plus"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Enrollment Code Modal -->
+<div id="enrollmentCodeModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3 class="modal-title">Course Enrollment Code</h3>
+        <div class="enrollment-code">
+            <p>Share this code with students to join your course:</p>
+            <div id="enrollmentCodeDisplay" class="code-display"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Participants Modal -->
+<div id="participantsModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3 class="modal-title">Course Participants</h3>
+        <div id="participantsList" class="participants-list">
+            <!-- Participants will be dynamically loaded here -->
+        </div>
+    </div>
+</div>
+
+<div class="activities-list">
+    {% for activity in activities %}
+    <div class="activity-item" data-course-id="{{ activity.course.id }}">
+        <div class="activity-options">
+            <button class="activity-menu-toggle">
+                <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <div class="activity-menu">
+                <a href="#" class="activity-menu-item" data-action="edit" data-activity-id="{{ activity.id }}">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <a href="#" class="activity-menu-item" data-action="link" data-activity-id="{{ activity.id }}">
+                    <i class="fas fa-link"></i> Get Activity Link
+                </a>
+                <a href="#" class="activity-menu-item delete-activity" data-action="delete" data-activity-id="{{ activity.id }}">
+                    <i class="fas fa-trash"></i> Delete
+                </a>
+            </div>
+        </div>
+        <div class="activity-content">
+            <h3 class="activity-title">{{ activity.title }}</h3>
+            <p class="activity-course">{{ activity.course.title }}</p>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <h3>No activities found</h3>
+        <p>
+            {% if is_teacher %}
+                Click the <i class="fas fa-plus"></i> button to create a new activity!
+            {% else %}
+                You don't have any activities yet. Ask your teacher to create one!
+            {% endif %}
+        </p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Activity Link Modal -->
+<div id="activityLinkModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3 class="modal-title">Activity Link</h3>
+        <p>Share this link with students to access the activity:</p>
+        <div class="code-display" id="activityLinkDisplay"></div>
+        <button class="btn btn-primary copy-link-btn">Copy Link</button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Course selector filter
+    const courseSelector = document.getElementById('courseSelector');
+    if (courseSelector) {
+        courseSelector.addEventListener('change', function() {
+            const selectedCourseId = this.value;
+            const activityItems = document.querySelectorAll('.activity-item');
+            
+            activityItems.forEach(item => {
+                if (!selectedCourseId || item.dataset.courseId === selectedCourseId) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    }
+    
+    // Create Activity Button
+    const createActivityBtn = document.getElementById('createActivityBtn');
+    if (createActivityBtn) {
+        createActivityBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const selectedCourseId = document.getElementById('courseSelector').value;
+            if (selectedCourseId) {
+                window.location.href = `/course/${selectedCourseId}/activity/create/`;
+            } else {
+                alert('Please select a course first');
+            }
+        });
+    }
+    
+    // Activity menu toggles
+    const activityMenuToggles = document.querySelectorAll('.activity-menu-toggle');
+    activityMenuToggles.forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            const menu = this.nextElementSibling;
+            closeAllMenus();
+            menu.classList.toggle('active');
+        });
+    });
+    
+    // Close menus when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.activity-options')) {
+            closeAllMenus();
+        }
+    });
+    
+    function closeAllMenus() {
+        document.querySelectorAll('.activity-menu').forEach(menu => {
+            menu.classList.remove('active');
+        });
+    }
+    
+    // Activity menu actions
+    document.querySelectorAll('.activity-menu-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const action = this.dataset.action;
+            const activityId = this.dataset.activityId;
+            
+            if (action === 'edit') {
+                // Handle edit
+                alert('Edit functionality will be implemented');
+            } else if (action === 'link') {
+                // Show activity link modal
+                document.getElementById('activityLinkDisplay').textContent = 
+                    `${window.location.origin}/chainlit/?activity_id=${activityId}`;
+                document.getElementById('activityLinkModal').style.display = 'block';
+            } else if (action === 'delete') {
+                // Handle delete
+                if (confirm('Are you sure you want to delete this activity?')) {
+                    alert('Delete functionality will be implemented');
+                }
+            }
+        });
+    });
+    
+    // Show enrollment code
+    const showEnrollmentCodeBtn = document.getElementById('showEnrollmentCode');
+    if (showEnrollmentCodeBtn) {
+        showEnrollmentCodeBtn.addEventListener('click', function() {
+            const selectedCourseId = document.getElementById('courseSelector').value;
+            if (!selectedCourseId) {
+                alert('Please select a course first');
+                return;
+            }
+            
+            // Fetch enrollment code and display
+            fetch(`/api/course/${selectedCourseId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('enrollmentCodeDisplay').textContent = data.enrollment_code;
+                    document.getElementById('enrollmentCodeModal').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error fetching course data:', error);
+                    alert('Failed to load enrollment code');
+                });
+        });
+    }
+    
+    // Show participants
+    const showParticipantsBtn = document.getElementById('showParticipants');
+    if (showParticipantsBtn) {
+        showParticipantsBtn.addEventListener('click', function() {
+            const selectedCourseId = document.getElementById('courseSelector').value;
+            if (!selectedCourseId) {
+                alert('Please select a course first');
+                return;
+            }
+            
+            // Fetch participants and display
+            fetch(`/api/course/${selectedCourseId}/participants/`)
+                .then(response => response.json())
+                .then(data => {
+                    const participantsList = document.getElementById('participantsList');
+                    participantsList.innerHTML = '';
+                    
+                    data.participants.forEach(participant => {
+                        const participantCard = document.createElement('div');
+                        participantCard.className = 'participant-card';
+                        participantCard.innerHTML = `
+                            <div class="participant-name">${participant.username}</div>
+                            <div class="participant-role">${participant.role}</div>
+                        `;
+                        participantsList.appendChild(participantCard);
+                    });
+                    
+                    document.getElementById('participantsModal').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error fetching participants:', error);
+                    alert('Failed to load participants');
+                });
+        });
+    }
+    
+    // Close modals
+    document.querySelectorAll('.close').forEach(closeBtn => {
+        closeBtn.addEventListener('click', function() {
+            this.closest('.modal').style.display = 'none';
+        });
+    });
+    
+    // Copy activity link
+    const copyLinkBtn = document.querySelector('.copy-link-btn');
+    if (copyLinkBtn) {
+        copyLinkBtn.addEventListener('click', function() {
+            const linkText = document.getElementById('activityLinkDisplay').textContent;
+            navigator.clipboard.writeText(linkText)
+                .then(() => {
+                    this.textContent = 'Copied!';
+                    setTimeout(() => {
+                        this.textContent = 'Copy Link';
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Failed to copy link:', err);
+                    alert('Failed to copy link to clipboard');
+                });
+        });
+    }
+});
+</script>
+{% endblock %} 

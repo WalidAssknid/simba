@@ -6,10 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SIMBA{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/simba.css' %}">
-    <link rel="stylesheet" href="{% static 'css/button-adjustments.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="shortcut icon" href="{% static 'images/icons/favicon.ico' %}" type="image/x-icon" />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
     {% block extra_css %}{% endblock %}
 </head>
 <body class="{% if request.resolver_match.url_name == 'login' or request.resolver_match.url_name == 'register' %}auth-page{% endif %}">
@@ -17,36 +16,31 @@
     <nav class="sidebar">
         <div class="sidebar-brand">
             <span>SIMBA</span>
+            <div class="sidebar-tagline">make the logo</div>
         </div>
         <div class="sidebar-nav">
             {% if request.session.user_id %}
-                {% if active_course %}
-                    <!-- Course navigation -->
-                    <div class="sidebar-section">
-                        <div class="sidebar-section-title">Courses</div>
-                        <a href="{% url 'courses' %}" class="sidebar-item {% if request.resolver_match.url_name == 'courses' %}active{% endif %}">
-                            All Courses
+                <!-- Main navigation -->
+                <a href="{% url 'courses' %}" class="sidebar-item {% if request.resolver_match.url_name == 'courses' %}active{% endif %}">
+                    Courses
+                </a>
+                
+                {% if enrolled_courses and request.resolver_match.url_name == 'course_detail' %}
+                    {% for enrolled_course in enrolled_courses %}
+                        <a href="{% url 'course_detail' enrolled_course.id %}" 
+                           class="sidebar-item course-subitem {% if active_course.id == enrolled_course.id %}active{% endif %}">
+                            {{ enrolled_course.title }}
                         </a>
-                    </div>
-                    <div class="sidebar-section">
-                        <div class="sidebar-section-title">My Courses</div>
-                        {% for enrolled_course in enrolled_courses %}
-                            <a href="{% url 'course_detail' enrolled_course.id %}" 
-                               class="sidebar-item {% if active_course.id == enrolled_course.id %}active{% endif %}">
-                                {{ enrolled_course.title }}
-                            </a>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <!-- Main navigation -->
-                    <a href="{% url 'courses' %}" class="sidebar-item {% if request.resolver_match.url_name == 'courses' %}active{% endif %}">
-                        Courses
+                    {% endfor %}
+                {% endif %}
+                
+                <a href="{% url 'activities' %}" class="sidebar-item {% if request.resolver_match.url_name == 'activities' %}active{% endif %}">
+                    Activities
+                </a>
+                {% if request.session.role == 'teacher' %}
+                    <a href="{% url 'dashboard' %}" class="sidebar-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                        Dashboard
                     </a>
-                    {% if request.session.role == 'teacher' %}
-                        <a href="{% url 'dashboard' %}" class="sidebar-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                            Dashboard
-                        </a>
-                    {% endif %}
                 {% endif %}
             {% else %}
                 <a href="{% url 'login' %}" class="sidebar-item {% if request.resolver_match.url_name == 'login' %}active{% endif %}">

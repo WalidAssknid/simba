@@ -5,6 +5,10 @@
 <h2>{{ course.title }}</h2>
 {% endblock %}
 
+{% block action_button %}
+<!-- Removing the + button from header in course detail view -->
+{% endblock %}
+
 {% block content %}
 <div class="course-details">
     <div class="back-link">
@@ -12,10 +16,6 @@
             <i class="fas fa-arrow-left"></i> Back to Courses
         </a>
     </div>
-    
-    <p class="course-meta">
-        Created on: {{ course.created_at|date:"d/m/Y" }}
-    </p>
     
     <div class="course-description">
         {% if course.description %}
@@ -25,20 +25,40 @@
         {% endif %}
     </div>
     
+    <div class="action-bar">
+        <h3>{{ course.title }}</h3>
+        <div class="action-buttons">
+            <button id="showEnrollmentCode" class="btn btn-secondary">
+                Show Enrollment Code
+            </button>
+            <button id="showParticipants" class="btn btn-secondary">
+                Show Participants
+            </button>
     {% if is_teacher %}
-    <div class="course-info">
-        <div class="enrollment-code">
-            <h4>Enrollment Code:</h4>
-            <p class="code-display">{{ course.enrollment_code }}</p>
-            <p class="code-instructions">
-                Share this code with students so they can join this course
-            </p>
+            <a href="#" id="createActivityBtn" class="add-button" title="Create Activity">
+                <i class="fas fa-plus"></i>
+            </a>
+            {% endif %}
         </div>
     </div>
-    {% endif %}
     
-    <div class="participants">
-        <h4>Participants</h4>
+    <!-- Enrollment Code Modal -->
+    <div id="enrollmentCodeModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 class="modal-title">Course Enrollment Code</h3>
+        <div class="enrollment-code">
+                <p>Share this code with students to join your course:</p>
+                <div class="code-display">{{ course.enrollment_code }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Participants Modal -->
+    <div id="participantsModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 class="modal-title">Course Participants</h3>
         <div class="participants-list">
             <!-- Owner always appears first -->
             <div class="participant-card">
@@ -57,41 +77,253 @@
             {% endfor %}
         </div>
     </div>
-    
-    <div class="action-bar">
-        <h3>Activities</h3>
     </div>
     
-    {% if is_teacher %}
-        {% include 'popup_activity.html' %}
-    {% endif %}
-    
-    <div class="activities-container">
-        {% for activity in activities %}
-            <div class="activity-card">
-                <div class="activity-info">
-                    <p>{% if activity.title %}{{ activity.title }}{% else %}Activity #{{ activity.id }} - {{ course.title }}{% endif %}</p>
-                    <small>
-                        Created by: {{ activity.user.username }} on {{ activity.created_at|date:"d/m/Y" }}
-                    </small>
-                </div>
-                <div class="activity-actions">
-                    <a href="{% url 'chainlit_view' %}?activity_id={{ activity.id }}" class="btn" target="_blank">
-                        <i class="fas fa-comments"></i> Open Chat
+    <!-- Activities and Chainlit Container -->
+    <div class="content-container">
+        <!-- Activities list container -->
+        <div id="activities-container">
+            <div class="activities-list">
+            {% if is_teacher %}
+                {% include 'popup_activity.html' %}
+            {% endif %}
+            
+                {% for activity in activities %}
+                <div class="activity-item" data-activity-id="{{ activity.id }}">
+                    <div class="activity-options">
+                        <button class="activity-menu-toggle">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <div class="activity-menu">
+                            <a href="#" class="activity-menu-item" data-action="edit" data-activity-id="{{ activity.id }}">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <a href="#" class="activity-menu-item" data-action="link" data-activity-id="{{ activity.id }}">
+                                <i class="fas fa-link"></i> Get Activity Link
+                            </a>
+                            <a href="#" class="activity-menu-item delete-activity" data-action="delete" data-activity-id="{{ activity.id }}">
+                                <i class="fas fa-trash"></i> Delete
+                            </a>
+                        </div>
+                    </div>
+                    <div class="activity-content">
+                        <h3 class="activity-title">{{ activity.title }}</h3>
+                        <p class="activity-course">{{ course.title }}</p>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="empty-state">
+                    <h3>No activities found</h3>
+                        <p>
+                            {% if is_teacher %}
+                            Click the <i class="fas fa-plus"></i> button to create a new activity!
+                            {% else %}
+                            This course doesn't have any activities yet.
+                            {% endif %}
+                        </p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Chainlit Container -->
+        <div id="chainlit-container" class="chainlit-container">
+            <div class="chainlit-header">
+                <div class="back-link">
+                    <a href="#" id="back-to-activities">
+                        <i class="fas fa-arrow-left"></i> Back to Activities
                     </a>
                 </div>
+                <h3 id="activity-title-header"></h3>
             </div>
-        {% empty %}
-            <div class="empty-state">
-                <p>
-                    {% if is_teacher %}
-                        No activities found. Create a new activity to start a conversation!
-                    {% else %}
-                        No activities found for this course yet.
-                    {% endif %}
-                </p>
+            <div class="chainlit-frame-container">
+                <iframe id="chainlit-frame" frameborder="0"></iframe>
             </div>
-        {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Activity Link Modal -->
+    <div id="activityLinkModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 class="modal-title">Activity Link</h3>
+            <p>Share this link with students to access the activity:</p>
+            <div class="code-display" id="activityLinkDisplay"></div>
+            <button class="btn btn-primary copy-link-btn">Copy Link</button>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Create Activity Button
+    const createActivityBtn = document.getElementById('createActivityBtn');
+    if (createActivityBtn) {
+        createActivityBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Open modal for activity creation
+            document.getElementById('activityModal').style.display = 'block';
+        });
+    }
+    
+    const activitiesContainer = document.getElementById('activities-container');
+    const chainlitContainer = document.getElementById('chainlit-container');
+    const activityTitleHeader = document.getElementById('activity-title-header');
+    const chainlitFrame = document.getElementById('chainlit-frame');
+    const backToActivitiesBtn = document.getElementById('back-to-activities');
+    
+    // Activity items click handler
+    document.querySelectorAll('.activity-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            // Prevent triggering if clicking on the menu toggle or menu
+            if (!e.target.closest('.activity-options')) {
+                const activityId = this.dataset.activityId;
+                const activityTitle = this.querySelector('.activity-title').textContent;
+                const userId = '{{ request.session.user_id }}';
+                const username = '{{ request.session.username }}';
+                
+                // Add pulse animation
+                this.classList.add('pulse');
+                
+                // Set activity title in chainlit view
+                activityTitleHeader.textContent = activityTitle;
+                
+                // Set iframe source
+                const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
+                chainlitFrame.src = chainlitUrl;
+                
+                // Hide activities container and show chainlit container
+                activitiesContainer.classList.add('hidden');
+                chainlitContainer.classList.add('active');
+            }
+        });
+    });
+    
+    // Back to activities button
+    backToActivitiesBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Hide chainlit container
+        chainlitContainer.classList.remove('active');
+        
+        // Show activities container
+        activitiesContainer.classList.remove('hidden');
+        
+        // Clear iframe after transition (to prevent unnecessary resource usage)
+        setTimeout(() => {
+            chainlitFrame.src = '';
+        }, 300);
+    });
+    
+    // Activity menu toggles
+    const activityMenuToggles = document.querySelectorAll('.activity-menu-toggle');
+    activityMenuToggles.forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation(); // Stop propagation to prevent triggering the activity item click
+            const menu = this.nextElementSibling;
+            closeAllMenus();
+            menu.classList.toggle('active');
+            
+            // Position menu to be fully visible
+            const rect = menu.getBoundingClientRect();
+            if (rect.right > window.innerWidth) {
+                menu.style.left = 'auto';
+                menu.style.right = '0';
+            }
+        });
+    });
+    
+    // Close menus when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.activity-options')) {
+            closeAllMenus();
+        }
+    });
+    
+    function closeAllMenus() {
+        document.querySelectorAll('.activity-menu').forEach(menu => {
+            menu.classList.remove('active');
+            menu.style.left = '0';
+            menu.style.right = 'auto';
+        });
+    }
+    
+    // Remove pulse animation after it completes
+    document.querySelectorAll('.activity-item').forEach(item => {
+        item.addEventListener('animationend', function() {
+            this.classList.remove('pulse');
+        });
+    });
+    
+    // Activity menu actions
+    document.querySelectorAll('.activity-menu-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation(); // Stop propagation to prevent triggering the activity item click
+            const action = this.dataset.action;
+            const activityId = this.dataset.activityId;
+            
+            if (action === 'edit') {
+                // Handle edit
+                alert('Edit functionality will be implemented');
+            } else if (action === 'link') {
+                // Show activity link modal
+                document.getElementById('activityLinkDisplay').textContent = 
+                    `${window.location.origin}/chainlit/?activity_id=${activityId}`;
+                document.getElementById('activityLinkModal').style.display = 'block';
+            } else if (action === 'delete') {
+                // Handle delete
+                if (confirm('Are you sure you want to delete this activity?')) {
+                    alert('Delete functionality will be implemented');
+                }
+            }
+        });
+    });
+    
+    // Show enrollment code modal
+    const showEnrollmentCodeBtn = document.getElementById('showEnrollmentCode');
+    if (showEnrollmentCodeBtn) {
+        showEnrollmentCodeBtn.addEventListener('click', function() {
+            document.getElementById('enrollmentCodeModal').style.display = 'block';
+        });
+    }
+    
+    // Show participants modal
+    const showParticipantsBtn = document.getElementById('showParticipants');
+    if (showParticipantsBtn) {
+        showParticipantsBtn.addEventListener('click', function() {
+            document.getElementById('participantsModal').style.display = 'block';
+        });
+    }
+    
+    // Close modals
+    document.querySelectorAll('.close').forEach(closeBtn => {
+        closeBtn.addEventListener('click', function() {
+            this.closest('.modal').style.display = 'none';
+        });
+    });
+    
+    // Copy activity link
+    const copyLinkBtn = document.querySelector('.copy-link-btn');
+    if (copyLinkBtn) {
+        copyLinkBtn.addEventListener('click', function() {
+            const linkText = document.getElementById('activityLinkDisplay').textContent;
+            navigator.clipboard.writeText(linkText)
+                .then(() => {
+                    this.textContent = 'Copied!';
+                    setTimeout(() => {
+                        this.textContent = 'Copy Link';
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Failed to copy link:', err);
+                    alert('Failed to copy link to clipboard');
+                });
+        });
+    }
+});
+</script>
 {% endblock %}

@@ -13,7 +13,7 @@
   --text-color: #333333;
   --background-color: #ffffff;
   --background-light: #f5f5f5;
-  --border-color: #333333; /* Changed to black */
+  --border-color: #aaaaaa; /* Changed to a softer gray */
   --hover-color: #f8f8f8;
   --sidebar-width: 280px;
   --header-height: 64px;
@@ -78,7 +78,7 @@ main.container {
   background: white;
   color: var(--text-color);
   box-shadow: none; 
-  border-bottom: 1px solid black; /* Thin black border */
+  border-bottom: 1px solid var(--border-color); /* Using border-color variable instead of black */
   position: fixed;
   top: 0;
   left: 0;
@@ -187,7 +187,7 @@ main.container {
   width: var(--sidebar-width);
   background-color: white;
   box-shadow: none;
-  border-right: 1px solid black; /* Thin black border */
+  border-right: 1px solid var(--border-color); /* Using border-color variable instead of black */
   z-index: 99;
   padding-top: var(--header-height);
   overflow-y: auto;
@@ -205,7 +205,7 @@ main.container {
   color: var(--primary-color);
   font-size: 1.5rem;
   font-weight: bold;
-  border-bottom: 1px solid black; /* Única borda inferior da marca */
+  border-bottom: 1px solid var(--border-color); /* Using border-color variable instead of black */
   position: fixed;
   top: 0;
   left: 0;
@@ -252,7 +252,7 @@ main.container {
   font-size: 1.1rem;
   font-weight: 500;
   position: relative;
-  border-bottom: 1px solid black; /* Apenas borda inferior */
+  border-bottom: 1px solid var(--border-color); /* Using border-color variable instead of black */
   border-top: none; /* Remover borda superior */
   letter-spacing: -0.06em; /* Consistência no letter spacing */
 }
@@ -287,7 +287,7 @@ main.container {
 
 /* O item após o último subitem mantém sua borda superior */
 .sidebar-item.course-subitem:last-of-type + .sidebar-item {
-  border-top: 1px solid black; /* Garante que haja apenas uma borda entre eles */
+  border-top: 1px solid var(--border-color); /* Using border-color variable instead of black */
 }
 
 .sidebar-item.course-subitem.active {
@@ -603,6 +603,10 @@ main.container {
   align-items: center;
   color: var(--text-color);
   font-weight: 500;
+}
+
+.back-link a i {
+  margin-right: 10px; /* Adding spacing between the arrow and text */
 }
 
 .back-link a:hover {
@@ -1051,14 +1055,21 @@ body.auth-page .header {
 
 .activity-item {
   background-color: white;
-  border: 1px solid black;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   display: flex;
   align-items: center;
-  min-height: 100px; /* Aumentado para ficar mais alto */
+  min-height: 100px;
   width: 100%;
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* Changed from hidden to visible to allow the menu to show */
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.activity-item:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
 }
 
 .activity-options {
@@ -1069,6 +1080,7 @@ body.auth-page .header {
   height: 100%;
   position: relative;
   border-right: 1px solid #eee;
+  z-index: 5;
 }
 
 .activity-menu-toggle {
@@ -1091,12 +1103,13 @@ body.auth-page .header {
   position: absolute;
   top: 100%;
   left: 0;
+  margin-top: 5px;
   background-color: white;
   border: 1px solid var(--border-color);
   border-radius: 4px;
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   width: 200px;
-  z-index: 10;
+  z-index: 100;
   display: none;
 }
 
@@ -1162,7 +1175,7 @@ body.auth-page .header {
   align-items: center;
   justify-content: space-between;
   padding: 12px 0;
-  border-bottom: 1px solid black;
+  border-bottom: 1px solid var(--border-color); /* Using border-color variable instead of black */
 }
 
 .action-bar h3 {
@@ -1173,9 +1186,85 @@ body.auth-page .header {
 
 /* Certifique-se de que o último item ativo ainda tenha a borda inferior */
 .sidebar-item.active:last-child {
-  border-bottom: 1px solid black;
+  border-bottom: 1px solid var(--border-color); /* Using border-color variable instead of black */
 }
 
 .sidebar-item.course-subitem.active:last-child {
-  border-bottom: 1px solid black;
+  border-bottom: 1px solid var(--border-color); /* Using border-color variable instead of black */
+}
+
+/* Content container for activities and chainlit */
+.content-container {
+  width: 100%;
+  position: relative;
+  margin-top: 20px;
+}
+
+/* Chainlit container */
+.chainlit-container {
+  width: 100%;
+  display: none;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.chainlit-container.active {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chainlit-header {
+  display: flex;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.chainlit-header .back-link {
+  margin-right: 20px;
+  margin-bottom: 0;
+}
+
+#activity-title-header {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--text-color);
+  margin: 0;
+  flex-grow: 1;
+}
+
+.chainlit-frame-container {
+  height: 600px;
+  width: 100%;
+  position: relative;
+  background-color: var(--background-light);
+}
+
+#chainlit-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background-color: white;
+}
+
+/* Hide activities container when chainlit is active */
+#activities-container.hidden {
+  display: none;
+}
+
+/* Animation for activity item when clicked */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.activity-item.pulse {
+  animation: pulse 0.3s ease;
 }

@@ -98,3 +98,10 @@ class Analytics(models.Model):
 
     def __str__(self):
         return f"Analytics at {self.timestamp}"
+
+class Event(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    verb = models.SmallIntegerField(choices = [(0,"Created"), (1,"Deleted"), (2,"Opened"), (3,"Closed"), (4,"Joined"), (5,"Modified")])
+    object = models.SmallIntegerField(choices = [(0,"Account"), (1,"Simba"), (2,"Course"), (3,"Activity"), (4,"Thread")])
+    context = models.JSONField(blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)

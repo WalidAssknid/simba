@@ -102,6 +102,9 @@ class Analytics(models.Model):
 class Event(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     verb = models.SmallIntegerField(choices = [(0,"Created"), (1,"Deleted"), (2,"Opened"), (3,"Closed"), (4,"Joined"), (5,"Modified")])
-    object = models.SmallIntegerField(choices = [(0,"Account"), (1,"Simba"), (2,"Course"), (3,"Activity"), (4,"Thread")])
+    object = models.SmallIntegerField(choices = [(0,"Account"), (1,"Course"), (2,"Activity"), (3,"Thread"), (4, "Message"), (5,"Simba")])
     context = models.JSONField(blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"subject : {self.user}, verb : {self.verb}, object : {self.object}"

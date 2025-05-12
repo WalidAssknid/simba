@@ -148,7 +148,6 @@ def deletedCourse(userId, courseId, timestamp):
 
     :param userId: the user ID from the database
     :param courseId: the course ID from the database
-    :param courseParameters: the new parameters of the course as stored in the database, stored in a dictionary
     :param timestamp: the timestamp from when the course was deleted
     :return: the created event
     """

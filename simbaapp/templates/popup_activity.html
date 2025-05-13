@@ -3,7 +3,7 @@
     <div class="modal-content">
         <span class="close">&times;</span>
         <h2 class="modal-title">Create New Activity</h2>
-        <form method="post" action="#" id="create-activity-form">
+        <form method="post" action="{% if course.id %}{% url 'create_activity' course.id %}{% else %}#{% endif %}" id="create-activity-form">
             {% csrf_token %}
             <div class="form-group">
                 <label for="activity-title">Activity Title</label>

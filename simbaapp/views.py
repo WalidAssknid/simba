@@ -466,11 +466,11 @@ def activities_view(request):
     else:
         enrolled_courses = Course.objects.filter(enrollments__user=user)
         activities = Activity.objects.filter(course__in=enrolled_courses).order_by('-created_at')
-    context = {
+        context = {
             'activities': activities,
             'is_teacher': False,
             'courses': enrolled_courses,
             'enrolled_courses': enrolled_courses
-    }
+        }
     
     return render(request, 'activities.html', context)

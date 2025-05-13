@@ -1162,6 +1162,13 @@ body.auth-page .header {
   max-width: 300px;
   margin-right: auto;
   margin-left: 16px;
+  padding-right: 40px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='%23666'%3E%3Cpath d='M6 8L0 0h12L6 8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 20px center;
 }
 
 .action-buttons {

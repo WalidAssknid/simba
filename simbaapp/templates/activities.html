@@ -4,13 +4,15 @@
 {% block content %}
 <div class="action-bar">
     <h3>Activities</h3>
-    {% if is_teacher %}
+    <!-- Filtro de cursos disponível para todos os usuários -->
     <select id="courseSelector" class="form-control course-selector">
         <option value="">All Courses</option>
         {% for course in courses %}
         <option value="{{ course.id }}">{{ course.title }}</option>
         {% endfor %}
     </select>
+    
+    {% if is_teacher %}
     <div class="action-buttons">
         <button id="showEnrollmentCode" class="btn btn-secondary">
             Show Enrollment Code
@@ -18,11 +20,9 @@
         <button id="showParticipants" class="btn btn-secondary">
             Show Participants
         </button>
-        {% if is_teacher %}
         <a href="#" id="createActivityBtn" class="add-button" title="Create Activity">
             <i class="fas fa-plus"></i>
         </a>
-        {% endif %}
     </div>
     {% endif %}
 </div>

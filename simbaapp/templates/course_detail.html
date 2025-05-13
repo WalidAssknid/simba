@@ -62,16 +62,25 @@
         <div class="participants-list">
             <!-- Owner always appears first -->
             <div class="participant-card">
-                <div class="participant-name">{{ course.owner.username }}</div>
-                <div class="participant-role">Teacher</div>
+                <div class="participant-info">
+                    <span class="participant-name">{{ course.owner.username }}</span>
+                    <span class="participant-role">{{ course.owner.role }}</span>
+                </div>
             </div>
             
             <!-- Other participants -->
             {% for enrollment in participants %}
-                {% if enrollment.user.id != course.owner.id %}
-                <div class="participant-card">
-                    <div class="participant-name">{{ enrollment.user.username }}</div>
-                    <div class="participant-role">Student</div>
+                {% if enrollment.user.id != course.owner.id %} {# Exclude owner if they are also in participants list for some reason #}
+                <div class="participant-card" data-enrollment-id="{{ enrollment.id }}" data-user-id="{{ enrollment.user.id }}">
+                    <div class="participant-info">
+                        <span class="participant-name">{{ enrollment.user.username }}</span>
+                        <span class="participant-role">{{ enrollment.user.role }}</span>
+                    </div>
+                    {% if is_teacher and enrollment.user.role == 'student' %}
+                    <button class="remove-participant-btn" data-enrollment-id="{{ enrollment.id }}" data-username="{{ enrollment.user.username }}" title="Remove {{ enrollment.user.username }} from course">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    {% endif %}
                 </div>
                 {% endif %}
             {% endfor %}
@@ -224,14 +233,22 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             e.stopPropagation(); // Stop propagation to prevent triggering the activity item click
             const menu = this.nextElementSibling;
-            closeAllMenus();
-            menu.classList.toggle('active');
             
-            // Position menu to be fully visible
+            // If this menu is already active, just close it and do nothing else
+            if (menu.classList.contains('active')) {
+                menu.classList.remove('active');
+                menu.classList.remove('position-left'); // Ensure position-left is also removed
+                return;
+            }
+
+            closeAllMenus(); // Close all other menus first
+            menu.classList.add('active');
+            
+            // Position menu: default is to the right (CSS). Flip if it overflows.
+            menu.classList.remove('position-left'); // Reset to default (right)
             const rect = menu.getBoundingClientRect();
             if (rect.right > window.innerWidth) {
-                menu.style.left = 'auto';
-                menu.style.right = '0';
+                menu.classList.add('position-left');
             }
         });
     });
@@ -246,8 +263,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeAllMenus() {
         document.querySelectorAll('.activity-menu').forEach(menu => {
             menu.classList.remove('active');
-            menu.style.left = '0';
-            menu.style.right = 'auto';
+            menu.classList.remove('position-left'); // Also remove position-left class
+            // menu.style.left = '0'; // Removed inline style manipulation
+            // menu.style.right = 'auto'; // Removed inline style manipulation
         });
     }
     
@@ -322,6 +340,89 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Failed to copy link:', err);
                     alert('Failed to copy link to clipboard');
                 });
+        });
+    }
+
+    // Function to get CSRF token (if ever needed, currently API has csrf=False)
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    // const csrftoken = getCookie('csrftoken'); // Example
+
+    // Event delegation for remove participant button clicks
+    const participantsModalList = document.querySelector('#participantsModal .participants-list');
+    if (participantsModalList) {
+        participantsModalList.addEventListener('click', function(event) {
+            const removeButton = event.target.closest('.remove-participant-btn');
+            if (removeButton) {
+                const enrollmentId = removeButton.dataset.enrollmentId;
+                const username = removeButton.dataset.username;
+                const currentUserId = '{{ request.session.user_id }}'; // Get current logged-in user ID
+
+                if (!currentUserId) {
+                    alert("Error: Could not verify current user. Please re-login.");
+                    return;
+                }
+
+                if (confirm(`Are you sure you want to remove ${username} from this course?`)) {
+                    fetch(`/api/enrollments/${enrollmentId}?current_user_id=${currentUserId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            // 'X-CSRFToken': csrftoken, // Include if CSRF protection is enabled for API
+                            // 'Authorization': 'Bearer YOUR_JWT_TOKEN_IF_APPLICABLE'
+                        },
+                    })
+                    .then(response => {
+                        if (response.status === 204) { // HTTP 204 No Content - Success
+                            const participantCard = removeButton.closest('.participant-card');
+                            if (participantCard) {
+                                participantCard.remove();
+                            }
+                            
+                            // Show a custom success message
+                            const successMsg = document.createElement('p');
+                            successMsg.textContent = `${username} removed successfully.`;
+                            successMsg.style.color = 'green';
+                            successMsg.style.textAlign = 'center'; // Ensure text is centered
+                            successMsg.style.marginBottom = '15px'; 
+                            successMsg.style.marginTop = '10px'; 
+
+                            const modalTitle = document.querySelector('#participantsModal .modal-title');
+                            if (modalTitle) {
+                                // Insert after the title, making it appear below and centered
+                                modalTitle.insertAdjacentElement('afterend', successMsg);
+                            } else {
+                                // Fallback if title isn't found (should not happen)
+                                const participantsList = document.querySelector('#participantsModal .participants-list');
+                                if (participantsList) participantsList.prepend(successMsg);
+                            }
+                            
+                            setTimeout(() => successMsg.remove(), 3000);
+
+                        } else {
+                            return response.json().then(data => {
+                                alert(`Error: ${data.message || 'Could not remove student.'}`);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error removing student:', error);
+                        alert('An unexpected error occurred while trying to remove the student.');
+                    });
+                }
+            }
         });
     }
 });

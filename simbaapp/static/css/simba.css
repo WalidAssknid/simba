@@ -78,7 +78,7 @@ main.container {
   background: white;
   color: var(--text-color);
   box-shadow: none; 
-  border-bottom: 1px solid var(--border-color); /* Using border-color variable instead of black */
+  border-bottom: 1px solid var(--border-color);
   position: fixed;
   top: 0;
   left: 0;
@@ -86,16 +86,16 @@ main.container {
   height: var(--header-height);
   z-index: 100;
   padding: 0;
-  letter-spacing: -0.06em; /* Consistência no letter spacing */
+  letter-spacing: -0.06em; 
 }
 
 .header .container {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  padding: 0 20px 0 calc(var(--sidebar-width) + 24px); /* Increased padding for wider hero */
+  padding: 0 20px 0 calc(var(--sidebar-width) + 24px); 
   height: 100%;
-  max-width: 1300px; /* Increased max-width */
+  max-width: 1300px; 
 }
 
 .header-brand {
@@ -104,10 +104,10 @@ main.container {
   color: var(--primary-color);
   margin-right: auto;
   position: absolute;
-  left: calc(var(--sidebar-width) + 40px); /* Increased for better centering */
+  left: calc(var(--sidebar-width) / 2); 
   transform: translateX(-50%);
   z-index: 102;
-  letter-spacing: -0.06em; /* Consistência no letter spacing */
+  letter-spacing: -0.06em; 
 }
 
 .header-title {
@@ -665,6 +665,15 @@ main.container {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  min-height: 40px;
+}
+
+.participant-info { /* Wrapper for name and role */
+    display: flex;
+    flex-direction: column; /* Stack name and role vertically */
+    align-items: flex-start; /* Align text to the start (left) */
+    margin-right: 8px; /* Space between info block and button */
+    flex-grow: 1; /* Allow this to take available space */
 }
 
 .participant-name {
@@ -674,7 +683,28 @@ main.container {
 
 .participant-role {
   color: #888;
-  font-size: 0.85rem;
+  font-size: 0.8rem; /* Smaller font size */
+  /* margin-left: 8px; */ /* Removed, as it's below now */
+  margin-top: 2px; /* Add a small space below the username */
+}
+
+.remove-participant-btn {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.remove-participant-btn:hover {
+  color: var(--primary-dark);
+}
+
+.remove-participant-btn i {
+  display: block;
 }
 
 .action-bar {
@@ -1069,7 +1099,7 @@ body.auth-page .header {
 
 .activity-item:hover {
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  transform: translateY(-2px);
+  /* transform: translateY(-2px); */ /* Removed to prevent rising effect */
 }
 
 .activity-options {
@@ -1101,9 +1131,10 @@ body.auth-page .header {
 
 .activity-menu {
   position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: 5px;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%);
+  margin-left: 8px;
   background-color: white;
   border: 1px solid var(--border-color);
   border-radius: 4px;
@@ -1111,6 +1142,13 @@ body.auth-page .header {
   width: 200px;
   z-index: 100;
   display: none;
+}
+
+.activity-menu.position-left {
+  left: auto;
+  right: 100%;
+  margin-left: 0;
+  margin-right: 8px;
 }
 
 .activity-menu.active {
@@ -1274,4 +1312,9 @@ body.auth-page .header {
 
 .activity-item.pulse {
   animation: pulse 0.3s ease;
+}
+
+/* Specific adjustment for create activity modal */
+#activityModal .modal-content {
+  margin-top: 5%;
 }

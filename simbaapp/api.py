@@ -2,21 +2,20 @@ import os
 import django
 import django.apps
 from django.contrib.auth.hashers import make_password, check_password
-from .models import User, Course, CourseEnrollment, Activity, Thread, Message
+from .models import User, Course, Activity, Thread, Message, CourseEnrollment
 from ninja import Swagger, Router
 from ninja_extra import NinjaExtraAPI
 from ninja_jwt.controller import NinjaJWTDefaultController
 from typing import List
 from django.db.models import Max
 from .schemas import (
-    UserSchema,
     SignInSchema,
-    ActivitySchema,
     MessageSchema,
     UserRegisterSchema, 
     UserOutSchema,      
     ErrorSchema,       
     CourseCreateSchema,
+    CourseUpdateSchema,
     CourseOutSchema,
     ActivityCreateSchema,
     ActivityOutSchema,
@@ -26,7 +25,6 @@ from .schemas import (
     ActivityDetailSchema
 )
 
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from http import HTTPStatus
 
@@ -102,6 +100,52 @@ def create_course_api(request, payload: CourseCreateSchema, user_id: int):
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
     except Exception as e:
         return HTTPStatus.BAD_REQUEST, {"message": f"Course creation failed: {str(e)}"}
+
+@api.put("/courses/{course_id}", response={200: CourseOutSchema, 400: ErrorSchema, 403: ErrorSchema, 404: ErrorSchema})
+def update_course_api(request, course_id: int, payload: CourseUpdateSchema, user_id: int):
+    """
+    Update an existing course. Only the owner/teacher can update it.
+    """
+    try:
+        user = User.objects.get(id=user_id)
+        course = Course.objects.get(id=course_id)
+        
+        if course.owner_id != user.id or user.role != 'teacher':
+            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can update this course."}
+        
+        course.title = payload.title
+        course.description = payload.description if payload.description else course.description
+        course.save()
+        
+        return HTTPStatus.OK, course
+    except User.DoesNotExist:
+        return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
+    except Course.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Course not found."}
+    except Exception as e:
+        return HTTPStatus.BAD_REQUEST, {"message": f"Course update failed: {str(e)}"}
+
+@api.delete("/courses/{course_id}", response={204: None, 403: ErrorSchema, 404: ErrorSchema})
+def delete_course_api(request, course_id: int, user_id: int):
+    """
+    Delete a course. Only the owner/teacher can delete it.
+    """
+    try:
+        user = User.objects.get(id=user_id)
+        course = Course.objects.get(id=course_id)
+        
+        if course.owner_id != user.id or user.role != 'teacher':
+            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can delete this course."}
+        
+        course.delete()
+        
+        return HTTPStatus.NO_CONTENT, None
+    except User.DoesNotExist:
+        return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
+    except Course.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Course not found."}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Course deletion failed: {str(e)}"}
 
 # --- Activity CRUD ---
 @api.post("/activities", response={201: ActivityOutSchema, 400: ErrorSchema, 403: ErrorSchema, 404: ErrorSchema})
@@ -219,6 +263,36 @@ def create_message_api(request, thread_id: int, payload: MessageCreateSchema):
          return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
     except Exception as e:
         return HTTPStatus.BAD_REQUEST, {"message": f"Message creation failed: {str(e)}"}
+
+@api.delete("/enrollments/{enrollment_id}", response={204: None, 403: ErrorSchema, 404: ErrorSchema, 500: ErrorSchema})
+def remove_student_from_course(request, enrollment_id: int, current_user_id: int):
+    """
+    Remove a student from a course. Only the course owner (teacher) can do this.
+    A teacher cannot remove another teacher.
+    `current_user_id` is passed from the client and should be the ID of the logged-in user.
+    """
+    try:
+        enrollment = CourseEnrollment.objects.select_related('user', 'course__owner').get(id=enrollment_id)
+        course_owner_id = enrollment.course.owner.id
+        user_to_remove_role = enrollment.user.role
+
+        try:
+            requesting_user = User.objects.get(id=current_user_id)
+            if requesting_user.role != 'teacher' or requesting_user.id != course_owner_id:
+                 return HTTPStatus.FORBIDDEN, {"message": "Only the course owner (teacher) can remove participants."}
+        except User.DoesNotExist:
+            return HTTPStatus.BAD_REQUEST, {"message": "Requesting user not found."}
+
+        if user_to_remove_role != 'student':
+            return HTTPStatus.FORBIDDEN, {"message": "Only students can be removed. Teachers cannot remove other users who are not students."}
+
+        enrollment.delete()
+        return HTTPStatus.NO_CONTENT, None
+
+    except CourseEnrollment.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Enrollment record not found."}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to remove student: {str(e)}"}
 
 # Add the thread router to the main API
 api.add_router("/threads", thread_router, tags=["Threads"])

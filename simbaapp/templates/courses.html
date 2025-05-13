@@ -9,17 +9,17 @@
 <div class="courses-container">
     {% for course in courses %}
         <div class="course-card">
+            {% if request.session.role == 'teacher' and request.session.user_id == course.owner.id %}
+            <div class="card-options">
+                <button class="dropdown-toggle"><i class="fas fa-angle-down"></i></button>
+                <div class="dropdown-menu">
+                    <a href="#" class="dropdown-item edit-course" data-course-id="{{ course.id }}" data-course-title="{{ course.title }}" data-course-description="{{ course.description|default:'' }}">Edit course</a>
+                    <a href="#" class="dropdown-item delete-course" data-course-id="{{ course.id }}" data-course-title="{{ course.title }}">Delete course</a>
+                </div>
+            </div>
+            {% endif %}
             <a href="{% url 'course_detail' course.id %}" class="course-card-link">
                 <div class="card-header course-color-{% cycle '1' '2' '3' '4' %}">
-                    {% if request.session.role == 'teacher' and request.session.user_id == course.owner.id %}
-                    <div class="card-options">
-                        <button class="dropdown-toggle"><i class="fas fa-angle-down"></i></button>
-                        <div class="dropdown-menu">
-                            <a href="{% url 'edit_course' course.id %}" class="dropdown-item">Edit course</a>
-                            <a href="#" class="dropdown-item delete-course" data-course-id="{{ course.id }}">Delete course</a>
-                        </div>
-                    </div>
-                    {% endif %}
                     <div class="course-info">
                         <h3 class="course-title">{{ course.title }}</h3>
                         <p class="teacher-name">{{ course.owner.username }}</p>
@@ -44,6 +44,44 @@
             </p>
         </div>
     {% endfor %}
+</div>
+
+<!-- Edit Course Modal -->
+<div id="editCourseModal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="closeEditModal">&times;</span>
+        <h3 class="modal-title">Edit Course</h3>
+        <form id="editCourseForm">
+            <div class="form-group">
+                <label for="edit-title">Title:</label>
+                <input type="text" id="edit-title" name="title" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="edit-description">Description:</label>
+                <textarea id="edit-description" name="description" rows="5" class="form-control"></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" id="cancelEditBtn" class="btn btn-danger">Cancel</button>
+                <button type="submit" class="btn btn-success">Update Course</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteCourseModal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="closeDeleteModal">&times;</span>
+        <h3 class="modal-title">Delete Course</h3>
+        <p>Are you sure you want to delete <strong id="courseToDeleteName"></strong>?</p>
+        <p>This action cannot be undone.</p>
+        <div class="form-actions">
+            <button type="button" id="cancelDeleteBtn" class="btn btn-secondary">Cancel</button>
+            <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Delete Course</button>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -138,9 +176,8 @@
 .card-options {
   position: absolute;
   top: 15px;
-  right: 50px;
+  right: 15px;
   z-index: 25;
-  display: block;
 }
 
 .dropdown-toggle {
@@ -151,6 +188,8 @@
   cursor: pointer;
   padding: 8px;
   opacity: 0.9;
+  z-index: 26;
+  position: relative;
 }
 
 .dropdown-toggle:hover {
@@ -236,4 +275,178 @@
   text-align: center;
 }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Prevent card clicks when clicking in dropdown area
+    document.querySelectorAll('.card-options').forEach(optionsEl => {
+        optionsEl.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+
+    // Ensure dropdown toggle works and prevent card link activation
+    document.querySelectorAll('.dropdown-toggle').forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            // This isn't strictly necessary since we're using CSS hover
+            // But it helps ensure the dropdown works in all cases
+            const menu = this.nextElementSibling;
+            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+        });
+    });
+
+    // Store the current user ID for API calls
+    const currentUserId = '{{ request.session.user_id }}';
+    
+    // Edit Course handling
+    const editCourseModal = document.getElementById('editCourseModal');
+    const editTitleInput = document.getElementById('edit-title');
+    const editDescriptionInput = document.getElementById('edit-description');
+    const editCourseForm = document.getElementById('editCourseForm');
+    let courseToEditId = null;
+    
+    // Edit course click handlers
+    document.querySelectorAll('.edit-course').forEach(editLink => {
+        editLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent card link from being triggered
+            
+            // Get course data from data attributes
+            courseToEditId = this.dataset.courseId;
+            const courseTitle = this.dataset.courseTitle;
+            const courseDescription = this.dataset.courseDescription;
+            
+            // Fill the form
+            editTitleInput.value = courseTitle;
+            editDescriptionInput.value = courseDescription;
+            
+            // Show the modal
+            editCourseModal.style.display = 'block';
+            
+            // Prevent event bubbling to parent elements
+            return false;
+        });
+    });
+    
+    // Close Edit Modal
+    document.getElementById('closeEditModal').addEventListener('click', () => {
+        editCourseModal.style.display = 'none';
+    });
+    
+    document.getElementById('cancelEditBtn').addEventListener('click', () => {
+        editCourseModal.style.display = 'none';
+    });
+    
+    // Handle form submission
+    editCourseForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!courseToEditId) {
+            alert('Error: Course ID is missing.');
+            return;
+        }
+        
+        const courseData = {
+            title: editTitleInput.value,
+            description: editDescriptionInput.value
+        };
+
+        // Call the API to update the course
+        fetch(`/api/courses/${courseToEditId}?user_id=${currentUserId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(courseData)
+        })
+        .then(response => {
+            if (response.ok) {
+                // Reload the page to show updated course
+                window.location.reload();
+            } else {
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Failed to update course');
+                });
+            }
+        })
+        .catch(error => {
+            alert(`Error: ${error.message}`);
+        });
+    });
+    
+    // Delete Course handling
+    const deleteCourseModal = document.getElementById('deleteCourseModal');
+    const courseToDeleteNameElement = document.getElementById('courseToDeleteName');
+    let courseToDeleteId = null;
+    
+    // Delete course click handlers
+    document.querySelectorAll('.delete-course').forEach(deleteLink => {
+        deleteLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent card link from being triggered
+            
+            // Get course data from data attributes
+            courseToDeleteId = this.dataset.courseId;
+            const courseTitle = this.dataset.courseTitle;
+            
+            // Set course name in confirmation dialog
+            courseToDeleteNameElement.textContent = courseTitle;
+            
+            // Show the modal
+            deleteCourseModal.style.display = 'block';
+        });
+    });
+    
+    // Close Delete Modal
+    document.getElementById('closeDeleteModal').addEventListener('click', () => {
+        deleteCourseModal.style.display = 'none';
+    });
+    
+    document.getElementById('cancelDeleteBtn').addEventListener('click', () => {
+        deleteCourseModal.style.display = 'none';
+    });
+    
+    // Handle delete confirmation
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        if (!courseToDeleteId) {
+            alert('Error: Course ID is missing.');
+            return;
+        }
+        
+        // Call the API to delete the course
+        fetch(`/api/courses/${courseToDeleteId}?user_id=${currentUserId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.status === 204) {
+                // Reload the page to show updated course list
+                window.location.reload();
+            } else {
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Failed to delete course');
+                });
+            }
+        })
+        .catch(error => {
+            alert(`Error: ${error.message}`);
+        });
+    });
+    
+    // Close modals when clicking outside
+    window.addEventListener('click', function(event) {
+        if (event.target === editCourseModal) {
+            editCourseModal.style.display = 'none';
+        } else if (event.target === deleteCourseModal) {
+            deleteCourseModal.style.display = 'none';
+        }
+    });
+});
+</script>
 {% endblock %}

@@ -30,6 +30,10 @@ class CourseCreateSchema(Schema):
     title: str
     description: Optional[str] = None
 
+class CourseUpdateSchema(Schema):
+    title: str
+    description: Optional[str] = None
+
 class ActivityCreateSchema(Schema):
     course_id: int 
     title: Optional[str] = None

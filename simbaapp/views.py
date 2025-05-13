@@ -1,25 +1,44 @@
-# filepath: /Users/lenonanthony/Documents/simba-2025/simbaapp/views.py
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 import urllib
+import requests
+from django.urls import reverse
+from django.conf import settings
 from .models import User, Course, Activity, CourseEnrollment, Message
 
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
+        
+        api_url = request.build_absolute_uri(reverse('api-1.0.0:login_user')) 
+        
         try:
-            user = User.objects.get(username=username)
-            if check_password(password, user.password_hash):
-                request.session['user_id'] = user.id
-                request.session['username'] = user.username
-                request.session['role'] = user.role
-                return redirect('courses')
-            else:
-                messages.error(request, "Invalid credentials.")
-        except User.DoesNotExist:
-            messages.error(request, "User does not exist.")
+            response = requests.post(api_url, json={
+                'username': username,
+                'password': password
+            })
+            response.raise_for_status() 
+            
+            user_data = response.json()
+            
+            request.session['user_id'] = user_data['id']
+            request.session['username'] = user_data['username']
+            request.session['role'] = user_data['role']
+            
+            return redirect('courses')
+            
+        except requests.exceptions.RequestException as e:
+            messages.error(request, f"Login request failed: {e}")
+            try:
+                error_data = e.response.json()
+                messages.error(request, f"API Error: {error_data.get('message', 'Unknown error')}")
+            except (AttributeError, ValueError, TypeError):
+                 messages.error(request, "An unexpected error occurred during login.")
+        except Exception as e:
+             messages.error(request, f"An unexpected error occurred: {str(e)}")
+
     return render(request, 'login.html')
 
 def logout_view(request):
@@ -35,33 +54,38 @@ def register_view(request):
         password_confirm = request.POST.get('password_confirm')
         role = request.POST.get('role', 'student')
         
-        if password != password_confirm:
-            messages.error(request, "Passwords do not match.")
-            return render(request, 'register.html')
+        api_url = request.build_absolute_uri(reverse('api-1.0.0:register_user'))
         
-        if User.objects.filter(username=username).exists():
-            messages.error(request, "Username already exists.")
-            return render(request, 'register.html')
+        try:
+            response = requests.post(api_url, json={
+                'username': username,
+                'email': email,
+                'password': password,
+                'password_confirm': password_confirm,
+                'role': role
+            })
+            
+            response_data = response.json()
+
+            if response.status_code == 201:
+                messages.success(request, "Registration successful!")
+                request.session['user_id'] = response_data['id']
+                request.session['username'] = response_data['username']
+                request.session['role'] = response_data['role']
+                return redirect('courses')
+            else:
+                 messages.error(request, response_data.get('message', 'Registration failed.'))
         
-        if User.objects.filter(email=email).exists():
-            messages.error(request, "Email is already registered.")
-            return render(request, 'register.html')
-        
-        hashed_password = make_password(password)
-        user = User.objects.create(
-            username=username,
-            email=email,
-            password_hash=hashed_password,
-            role=role  
-        )
-        messages.success(request, "Registration successful!")
-        
-        request.session['user_id'] = user.id
-        request.session['username'] = user.username
-        request.session['role'] = user.role
-        
-        return redirect('courses')
-        
+        except requests.exceptions.RequestException as e:
+            messages.error(request, f"Registration request failed: {e}")
+            try:
+                error_data = e.response.json()
+                messages.error(request, f"API Error: {error_data.get('message', 'Unknown error')}")
+            except (AttributeError, ValueError, TypeError):
+                 messages.error(request, "An unexpected error occurred during registration.")
+        except Exception as e:
+            messages.error(request, f"An unexpected error occurred: {str(e)}")
+            
     return render(request, 'register.html')
 
 def chainlit_view(request):
@@ -126,13 +150,16 @@ def create_course_view(request):
         return redirect('login')
         
     user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)
     
-    if user.role != 'teacher':
-        messages.error(request, "Only teachers can create courses.")
-        return redirect('courses')
+    try:
+        user = User.objects.get(id=user_id)
+        if user.role != 'teacher':
+            messages.error(request, "Only teachers can create courses.")
+            return redirect('courses')
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
     
-    # Get enrolled courses for sidebar
     enrolled_courses = Course.objects.filter(owner=user).order_by('-created_at')
     
     if request.method == 'POST':
@@ -143,13 +170,31 @@ def create_course_view(request):
             messages.error(request, "Title is required.")
             return render(request, 'create_course.html', {'enrolled_courses': enrolled_courses})
             
-        course = Course(title=title, description=description, owner=user)
-        course.save()
-        
-        messages.success(request, f"Course created successfully! Enrollment code: {course.enrollment_code}")
-        
-        return redirect('courses')
-        
+        api_url = request.build_absolute_uri(reverse('api-1.0.0:create_course_api') + f"?user_id={user_id}")
+
+        try:
+            response = requests.post(api_url, json={
+                'title': title,
+                'description': description
+            })
+            response_data = response.json()
+
+            if response.status_code == 201:
+                messages.success(request, f"Course created successfully! Enrollment code: {response_data['enrollment_code']}")
+                return redirect('courses')
+            else:
+                 messages.error(request, response_data.get('message', 'Course creation failed.'))
+
+        except requests.exceptions.RequestException as e:
+            messages.error(request, f"Course creation request failed: {e}")
+            try:
+                error_data = e.response.json()
+                messages.error(request, f"API Error: {error_data.get('message', 'Unknown error')}")
+            except (AttributeError, ValueError, TypeError):
+                 messages.error(request, "An unexpected error occurred during course creation.")
+        except Exception as e:
+            messages.error(request, f"An unexpected error occurred: {str(e)}")
+            
     return render(request, 'create_course.html', {'enrolled_courses': enrolled_courses})
 
 def course_detail_view(request, course_id):
@@ -180,7 +225,6 @@ def course_detail_view(request, course_id):
     
     participants = CourseEnrollment.objects.filter(course=course).select_related('user')
     
-    # Get all enrolled courses for the sidebar
     if user.role == 'teacher':
         enrolled_courses = Course.objects.filter(owner=user)
     else:
@@ -192,55 +236,69 @@ def course_detail_view(request, course_id):
         'is_teacher': is_teacher_of_course,
         'participants': participants,
         'enrolled_courses': enrolled_courses,
-        'active_course': course  # Mark the current course as active
+        'active_course': course 
     })
 
 def create_activity_view(request, course_id):
     if not request.session.get('user_id'):
         return redirect('login')
+        
+    user_id = request.session.get('user_id')
+
     try:
-        course = Course.objects.get(id=course_id)
-        user_id = request.session.get('user_id')
         user = User.objects.get(id=user_id)
-        can_create_activity = course.owner_id == user_id and user.role == 'teacher'
-        if not can_create_activity:
-            messages.error(request, "Only teachers can create activities in this course.")
-            return redirect('activities')
-        if request.method == 'POST':
-            activity_title = request.POST.get('activity_title', '')
-            description = request.POST.get('activity_description', '')
-            expert_mode = request.POST.get('expert_mode') == 'on'
-            custom_prompt = request.POST.get('custom_prompt', '') if expert_mode else ''
-            questions = request.POST.getlist('questions[]') or []
-            agent_attitude = request.POST.get('agent_attitude', 'friendly')
-            subjects = request.POST.get('subjects', '')
-            restrict_to_subject = request.POST.get('restrict_to_subject') == 'on'
-            allow_questions = request.POST.get('allow_questions') == 'on'
-            allow_emojis = request.POST.get('allow_emojis') == 'on'
-            trust_document = request.POST.get('trust_document') == 'on'
-            activity = Activity.objects.create(
-                course=course,
-                user=user,
-                title=activity_title if activity_title else f"Activity for {course.title}",
-                description=description,
-                expert_mode=expert_mode,
-                custom_prompt=custom_prompt,
-                questions=questions,
-                agent_attitude=agent_attitude,
-                subjects=subjects,
-                restrict_to_subject=restrict_to_subject,
-                allow_questions=allow_questions,
-                allow_emojis=allow_emojis,
-                trust_document=trust_document
-            )
-            messages.success(request, "Activity created successfully!")
-            return redirect('activities')
-        else:
-            return redirect('activities')
+        course = Course.objects.get(id=course_id)
+        if user.role != 'teacher' or course.owner_id != user_id:
+            messages.error(request, "You do not have permission to create activities in this course.")
+            return redirect('course_detail', course_id=course_id) 
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
     except Course.DoesNotExist:
         messages.error(request, "Course not found.")
         return redirect('courses')
+        
+    if request.method == 'POST':
+        activity_data = {
+            "course_id": course_id,
+            "title": request.POST.get('activity_title', ''),
+            "description": request.POST.get('activity_description', ''),
+            "expert_mode": request.POST.get('expert_mode') == 'on',
+            "custom_prompt": request.POST.get('custom_prompt', '') if request.POST.get('expert_mode') == 'on' else '',
+            "questions": request.POST.getlist('questions[]') or [],
+            "agent_attitude": request.POST.get('agent_attitude', 'friendly'),
+            "subjects": request.POST.get('subjects', ''),
+            "restrict_to_subject": request.POST.get('restrict_to_subject') == 'on',
+            "allow_questions": request.POST.get('allow_questions') == 'on',
+            "allow_emojis": request.POST.get('allow_emojis') == 'on',
+            "trust_document": request.POST.get('trust_document') == 'on'
+        }
+        
+        api_url = request.build_absolute_uri(reverse('api-1.0.0:create_activity_api') + f"?user_id={user_id}")
 
+        try:
+            response = requests.post(api_url, json=activity_data)
+            response_data = response.json()
+
+            if response.status_code == 201:
+                messages.success(request, "Activity created successfully!")
+                return redirect('course_detail', course_id=course_id) # Redirect back to course detail
+            else:
+                messages.error(request, response_data.get('message', 'Activity creation failed.'))
+        
+        except requests.exceptions.RequestException as e:
+            messages.error(request, f"Activity creation request failed: {e}")
+            try:
+                error_data = e.response.json()
+                messages.error(request, f"API Error: {error_data.get('message', 'Unknown error')}")
+            except (AttributeError, ValueError, TypeError):
+                 messages.error(request, "An unexpected error occurred during activity creation.")
+        except Exception as e:
+            messages.error(request, f"An unexpected error occurred: {str(e)}")
+            
+        return redirect('course_detail', course_id=course_id)
+    else:
+        return redirect('course_detail', course_id=course_id)
 
 def join_course_view(request):
     """View for students to join courses using enrollment codes"""
@@ -250,7 +308,6 @@ def join_course_view(request):
     user_id = request.session.get('user_id')
     user = User.objects.get(id=user_id)
     
-    # Get enrolled courses for sidebar
     enrolled_courses = Course.objects.filter(enrollments__user=user).order_by('-created_at')
     
     if request.method == 'POST':
@@ -263,11 +320,9 @@ def join_course_view(request):
         try:
             course = Course.objects.get(enrollment_code=enrollment_code)
             
-            # Check if already enrolled
             if CourseEnrollment.objects.filter(user=user, course=course).exists():
                 messages.warning(request, f"You are already enrolled in the course '{course.title}'.")
             else:
-                # Create enrollment
                 CourseEnrollment.objects.create(
                     user=user,
                     course=course
@@ -284,7 +339,6 @@ def join_course_view(request):
     return render(request, 'join_course.html', {'enrolled_courses': enrolled_courses})
 
 def dashboard_view(request):
-    # Ensure user is logged in and is a teacher
     if not request.session.get('user_id'):
         return redirect('login')
     user_id = request.session.get('user_id')
@@ -293,7 +347,6 @@ def dashboard_view(request):
         messages.error(request, "Only teachers can access the dashboard.")
         return redirect('courses')
 
-    # Get teacher's courses and selected course
     courses = Course.objects.filter(owner=user).order_by('-created_at')
     selected_course_id = request.GET.get('course_id')
     if selected_course_id:
@@ -304,7 +357,6 @@ def dashboard_view(request):
         messages.info(request, "No courses found. Create one first.")
         return redirect('create_course')
 
-    # Compute stats for the selected course
     students = CourseEnrollment.objects.filter(course=selected_course).select_related('user')
     activities_count = Activity.objects.filter(course=selected_course).count()
     student_messages_qs = Message.objects.filter(
@@ -313,7 +365,6 @@ def dashboard_view(request):
     ).select_related('thread__user')
     total_messages = student_messages_qs.count()
 
-    # Aggregate per-student message counts and average lengths
     counts = {}
     lengths = {}
     for msg in student_messages_qs:
@@ -330,10 +381,8 @@ def dashboard_view(request):
             'avg_length': round(avg_len, 2)
         })
 
-    # Recent messages preview
     last_messages = student_messages_qs.order_by('-timestamp')[:10]
 
-    # Prepare context and render template
     context = {
         'courses': courses,
         'selected_course': selected_course,
@@ -342,7 +391,7 @@ def dashboard_view(request):
         'total_messages': total_messages,
         'stats_per_student': stats_per_student,
         'last_messages': last_messages,
-        'enrolled_courses': courses  # Add enrolled_courses to context
+        'enrolled_courses': courses  
     }
     return render(request, 'dashboard.html', context)
     
@@ -354,18 +403,15 @@ def edit_course_view(request, course_id):
     user_id = request.session.get('user_id')
     user = User.objects.get(id=user_id)
     
-    # Only teachers can edit courses
     if user.role != 'teacher':
         messages.error(request, "Only teachers can edit courses.")
         return redirect('courses')
     
-    # Get enrolled courses for sidebar
     enrolled_courses = Course.objects.filter(owner=user).order_by('-created_at')
     
     try:
         course = Course.objects.get(id=course_id)
         
-        # Only the owner of the course can edit it
         if course.owner.id != user_id:
             messages.error(request, "You can only edit your own courses.")
             return redirect('courses')
@@ -409,7 +455,6 @@ def activities_view(request):
     user = User.objects.get(id=user_id)
     
     if role == 'teacher':
-        # For teachers, show activities they created
         teacher_courses = Course.objects.filter(owner_id=user_id)
         activities = Activity.objects.filter(course__in=teacher_courses).order_by('-created_at')
         context = {
@@ -419,14 +464,13 @@ def activities_view(request):
             'enrolled_courses': teacher_courses
         }
     else:
-        # For students, show activities from enrolled courses
         enrolled_courses = Course.objects.filter(enrollments__user=user)
         activities = Activity.objects.filter(course__in=enrolled_courses).order_by('-created_at')
-        context = {
+    context = {
             'activities': activities,
             'is_teacher': False,
             'courses': enrolled_courses,
             'enrolled_courses': enrolled_courses
-        }
+    }
     
     return render(request, 'activities.html', context)

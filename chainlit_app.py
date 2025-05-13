@@ -1,22 +1,23 @@
 import os
 import django
+import django.apps
 from openai import AsyncOpenAI
 import chainlit as cl
 import logging
 import urllib.parse
-from asgiref.sync import sync_to_async
-from django.db.models import Max
+import httpx
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+SIMBA_API_BASE_URL = os.getenv('SIMBA_API_URL', 'http://web:8000/api')
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
-django.setup()
+if not django.apps.apps.ready:
+    django.setup()
+from simbaapp.models import Activity, Message, Thread, User # Will not be used anymore
 
-from simbaapp.models import Activity, Message, Thread, User
-
-# OpenAI client
 client = AsyncOpenAI()
 
 settings = {
@@ -24,176 +25,154 @@ settings = {
     "temperature": 0.7,
 }
 
-# --- ASYNC DB HELPERS ---
-@sync_to_async
-def get_activity_by_id(activity_id):
-    return Activity.objects.get(id=activity_id)
+# --- API Client Helpers ---
+async def api_get_activity(activity_id: int):
+    async with httpx.AsyncClient() as http_client:
+        try:
+            response = await http_client.get(f"{SIMBA_API_BASE_URL}/activities/{activity_id}")
+            response.raise_for_status() 
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"API Error getting activity {activity_id}: {e.response.status_code} - {e.response.text}")
+            raise Exception(f"API Error: Could not fetch activity. Status: {e.response.status_code}")
+        except httpx.RequestError as e:
+            logger.error(f"Request Error getting activity {activity_id}: {e}")
+            raise Exception(f"Request Error: Could not connect to API to fetch activity.")
 
+async def api_get_or_create_thread(activity_id: int, user_id: int):
+    payload = {"activity_id": activity_id, "user_id": user_id}
+    async with httpx.AsyncClient() as http_client:
+        try:
+            response = await http_client.post(f"{SIMBA_API_BASE_URL}/threads/get-or-create", json=payload)
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"API Error get/create thread: {e.response.status_code} - {e.response.text}")
+            raise Exception(f"API Error: Could not get/create thread. Status: {e.response.status_code}")
+        except httpx.RequestError as e:
+            logger.error(f"Request Error get/create thread: {e}")
+            raise Exception(f"Request Error: Could not connect to API for thread.")
 
-@sync_to_async
-def get_course_from_activity(activity):
-    return activity.course
+async def api_create_message(thread_id: int, content: str, role: str, user_id: int, username: str = None, model_name: str = None):
+    payload = {
+        "thread_id": thread_id, 
+        "content": content,
+        "role": role,
+        "user_id": user_id,
+        "username": username,
+        "model": model_name
+    }
+    async with httpx.AsyncClient() as http_client:
+        try:
+            response = await http_client.post(f"{SIMBA_API_BASE_URL}/threads/{thread_id}/messages", json=payload)
+            response.raise_for_status()
+            return response.json() 
+        except httpx.HTTPStatusError as e:
+            logger.error(f"API Error creating message: {e.response.status_code} - {e.response.text}")
+            raise Exception(f"API Error: Could not create message. Status: {e.response.status_code}")
+        except httpx.RequestError as e:
+            logger.error(f"Request Error creating message: {e}")
+            raise Exception(f"Request Error: Could not connect to API for message.")
 
-@sync_to_async
-def get_course_title(activity):
-    return activity.course.title
-
-@sync_to_async
-def get_activity_title(activity):
-    return activity.title
-
-@sync_to_async
-def get_user_by_id(user_id):
-    return User.objects.get(id=user_id)
-
-@sync_to_async
-def create_user_message(thread, content, user_id, username):
-    user = User.objects.get(id=user_id)
-    last_num = Message.objects.filter(thread=thread).aggregate(Max('message_number')).get('message_number__max') or 0
-    return Message.objects.create(
-        thread=thread,
-        content=content,
-        role=user.role,  
-        message_number=last_num + 1,
-        metadata={
-            "user_id": user_id,
-            "author": username,
-            "role": user.role
-        }
-    )
-
-@sync_to_async
-def create_assistant_message(thread, content, model, user_id):
-    last_num = Message.objects.filter(thread=thread).aggregate(Max('message_number')).get('message_number__max') or 0
-    return Message.objects.create(
-        thread=thread,
-        content=content,
-        role="assistant",
-        message_number=last_num + 1,
-        metadata={
-            "model": model,
-            "user_id": user_id
-        }
-    )
-
-@sync_to_async
-def create_thread(activity, user_id):
-    return Thread.objects.create(activity=activity, user_id=user_id)
-
-@sync_to_async
-def get_thread_by_id(thread_id):
-    return Thread.objects.get(id=thread_id)
-
-@sync_to_async
-def get_messages_for_thread(thread_id):
-    return list(Message.objects.filter(thread_id=thread_id).order_by('message_number'))
-
-@sync_to_async
-def get_or_create_thread(activity, user_id):
-    thread, created = Thread.objects.get_or_create(
-        activity=activity,
-        user_id=user_id,
-    )
-    if not created:
-        thread.save(update_fields=['updated_at'])
-        logger.info(f"Existing thread found and updated: {thread.id}")
-    else:
-        logger.info(f"New thread created: {thread.id}")
-    return thread
+async def api_get_messages_for_thread(thread_id: int):
+    async with httpx.AsyncClient() as http_client:
+        try:
+            response = await http_client.get(f"{SIMBA_API_BASE_URL}/threads/{thread_id}/messages")
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"API Error getting messages: {e.response.status_code} - {e.response.text}")
+            raise Exception(f"API Error: Could not fetch messages. Status: {e.response.status_code}")
+        except httpx.RequestError as e:
+            logger.error(f"Request Error getting messages: {e}")
+            raise Exception(f"Request Error: Could not connect to API for messages.")
 
 @cl.on_chat_start
 async def on_chat_start():
     referer_url = cl.user_session.get("http_referer", "")
-    
     parsed_url = urllib.parse.urlparse(referer_url)
-    query_string = parsed_url.query
-    query_params = dict(urllib.parse.parse_qsl(query_string))
+    query_params = dict(urllib.parse.parse_qsl(parsed_url.query))
     
-    logger.info(f"Referer URL: {referer_url}")
-    logger.info(f"Query string: {query_string}")
-    logger.info(f"Parsed parameters: {query_params}")
-    
-    activity_id = query_params.get('activity_id')
-    user_id = query_params.get('user_id')
+    activity_id_str = query_params.get('activity_id')
+    user_id_str = query_params.get('user_id')
     username = query_params.get('username', 'User')
     
-    logger.info(f"activity_id: {activity_id}")
-    logger.info(f"user_id: {user_id}")
-    
-    if not activity_id or not user_id:
-        await cl.Message(content=f"Invalid parameters. Activity ID and User ID are required. Received params: {query_params}").send()
-        raise Exception("Invalid parameters")
-    
+    if not activity_id_str or not user_id_str:
+        await cl.Message(content=f"Invalid parameters. Activity ID and User ID are required. Received: {query_params}").send()
+        raise Exception("Invalid parameters: activity_id and user_id are required.")
+
     try:
-        activity = await get_activity_by_id(activity_id)
-        thread = await get_or_create_thread(activity, user_id) 
-        cl.user_session.set("thread_id", thread.id)
+        activity_id = int(activity_id_str)
+        user_id = int(user_id_str)
+    except ValueError:
+        await cl.Message(content="Invalid Activity ID or User ID format.").send()
+        raise Exception("Invalid ID format")
+
+    try:
+        activity_data = await api_get_activity(activity_id)
+        activity_title = activity_data.get('title', 'Activity')
+
+        thread_data = await api_get_or_create_thread(activity_id, user_id)
+        thread_id = thread_data['id']
+        
+        cl.user_session.set("thread_id", thread_id)
         cl.user_session.set("activity_id", activity_id)
         cl.user_session.set("user_id", user_id)
         cl.user_session.set("username", username)
-        
-        course_title = await get_course_title(activity)
+        cl.user_session.set("activity_data", activity_data)
 
-        questions = getattr(activity, 'questions', [])
-        main_question = None
-        if questions and isinstance(questions, list) and len(questions) > 0:
-            main_question = questions[0]
-        else:
-            main_question = getattr(activity, 'title', None)
-
-        welcome_message = f"Welcome to SIMBA! You are in the activity: **{activity.title}**, course: **{course_title}**"
+        welcome_message = f"Welcome to SIMBA! You are in the activity: **{activity_title}**."
         await cl.Message(content=welcome_message).send()
+
+        questions = activity_data.get('questions', [])
+        main_question = questions[0] if questions and isinstance(questions, list) and questions else activity_data.get('title')
 
         if main_question:
             question_message = f"Main question for this activity: **{main_question}**"
             await cl.Message(content=question_message).send()
         
-        previous_messages = await get_messages_for_thread(thread.id)
-        for msg in previous_messages:
-            author = msg.metadata.get('author') if msg.metadata else None
-            if msg.role == 'assistant':
-                await cl.Message(content=msg.content, author='Assistant').send()
+        previous_messages_data = await api_get_messages_for_thread(thread_id)
+        for msg_data in previous_messages_data:
+            author = msg_data.get('metadata', {}).get('author') if msg_data.get('metadata') else msg_data.get('role')
+            if msg_data['role'] == 'assistant':
+                await cl.Message(content=msg_data['content'], author='Assistant').send()
             else:
-                await cl.Message(content=msg.content, author=author, type="user_message").send()
+                await cl.Message(content=msg_data['content'], author=author, type="user_message").send()
         
-    except Activity.DoesNotExist:
-        await cl.Message(content="Activity not found. Please check the provided ID.").send()
-        raise Exception("Activity not found")
+    except Exception as e:
+        logger.error(f"Error during chat start: {e}")
+        await cl.Message(content=f"Could not start chat: {str(e)}").send()
+        raise
 
 @cl.on_message
 async def on_message(message: cl.Message):
     activity_id = cl.user_session.get("activity_id")
     user_id = cl.user_session.get("user_id")
     username = cl.user_session.get("username")
+    thread_id = cl.user_session.get("thread_id")
+    activity_data = cl.user_session.get("activity_data")
 
-    if not activity_id or not user_id:
-        await cl.Message(content="Invalid session. Please refresh the page.").send()
+    if not all([activity_id, user_id, thread_id, activity_data]):
+        await cl.Message(content="Session error. Please refresh and try again.").send()
         return
 
     try:
-        thread_id = cl.user_session.get("thread_id")
-        thread = await get_thread_by_id(thread_id)
-        activity = await get_activity_by_id(activity_id) 
-        await create_user_message(thread, message.content, user_id, username)
-        messages = await get_messages_for_thread(thread_id)
+        await api_create_message(thread_id, message.content, "user", user_id, username=username)
+        
+        messages_history_data = await api_get_messages_for_thread(thread_id)
         openai_messages = []
 
-        attitude = getattr(activity, 'agent_attitude', 'friendly')
-        subjects = getattr(activity, 'subjects', '')
-        restrict = getattr(activity, 'restrict_to_subject', False)
-        allow_questions = getattr(activity, 'allow_questions', True)
-        allow_emojis = getattr(activity, 'allow_emojis', True)
-        trust_document = getattr(activity, 'trust_document', True)
-        expert_mode = getattr(activity, 'expert_mode', False)
-        custom_prompt = getattr(activity, 'custom_prompt', '')
-        description = getattr(activity, 'description', '')
-        questions = getattr(activity, 'questions', [])
-
-        main_question = None
-        if questions and isinstance(questions, list) and len(questions) > 0:
-            main_question = questions[0]
-        else:
-            main_question = getattr(activity, 'title', None)
+        attitude = activity_data.get('agent_attitude', 'friendly')
+        subjects = activity_data.get('subjects', '')
+        restrict = activity_data.get('restrict_to_subject', False)
+        allow_q = activity_data.get('allow_questions', True)
+        allow_e = activity_data.get('allow_emojis', True)
+        trust_doc = activity_data.get('trust_document', True)
+        expert = activity_data.get('expert_mode', False)
+        custom_p = activity_data.get('custom_prompt', '')
+        description = activity_data.get('description', '')
+        questions = activity_data.get('questions', [])
+        main_question = questions[0] if questions and isinstance(questions, list) and questions else activity_data.get('title')
 
         system_prompt = "You are an intelligent study assistant for students and teachers."
         system_prompt += f" Your attitude should be {attitude}."
@@ -205,37 +184,35 @@ async def on_message(message: cl.Message):
             system_prompt += f" Subjects: {subjects}."
         if restrict:
             system_prompt += " Only answer questions related to the course subjects."
-        if not allow_questions:
+        if not allow_q:
             system_prompt += " Do not provide questions to the student unless explicitly asked."
-        if not allow_emojis:
+        if not allow_e:
             system_prompt += " Do not use emojis in your responses."
         else:
             system_prompt += " You can use emojis to make the conversation more engaging."
-        if trust_document:
+        if trust_doc:
             system_prompt += " Trust the provided document to help answer questions."
-        if expert_mode and custom_prompt:
-            system_prompt += f" {custom_prompt}"
+        if expert and custom_p:
+            system_prompt += f" {custom_p}"
         if questions:
             system_prompt += f" Example questions for this activity: {', '.join(questions)}."
 
         openai_messages.append({"role": "system", "content": system_prompt})
-        for msg in messages:
-            if msg.role in ["assistant", "user"]:
-                openai_role = msg.role
-            else:
-                openai_role = "user"
-            openai_messages.append({"role": openai_role, "content": msg.content})
+        for msg_data in messages_history_data:
+            openai_role = msg_data['role'] if msg_data['role'] in ["assistant", "user"] else "user"
+            openai_messages.append({"role": openai_role, "content": msg_data['content']})
+            
         response = await client.chat.completions.create(
             model=settings["model"],
             messages=openai_messages,
             temperature=settings["temperature"],
         )
-        ai_response = response.choices[0].message.content
-        await create_assistant_message(thread, ai_response, settings["model"], user_id)
-        await cl.Message(content=ai_response).send()
-    except Activity.DoesNotExist:
-        await cl.Message(content="Activity not found. Please check the provided ID.").send()
+        ai_response_content = response.choices[0].message.content
+        
+        await api_create_message(thread_id, ai_response_content, "assistant", user_id, model_name=settings["model"])
+        await cl.Message(content=ai_response_content).send()
+        
     except Exception as e:
-        logger.error(f"Error processing message: {str(e)}")
-        await cl.Message(content=f"An error occurred while processing your message. Details: {str(e)}").send()
+        logger.error(f"Error processing message: {e}")
+        await cl.Message(content=f"An error occurred: {str(e)}").send()
 

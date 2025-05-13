@@ -21,26 +21,26 @@
         <div class="sidebar-nav">
             {% if request.session.user_id %}
                 <!-- Main navigation -->
-                <a href="{% url 'courses' %}" class="sidebar-item {% if request.resolver_match.url_name == 'courses' %}active{% endif %}">
+                        <a href="{% url 'courses' %}" class="sidebar-item {% if request.resolver_match.url_name == 'courses' %}active{% endif %}">
                     Courses
-                </a>
+                        </a>
                 
                 {% if enrolled_courses and request.resolver_match.url_name == 'course_detail' %}
-                    {% for enrolled_course in enrolled_courses %}
-                        <a href="{% url 'course_detail' enrolled_course.id %}" 
+                        {% for enrolled_course in enrolled_courses %}
+                            <a href="{% url 'course_detail' enrolled_course.id %}" 
                            class="sidebar-item course-subitem {% if active_course.id == enrolled_course.id %}active{% endif %}">
-                            {{ enrolled_course.title }}
-                        </a>
-                    {% endfor %}
+                                {{ enrolled_course.title }}
+                            </a>
+                        {% endfor %}
                 {% endif %}
                 
                 <a href="{% url 'activities' %}" class="sidebar-item {% if request.resolver_match.url_name == 'activities' %}active{% endif %}">
                     Activities
-                </a>
-                {% if request.session.role == 'teacher' %}
-                    <a href="{% url 'dashboard' %}" class="sidebar-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                        Dashboard
                     </a>
+                    {% if request.session.role == 'teacher' %}
+                        <a href="{% url 'dashboard' %}" class="sidebar-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                            Dashboard
+                        </a>
                 {% endif %}
             {% else %}
                 <a href="{% url 'login' %}" class="sidebar-item {% if request.resolver_match.url_name == 'login' %}active{% endif %}">

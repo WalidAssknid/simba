@@ -16,10 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from simbaapp.api import api as simba_api
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', simba_api.urls),
     path('', include('simbaapp.urls')),
 ]

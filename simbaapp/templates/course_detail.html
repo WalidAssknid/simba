@@ -285,8 +285,156 @@ document.addEventListener('DOMContentLoaded', function() {
             const activityId = this.dataset.activityId;
             
             if (action === 'edit') {
-                // Handle edit
-                alert('Edit functionality will be implemented');
+                const userId = '{{ request.session.user_id }}';
+                
+                fetch(`/api/activities/${activityId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch activity details');
+                        }
+                        return response.json();
+                    })
+                    .then(activity => {
+                        // Log para depuração
+                        console.log('Activity data received:', activity);
+                        
+                        const createModal = document.getElementById('activityModal');
+                        const editModal = createModal.cloneNode(true);
+                        editModal.id = 'editActivityModal';
+                        
+                        // Update modal title and form attributes
+                        editModal.querySelector('.modal-title').textContent = 'Edit Activity';
+                        const form = editModal.querySelector('form');
+                        form.action = '#';
+                        form.setAttribute('data-activity-id', activityId);
+                        
+                        form.querySelector('#activity-title').value = activity.title || '';
+                        form.querySelector('#activity-description').value = activity.description || '';
+                        form.querySelector('#activity-expert-mode').checked = activity.expert_mode;
+                        
+                        const customPromptGroup = form.querySelector('#custom-prompt-group');
+                        customPromptGroup.style.display = activity.expert_mode ? 'block' : 'none';
+                        form.querySelector('#custom-prompt').value = activity.custom_prompt || '';
+                        
+                        // Load existing questions
+                        const questionsList = form.querySelector('#questions-list');
+                        questionsList.innerHTML = '';
+                        const questionsHidden = form.querySelector('#questions-hidden');
+                        
+                        if (activity.questions && activity.questions.length > 0) {
+                            // Create JS array from activity.questions
+                            let questions = activity.questions;
+                            
+                            // Display each question
+                            questions.forEach(question => {
+                                const questionItem = document.createElement('div');
+                                questionItem.className = 'question-item';
+                                
+                                const questionText = document.createElement('span');
+                                questionText.className = 'question-text';
+                                questionText.textContent = question;
+                                
+                                const removeBtn = document.createElement('button');
+                                removeBtn.className = 'remove-question';
+                                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                                removeBtn.type = 'button';
+                                
+                                questionItem.appendChild(questionText);
+                                questionItem.appendChild(removeBtn);
+                                questionsList.appendChild(questionItem);
+                            });
+                            
+                            // Update hidden field with JSON
+                            questionsHidden.value = JSON.stringify(questions);
+                        }
+                        
+                        // Set advanced options
+                        form.querySelector('#agent-attitude').value = activity.agent_attitude;
+                        form.querySelector('#subjects').value = activity.subjects || '';
+                        form.querySelector('#restrict-to-subject').checked = activity.restrict_to_subject;
+                        form.querySelector('#allow-questions').checked = activity.allow_questions;
+                        form.querySelector('#allow-emojis').checked = activity.allow_emojis;
+                        form.querySelector('#trust-document').checked = activity.trust_document;
+                        form.querySelector('#word-limit').value = activity.word_limit || 0;
+                        
+                        // Update submit button text
+                        form.querySelector('.form-actions button').textContent = 'Update Activity';
+                        
+                        // Add event listener for form submission
+                        form.addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            
+                            // Gather updated activity data
+                            const formData = {
+                                title: form.querySelector('#activity-title').value,
+                                description: form.querySelector('#activity-description').value,
+                                expert_mode: form.querySelector('#activity-expert-mode').checked,
+                                custom_prompt: form.querySelector('#custom-prompt').value,
+                                questions: form.querySelector('#questions-hidden').value ? JSON.parse(form.querySelector('#questions-hidden').value) : [],
+                                agent_attitude: form.querySelector('#agent-attitude').value,
+                                subjects: form.querySelector('#subjects').value,
+                                restrict_to_subject: form.querySelector('#restrict-to-subject').checked,
+                                allow_questions: form.querySelector('#allow-questions').checked,
+                                allow_emojis: form.querySelector('#allow-emojis').checked,
+                                trust_document: form.querySelector('#trust-document').checked,
+                                word_limit: parseInt(form.querySelector('#word-limit').value) || 0
+                            };
+                            
+                            // Send PUT request to update activity
+                            console.log('Sending data:', formData);
+                            fetch(`/api/activities/${activityId}?user_id=${userId}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify(formData)
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    return response.json().then(data => {
+                                        throw new Error(data.message || 'Failed to update activity');
+                                    });
+                                }
+                                return response.json();
+                            })
+                            .then(updatedActivity => {
+                                // Update activity title in the list
+                                const activityItem = document.querySelector(`.activity-item[data-activity-id="${activityId}"]`);
+                                if (activityItem) {
+                                    activityItem.querySelector('.activity-title').textContent = updatedActivity.title;
+                                }
+                                
+                                // Close modal
+                                document.body.removeChild(editModal);
+                                
+                                // Show success message
+                                alert('Activity updated successfully!');
+                            })
+                            .catch(error => {
+                                console.error('Error updating activity:', error);
+                                alert(`Failed to update activity: ${error.message}`);
+                            });
+                        });
+                        
+                        // Set up close button behavior
+                        const closeBtn = editModal.querySelector('.close');
+                        closeBtn.addEventListener('click', function() {
+                            document.body.removeChild(editModal);
+                        });
+                        
+                        // Setup other event listeners (questions, expert mode toggle, etc.)
+                        setupEditModalEventListeners(editModal);
+                        
+                        // Add modal to body
+                        document.body.appendChild(editModal);
+                        
+                        // Display the modal
+                        editModal.style.display = 'block';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to load activity details for editing.');
+                    });
             } else if (action === 'link') {
                 // Show activity link modal
                 document.getElementById('activityLinkDisplay').textContent = 
@@ -295,11 +443,156 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (action === 'delete') {
                 // Handle delete
                 if (confirm('Are you sure you want to delete this activity?')) {
-                    alert('Delete functionality will be implemented');
+                    const userId = '{{ request.session.user_id }}';
+                    
+                    fetch(`/api/activities/${activityId}?user_id=${userId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    })
+                    .then(response => {
+                        if (response.status === 204) { // Success, no content
+                            // Remove the activity item from the DOM
+                            const activityItem = document.querySelector(`.activity-item[data-activity-id="${activityId}"]`);
+                            if (activityItem) {
+                                activityItem.remove();
+                                
+                                // Check if there are no more activities
+                                const activitiesList = document.querySelector('.activities-list');
+                                if (activitiesList.querySelectorAll('.activity-item').length === 0) {
+                                    // Add empty state message
+                                    const emptyState = document.createElement('div');
+                                    emptyState.className = 'empty-state';
+                                    emptyState.innerHTML = `
+                                        <h3>No activities found</h3>
+                                        <p>
+                                            {% if is_teacher %}
+                                            Click the <i class="fas fa-plus"></i> button to create a new activity!
+                                            {% else %}
+                                            This course doesn't have any activities yet.
+                                            {% endif %}
+                                        </p>
+                                    `;
+                                    activitiesList.appendChild(emptyState);
+                                }
+                            }
+                        } else {
+                            return response.json().then(data => {
+                                alert(`Error: ${data.message || 'Could not delete activity.'}`);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting activity:', error);
+                        alert('An unexpected error occurred while trying to delete the activity.');
+                    });
                 }
             }
         });
     });
+    
+    // Function to set up event listeners for the edit modal
+    function setupEditModalEventListeners(modal) {
+        const expertMode = modal.querySelector('#activity-expert-mode');
+        const customPromptGroup = modal.querySelector('#custom-prompt-group');
+        const questionsList = modal.querySelector('#questions-list');
+        const newQuestion = modal.querySelector('#new-question');
+        const addQuestionBtn = modal.querySelector('#add-question');
+        const questionsHidden = modal.querySelector('#questions-hidden');
+        let questions = [];
+        
+        // If there are existing questions in the hidden field, parse them
+        if (questionsHidden.value) {
+            try {
+                questions = JSON.parse(questionsHidden.value);
+            } catch (e) {
+                console.error('Error parsing questions:', e);
+                questions = [];
+            }
+        }
+        
+        // Expert mode toggle
+        expertMode.addEventListener('change', function() {
+            customPromptGroup.style.display = this.checked ? 'block' : 'none';
+        });
+        
+        // Add question
+        addQuestionBtn.addEventListener('click', function() {
+            const questionText = newQuestion.value.trim();
+            if (questionText) {
+                addQuestion(questionText);
+                newQuestion.value = '';
+                newQuestion.focus();
+            }
+        });
+        
+        // Enter key for adding questions
+        newQuestion.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addQuestionBtn.click();
+            }
+        });
+        
+        // Add a question to the list
+        function addQuestion(text) {
+            questions.push(text);
+            updateQuestionsList();
+            updateHiddenField();
+        }
+        
+        // Remove a question from the list
+        function removeQuestion(index) {
+            questions.splice(index, 1);
+            updateQuestionsList();
+            updateHiddenField();
+        }
+        
+        // Update the questions list display
+        function updateQuestionsList() {
+            questionsList.innerHTML = '';
+            questions.forEach((question, index) => {
+                const questionItem = document.createElement('div');
+                questionItem.className = 'question-item';
+                
+                const questionText = document.createElement('span');
+                questionText.className = 'question-text';
+                questionText.textContent = question;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-question';
+                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                removeBtn.type = 'button';
+                removeBtn.addEventListener('click', function() {
+                    removeQuestion(index);
+                });
+                
+                questionItem.appendChild(questionText);
+                questionItem.appendChild(removeBtn);
+                questionsList.appendChild(questionItem);
+            });
+        }
+        
+        // Update the hidden field with JSON
+        function updateHiddenField() {
+            questionsHidden.value = JSON.stringify(questions);
+        }
+        
+        // Set up removal of existing questions
+        modal.querySelectorAll('.remove-question').forEach((btn, index) => {
+            btn.addEventListener('click', function() {
+                removeQuestion(index);
+            });
+        });
+        
+        // Close when clicking outside
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+    }
     
     // Show enrollment code modal
     const showEnrollmentCodeBtn = document.getElementById('showEnrollmentCode');

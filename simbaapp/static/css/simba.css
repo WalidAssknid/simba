@@ -1336,3 +1336,7 @@ body.auth-page .header {
 #activityModal .modal-content {
   margin-top: 5%;
 }
+
+#editActivityModal .modal-content {
+  margin-top: 5%;
+}

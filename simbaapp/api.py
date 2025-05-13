@@ -19,6 +19,7 @@ from .schemas import (
     CourseUpdateSchema,
     CourseOutSchema,
     ActivityCreateSchema,
+    ActivityUpdateSchema,
     ActivityOutSchema,
     ThreadGetOrCreateSchema,
     MessageCreateSchema,
@@ -211,7 +212,8 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: int):
             restrict_to_subject=payload.restrict_to_subject,
             allow_questions=payload.allow_questions,
             allow_emojis=payload.allow_emojis,
-            trust_document=payload.trust_document
+            trust_document=payload.trust_document,
+            word_limit=payload.word_limit
         )
         return HTTPStatus.CREATED, activity
     except User.DoesNotExist:
@@ -220,6 +222,67 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: int):
         return HTTPStatus.NOT_FOUND, {"message": "Course not found."}
     except Exception as e:
         return HTTPStatus.BAD_REQUEST, {"message": f"Activity creation failed: {str(e)}"}
+
+@api.put("/activities/{activity_id}", response={200: ActivityOutSchema, 400: ErrorSchema, 403: ErrorSchema, 404: ErrorSchema})
+def update_activity_api(request, activity_id: int, payload: ActivityUpdateSchema, user_id: int):
+    """
+    Update an existing activity. Only the course owner/teacher can update it.
+    """
+    try:
+        user = User.objects.get(id=user_id)
+        activity = Activity.objects.select_related('course').get(id=activity_id)
+        
+        # Check if user is the owner of the course
+        if activity.course.owner_id != user.id or user.role != 'teacher':
+            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can update this activity."}
+        
+        # Update activity fields
+        activity.title = payload.title if payload.title is not None else activity.title
+        activity.description = payload.description if payload.description is not None else activity.description
+        activity.expert_mode = payload.expert_mode
+        activity.custom_prompt = payload.custom_prompt
+        activity.questions = payload.questions
+        activity.agent_attitude = payload.agent_attitude
+        activity.subjects = payload.subjects
+        activity.restrict_to_subject = payload.restrict_to_subject
+        activity.allow_questions = payload.allow_questions
+        activity.allow_emojis = payload.allow_emojis
+        activity.trust_document = payload.trust_document
+        activity.word_limit = payload.word_limit
+        
+        activity.save()
+        
+        return HTTPStatus.OK, activity
+    except User.DoesNotExist:
+        return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
+    except Activity.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
+    except Exception as e:
+        return HTTPStatus.BAD_REQUEST, {"message": f"Activity update failed: {str(e)}"}
+
+@api.delete("/activities/{activity_id}", response={204: None, 403: ErrorSchema, 404: ErrorSchema})
+def delete_activity_api(request, activity_id: int, user_id: int):
+    """
+    Delete an activity. Only the course owner/teacher can delete it.
+    """
+    try:
+        user = User.objects.get(id=user_id)
+        activity = Activity.objects.select_related('course').get(id=activity_id)
+        
+        # Check if user is the owner of the course
+        if activity.course.owner_id != user.id or user.role != 'teacher':
+            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can delete this activity."}
+        
+        # Delete the activity
+        activity.delete()
+        
+        return HTTPStatus.NO_CONTENT, None
+    except User.DoesNotExist:
+        return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
+    except Activity.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Activity deletion failed: {str(e)}"}
 
 @api.get("/activities/{activity_id}", response={200: ActivityDetailSchema, 404: ErrorSchema})
 def get_activity_api(request, activity_id: int):

@@ -55,6 +55,7 @@ class Activity(models.Model):
     allow_questions = models.BooleanField(default=True)
     allow_emojis = models.BooleanField(default=True)
     trust_document = models.BooleanField(default=True)
+    word_limit = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

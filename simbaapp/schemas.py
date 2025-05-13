@@ -54,6 +54,21 @@ class ActivityCreateSchema(Schema):
     allow_questions: bool = True
     allow_emojis: bool = True
     trust_document: bool = True
+    word_limit: int = 0
+
+class ActivityUpdateSchema(Schema):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    expert_mode: bool = False
+    custom_prompt: Optional[str] = None
+    questions: List[str] = Field(default_factory=list)
+    agent_attitude: str = 'friendly'
+    subjects: Optional[str] = None
+    restrict_to_subject: bool = False
+    allow_questions: bool = True
+    allow_emojis: bool = True
+    trust_document: bool = True
+    word_limit: int = 0
 
 class ThreadGetOrCreateSchema(Schema):
     activity_id: int
@@ -101,6 +116,7 @@ class ActivityDetailSchema(ModelSchema):
     allow_questions: bool
     allow_emojis: bool
     trust_document: bool
+    word_limit: int
 
     class Meta:
         model = Activity
@@ -116,7 +132,8 @@ class ActivityDetailSchema(ModelSchema):
             "restrict_to_subject",
             "allow_questions",
             "allow_emojis",
-            "trust_document"
+            "trust_document",
+            "word_limit"
         ]
 
 class ThreadSchema(ModelSchema):

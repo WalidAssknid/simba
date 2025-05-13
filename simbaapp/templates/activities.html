@@ -50,6 +50,63 @@
     </div>
 </div>
 
+<!-- Include the activity creation popup -->
+{% if is_teacher %}
+    {% with course=None %}
+        {% include 'popup_activity.html' %}
+    {% endwith %}
+{% endif %}
+
+<style>
+.participants-list {
+    margin-top: 20px;
+}
+
+.participant-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f8f9fa;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.participant-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.participant-name {
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+.participant-role {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.remove-participant-btn {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 14px;
+    transition: color 0.2s ease;
+}
+
+.remove-participant-btn:hover {
+    color: #dc3545;
+}
+
+#activityModal .modal-content {
+    margin-top: 5%;
+}
+</style>
+
 <div class="activities-list">
     {% for activity in activities %}
     <div class="activity-item" data-course-id="{{ activity.course.id }}">
@@ -104,6 +161,11 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const questionsHidden = document.getElementById('questions-hidden');
+    if (questionsHidden) {
+        questionsHidden.value = JSON.stringify([]);
+    }
+    
     // Course selector filter
     const courseSelector = document.getElementById('courseSelector');
     if (courseSelector) {
@@ -127,10 +189,31 @@ document.addEventListener('DOMContentLoaded', function() {
         createActivityBtn.addEventListener('click', function(e) {
             e.preventDefault();
             const selectedCourseId = document.getElementById('courseSelector').value;
-            if (selectedCourseId) {
-                window.location.href = `/course/${selectedCourseId}/activity/create/`;
-            } else {
+            if (!selectedCourseId) {
                 alert('Please select a course first');
+                return;
+            }
+            
+            // Set the course ID for the activity creation form
+            const activityModal = document.getElementById('activityModal');
+            const form = activityModal.querySelector('form');
+            
+            // Update the form action to use the selected course ID
+            form.action = `/courses/${selectedCourseId}/create_activity/`;
+            
+            // Show the activity creation modal
+            activityModal.style.display = 'block';
+        });
+    }
+    
+    // Handle form submission for activity creation
+    const createActivityForm = document.getElementById('create-activity-form');
+    if (createActivityForm) {
+        createActivityForm.addEventListener('submit', function(e) {
+            const courseId = this.action.match(/\/courses\/(\d+)\/create_activity\//);
+            if (!courseId || !courseId[1]) {
+                e.preventDefault();
+                alert('Course ID is missing. Please select a course first.');
             }
         });
     }
@@ -193,8 +276,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Fetch enrollment code and display
-            fetch(`/api/course/${selectedCourseId}/`)
-                .then(response => response.json())
+            fetch(`/api/courses/${selectedCourseId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch course details');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     document.getElementById('enrollmentCodeDisplay').textContent = data.enrollment_code;
                     document.getElementById('enrollmentCodeModal').style.display = 'block';
@@ -216,9 +304,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            const currentUserId = '{{ request.session.user_id }}';
+            
             // Fetch participants and display
-            fetch(`/api/course/${selectedCourseId}/participants/`)
-                .then(response => response.json())
+            fetch(`/api/courses/${selectedCourseId}/participants`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch participants');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     const participantsList = document.getElementById('participantsList');
                     participantsList.innerHTML = '';
@@ -226,10 +321,43 @@ document.addEventListener('DOMContentLoaded', function() {
                     data.participants.forEach(participant => {
                         const participantCard = document.createElement('div');
                         participantCard.className = 'participant-card';
-                        participantCard.innerHTML = `
-                            <div class="participant-name">${participant.username}</div>
-                            <div class="participant-role">${participant.role}</div>
-                        `;
+                        participantCard.dataset.enrollmentId = participant.enrollment_id;
+                        participantCard.dataset.userId = participant.id;
+                        
+                        // Create participant info container
+                        const participantInfo = document.createElement('div');
+                        participantInfo.className = 'participant-info';
+                        
+                        // Add username
+                        const nameSpan = document.createElement('span');
+                        nameSpan.className = 'participant-name';
+                        nameSpan.textContent = participant.username;
+                        participantInfo.appendChild(nameSpan);
+                        
+                        // Add role
+                        const roleSpan = document.createElement('span');
+                        roleSpan.className = 'participant-role';
+                        roleSpan.textContent = participant.role;
+                        participantInfo.appendChild(roleSpan);
+                        
+                        participantCard.appendChild(participantInfo);
+                        
+                        // Add remove button for students if user is teacher and not the owner
+                        if ('{{ request.session.role }}' === 'teacher' && 
+                            participant.role === 'student' && 
+                            !participant.is_owner && 
+                            participant.enrollment_id) {
+                            
+                            const removeBtn = document.createElement('button');
+                            removeBtn.className = 'remove-participant-btn';
+                            removeBtn.dataset.enrollmentId = participant.enrollment_id;
+                            removeBtn.dataset.username = participant.username;
+                            removeBtn.title = `Remove ${participant.username} from course`;
+                            removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                            
+                            participantCard.appendChild(removeBtn);
+                        }
+                        
                         participantsList.appendChild(participantCard);
                     });
                     
@@ -239,6 +367,67 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Error fetching participants:', error);
                     alert('Failed to load participants');
                 });
+        });
+    }
+    
+    // Event delegation for remove participant button clicks
+    const participantsList = document.getElementById('participantsList');
+    if (participantsList) {
+        participantsList.addEventListener('click', function(event) {
+            const removeButton = event.target.closest('.remove-participant-btn');
+            if (removeButton) {
+                const enrollmentId = removeButton.dataset.enrollmentId;
+                const username = removeButton.dataset.username;
+                const currentUserId = '{{ request.session.user_id }}';
+
+                if (!currentUserId) {
+                    alert("Error: Could not verify current user. Please re-login.");
+                    return;
+                }
+
+                if (confirm(`Are you sure you want to remove ${username} from this course?`)) {
+                    fetch(`/api/enrollments/${enrollmentId}?current_user_id=${currentUserId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    })
+                    .then(response => {
+                        if (response.status === 204) { // HTTP 204 No Content - Success
+                            const participantCard = removeButton.closest('.participant-card');
+                            if (participantCard) {
+                                participantCard.remove();
+                            }
+                            
+                            // Show a custom success message
+                            const successMsg = document.createElement('p');
+                            successMsg.textContent = `${username} removed successfully.`;
+                            successMsg.style.color = 'green';
+                            successMsg.style.textAlign = 'center';
+                            successMsg.style.marginBottom = '15px'; 
+                            successMsg.style.marginTop = '10px'; 
+
+                            const modalTitle = document.querySelector('#participantsModal .modal-title');
+                            if (modalTitle) {
+                                modalTitle.insertAdjacentElement('afterend', successMsg);
+                            } else {
+                                const participantsList = document.querySelector('#participantsList');
+                                if (participantsList) participantsList.prepend(successMsg);
+                            }
+                            
+                            setTimeout(() => successMsg.remove(), 3000);
+                        } else {
+                            return response.json().then(data => {
+                                alert(`Error: ${data.message || 'Could not remove student.'}`);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error removing student:', error);
+                        alert('An unexpected error occurred while trying to remove the student.');
+                    });
+                }
+            }
         });
     }
     

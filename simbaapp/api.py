@@ -398,6 +398,51 @@ def remove_student_from_course(request, enrollment_id: int, current_user_id: int
 # Add the thread router to the main API
 api.add_router("/threads", thread_router, tags=["Threads"])
 
+@api.get("/courses/{course_id}", response={200: CourseOutSchema, 404: ErrorSchema})
+def get_course_api(request, course_id: int):
+    """Fetch details for a specific course."""
+    try:
+        course = Course.objects.get(id=course_id)
+        return HTTPStatus.OK, course
+    except Course.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Course not found."}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to get course: {str(e)}"}
+
+@api.get("/courses/{course_id}/participants", response={200: dict, 404: ErrorSchema, 500: ErrorSchema})
+def get_course_participants_api(request, course_id: int):
+    """Fetch all participants for a specific course."""
+    try:
+        course = Course.objects.get(id=course_id)
+        enrollments = CourseEnrollment.objects.filter(course_id=course_id).select_related('user')
+        participants = []
+        
+        owner_data = {
+            "id": course.owner.id,
+            "username": course.owner.username,
+            "role": course.owner.role,
+            "is_owner": True,
+            "enrollment_id": None
+        }
+        participants.append(owner_data)
+        
+        for enrollment in enrollments:
+            if enrollment.user.id != course.owner.id:  
+                participant_data = {
+                    "id": enrollment.user.id,
+                    "username": enrollment.user.username,
+                    "role": enrollment.user.role,
+                    "is_owner": False,
+                    "enrollment_id": enrollment.id
+                }
+                participants.append(participant_data)
+        
+        return HTTPStatus.OK, {"participants": participants, "owner_id": course.owner.id}
+    except Course.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Course not found."}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to get participants: {str(e)}"}
+
 # --- Remove old Django view-based endpoints --- 
 # The functions get_course_info and get_course_participants are now deprecated
 # as they rely on Django sessions and aren't standard Ninja endpoints.

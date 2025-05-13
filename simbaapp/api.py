@@ -13,6 +13,7 @@ from .schemas import (
     MessageSchema,
     UserRegisterSchema, 
     UserOutSchema,      
+    UserUpdateSchema,
     ErrorSchema,       
     CourseCreateSchema,
     CourseUpdateSchema,
@@ -77,6 +78,43 @@ def login_user(request, payload: SignInSchema):
         return HTTPStatus.NOT_FOUND, {"message": "User does not exist."}
     except Exception as e:
          return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Login failed: {str(e)}"}
+
+@api.put("/users/{user_id}", response={200: UserOutSchema, 400: ErrorSchema, 401: ErrorSchema, 404: ErrorSchema, 409: ErrorSchema})
+def update_user_profile(request, user_id: int, payload: UserUpdateSchema):
+    """
+    Update a user's profile information.
+    The current password is required to make any changes.
+    """
+    try:
+        user = User.objects.get(id=user_id)
+        
+        if not check_password(payload.current_password, user.password_hash):
+            return HTTPStatus.UNAUTHORIZED, {"message": "Current password is incorrect."}
+            
+        if payload.username != user.username and User.objects.filter(username=payload.username).exists():
+            return HTTPStatus.CONFLICT, {"message": "Username already exists."}
+            
+        if payload.email != user.email and User.objects.filter(email=payload.email).exists():
+            return HTTPStatus.CONFLICT, {"message": "Email is already registered."}
+        
+        if payload.new_password:
+            if not payload.new_password_confirm:
+                return HTTPStatus.BAD_REQUEST, {"message": "Password confirmation is required."}
+                
+            if payload.new_password != payload.new_password_confirm:
+                return HTTPStatus.BAD_REQUEST, {"message": "New passwords do not match."}
+                
+            user.password_hash = make_password(payload.new_password)
+        
+        user.username = payload.username
+        user.email = payload.email
+        user.save()
+        
+        return HTTPStatus.OK, user
+    except User.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "User not found."}
+    except Exception as e:
+        return HTTPStatus.BAD_REQUEST, {"message": f"Profile update failed: {str(e)}"}
 
 # --- Course CRUD ---
 @api.post("/courses", response={201: CourseOutSchema, 400: ErrorSchema, 403: ErrorSchema})

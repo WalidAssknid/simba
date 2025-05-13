@@ -171,11 +171,59 @@ main.container {
   border: none;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   transition: all 0.2s ease;
+  z-index: 100; /* Ensure higher z-index */
 }
 
 .user-profile:hover {
   background-color: var(--primary-dark);
   box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+/* Menu text should also have hover */
+.user-menu-content a:hover {
+  background-color: #f5f5f5;
+  color: var(--primary-color);
+}
+
+/* Remove redundant CSS that could be causing conflicts */
+.user-menu:hover .user-menu-content {
+  display: none; /* Disable automatic display on hover */
+}
+
+/* User menu should have a higher z-index than other elements */
+.user-menu-content {
+  display: none;
+  position: absolute;
+  left: 50%; 
+  transform: translateX(-50%); 
+  top: 100%; 
+  margin-top: 8px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15); /* Enhanced shadow */
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  width: max-content;
+  min-width: 130px; /* Reduced from 140px */
+  max-width: 150px; /* Added max-width */
+  z-index: 1001; /* Higher z-index than user-profile */
+  padding: 8px 0; /* Slightly more padding */
+  overflow: hidden;
+}
+
+.user-menu-content a {
+  display: block;
+  padding: 8px 16px; /* Slightly smaller padding */
+  color: #333;
+  text-align: center;
+  white-space: nowrap;
+  transition: all 0.2s ease; /* Smooth transition */
+  font-weight: normal; /* Normal font weight */
+  font-size: 0.95rem; /* Slightly smaller font size */
+}
+
+.user-menu-content a:hover {
+  background-color: #f5f5f5;
+  color: var(--primary-color);
 }
 
 /* Sidebar */
@@ -322,36 +370,6 @@ main.container {
 .user-menu {
   position: relative;
   cursor: pointer;
-}
-
-.user-menu-content {
-  display: none;
-  position: absolute;
-  left: 50%; 
-  transform: translateX(-50%); 
-  top: 100%; 
-  margin-top: 8px;
-  background: white;
-  box-shadow: none;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  width: max-content;
-  min-width: 140px;
-  z-index: 1000;
-  padding: 5px 0;
-  overflow: hidden;
-}
-
-.user-menu-content a {
-  display: block;
-  padding: 8px 15px;
-  color: #333;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.user-menu:hover .user-menu-content {
-  display: block;
 }
 
 /* ===== UI Components ===== */

@@ -474,3 +474,70 @@ def activities_view(request):
         }
     
     return render(request, 'activities.html', context)
+
+def profile_view(request):
+    if not request.session.get('user_id'):
+        return redirect('login')
+        
+    user_id = request.session.get('user_id')
+    
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
+    
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        current_password = request.POST.get('current_password')
+        new_password = request.POST.get('new_password')
+        new_password_confirm = request.POST.get('new_password_confirm')
+        
+        if not current_password:
+            messages.error(request, "Current password is required to make changes.")
+            return render(request, 'profile.html', {'user': user})
+            
+        profile_data = {
+            'username': username,
+            'email': email,
+            'current_password': current_password
+        }
+        
+        if new_password:
+            profile_data['new_password'] = new_password
+            profile_data['new_password_confirm'] = new_password_confirm
+            
+        api_url = request.build_absolute_uri(reverse('api-1.0.0:update_user_profile', args=[user_id]))
+        
+        try:
+            response = requests.put(api_url, json=profile_data)
+            
+            if response.status_code == 200:
+                user_data = response.json()
+                request.session['username'] = user_data['username']
+                messages.success(request, "Profile updated successfully!")
+                return redirect('profile')
+            else:
+                error_data = response.json()
+                messages.error(request, error_data.get('message', 'Profile update failed.'))
+                
+        except requests.exceptions.RequestException as e:
+            messages.error(request, f"Profile update request failed: {e}")
+            try:
+                error_data = e.response.json()
+                messages.error(request, f"API Error: {error_data.get('message', 'Unknown error')}")
+            except (AttributeError, ValueError, TypeError):
+                messages.error(request, "An unexpected error occurred during profile update.")
+        except Exception as e:
+            messages.error(request, f"An unexpected error occurred: {str(e)}")
+    
+    if user.role == 'teacher':
+        enrolled_courses = Course.objects.filter(owner=user)
+    else:
+        enrolled_courses = Course.objects.filter(enrollments__user=user)
+    
+    return render(request, 'profile.html', {
+        'user': user,
+        'enrolled_courses': enrolled_courses
+    })

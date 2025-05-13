@@ -24,6 +24,13 @@ class UserRegisterSchema(Schema):
     password_confirm: str
     role: str = "student"
 
+class UserUpdateSchema(Schema):
+    username: str
+    email: EmailStr
+    current_password: str
+    new_password: Optional[str] = None
+    new_password_confirm: Optional[str] = None
+
 # --- Input Schemas ---
 
 class CourseCreateSchema(Schema):

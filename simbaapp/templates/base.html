@@ -80,7 +80,7 @@
                     <div class="user-profile" id="userMenu">
                         {{ request.session.username|first|upper }}
                         <div class="user-menu-content">
-                            <a href="#">My Account</a>
+                            <a href="{% url 'profile' %}">Manage Account</a>
                             <a href="{% url 'logout' %}">Logout</a>
                         </div>
                     </div>
@@ -122,7 +122,8 @@
             // User menu
             const userMenu = document.getElementById('userMenu');
             if (userMenu) {
-                userMenu.addEventListener('click', () => {
+                userMenu.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent event bubbling
                     const content = userMenu.querySelector('.user-menu-content');
                     content.style.display = content.style.display === 'block' ? 'none' : 'block';
                 });
@@ -137,52 +138,6 @@
             }
 
             // Toggle for mobile menu
-            const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
-            if (mobileMenuToggle) {
-                mobileMenuToggle.addEventListener('click', () => {
-                    const sidebar = document.querySelector('.sidebar');
-                    sidebar.classList.toggle('active');
-                });
-            }
-        });
-    </script>
-</body>
-</html>
-
-    {# Script para menus e interações #}
-    <script>
-        document.addEventListener('DOMContentLoaded', (event) => {
-            // Fade out para alertas
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-                setTimeout(() => {
-                    alert.classList.add('fade-out');
-                    alert.addEventListener('transitionend', () => {
-                        if (alert.style.opacity == 0 || alert.classList.contains('fade-out')) { 
-                           alert.remove();
-                        }
-                    });
-                }, 3000);
-            });
-            
-            // Menu do usuário
-            const userMenu = document.getElementById('userMenu');
-            if (userMenu) {
-                userMenu.addEventListener('click', () => {
-                    const content = userMenu.querySelector('.user-menu-content');
-                    content.style.display = content.style.display === 'block' ? 'none' : 'block';
-                });
-                
-                // Fechar menu ao clicar fora
-                document.addEventListener('click', (e) => {
-                    if (userMenu && !userMenu.contains(e.target)) {
-                        const content = userMenu.querySelector('.user-menu-content');
-                        if (content) content.style.display = 'none';
-                    }
-                });
-            }
-
-            // Toggle para menu mobile
             const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
             if (mobileMenuToggle) {
                 mobileMenuToggle.addEventListener('click', () => {

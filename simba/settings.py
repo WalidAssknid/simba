@@ -33,6 +33,7 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'db').split(',')
 
+CSRF_TRUSTED_ORIGINS = ['https://simba-refact.irit.fr']
 
 # Application definition
 

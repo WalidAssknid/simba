@@ -97,7 +97,7 @@ DATABASES = {
         'USER': os.getenv('POSTGRES_USER', 'simba_user'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'secretpassword'),
         'HOST': os.getenv('DB_HOST', 'db'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+        'PORT': os.getenv('DB_PORT', '5433'),
     }
 }
 

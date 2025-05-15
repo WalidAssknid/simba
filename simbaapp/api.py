@@ -3,7 +3,7 @@ import django
 import django.apps
 from django.contrib.auth.hashers import make_password, check_password
 from .models import User, Course, Activity, Thread, Message, CourseEnrollment
-from ninja import Swagger, Router
+from ninja import Swagger, Router, Schema
 from ninja_extra import NinjaExtraAPI
 from ninja_jwt.controller import NinjaJWTDefaultController
 from typing import List
@@ -29,6 +29,8 @@ from .schemas import (
 
 from django.shortcuts import get_object_or_404
 from http import HTTPStatus
+import json
+from . import cluster_students
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
 if not django.apps.apps.ready:
@@ -456,3 +458,339 @@ def get_course_participants_api(request, course_id: int):
 #         pass
 
 # api = NinjaAPI(auth=GlobalAuth()) # Apply auth globally if needed
+
+# --- Dashboard API Endpoints ---
+dashboard_router = Router()
+
+class StudentDataSchema(Schema):
+    activities_count: int
+    messages_count: int
+    total_chars: int
+    messages: list
+    length_distribution: dict
+    student_length: int
+    activity_engagement: dict
+
+class ConversationStatsSchema(Schema):
+    stats: list
+
+class SummaryResponseSchema(Schema):
+    summary: str
+
+class StudentAnalysisSchema(Schema):
+    analysis: str
+
+class ClusterResponseSchema(Schema):
+    clusters: list
+    features: list
+
+@dashboard_router.get("/student/{student_id}/", response=StudentDataSchema)
+def get_student_data(request, student_id: int, course_id: str = "all"):
+    """Get detailed data for a specific student."""
+    try:
+        student = User.objects.get(id=student_id)
+        
+        if course_id != "all":
+            course = Course.objects.get(id=course_id)
+            messages = Message.objects.filter(
+                thread__user=student, 
+                thread__activity__course=course,
+                role='user'
+            ).select_related('thread__activity').order_by('timestamp')
+        else:
+            messages = Message.objects.filter(
+                thread__user=student,
+                role='user'
+            ).select_related('thread__activity').order_by('timestamp')
+        
+        # Count unique activities the student has participated in
+        activities = set([msg.thread.activity_id for msg in messages])
+        activities_count = len(activities)
+        
+        # Calculate total messages and characters
+        messages_count = messages.count()
+        total_chars = sum([len(msg.content) for msg in messages])
+        
+        # Prepare engagement data (messages per activity)
+        activity_counts = {}
+        for msg in messages:
+            activity_name = msg.thread.activity.title or f"Activity {msg.thread.activity.id}"
+            activity_counts[activity_name] = activity_counts.get(activity_name, 0) + 1
+        
+        # Get recent conversation for display
+        recent_thread = Thread.objects.filter(user=student).order_by('-updated_at').first()
+        conversation = []
+        
+        if recent_thread:
+            conversation = Message.objects.filter(thread=recent_thread).order_by('message_number')
+            conversation = [
+                {"role": msg.role, "content": msg.content} 
+                for msg in conversation
+            ]
+        
+        # Create length distribution data
+        all_user_messages = Message.objects.filter(role='user')
+        message_lengths = [len(msg.content) for msg in all_user_messages]
+        student_avg_length = total_chars / messages_count if messages_count > 0 else 0
+        
+        # Create bins for histogram
+        max_length = max(message_lengths) if message_lengths else 1000
+        bins = list(range(0, max_length + 200, 200))
+        values = [0] * len(bins)
+        
+        # Count messages in each bin
+        for length in message_lengths:
+            bin_index = min(length // 200, len(bins) - 1)
+            values[bin_index] += 1
+        
+        return {
+            "activities_count": activities_count,
+            "messages_count": messages_count,
+            "total_chars": total_chars,
+            "messages": conversation,
+            "length_distribution": {
+                "bins": bins,
+                "values": values
+            },
+            "student_length": int(student_avg_length),
+            "activity_engagement": {
+                "labels": list(activity_counts.keys()),
+                "values": list(activity_counts.values())
+            }
+        }
+    except User.DoesNotExist:
+        return {"error": "Student not found"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@dashboard_router.get("/conversation_stats/", response=ConversationStatsSchema)
+def get_conversation_stats(request, course_id: str = "all"):
+    """Get detailed conversation statistics for analysis."""
+    try:
+        if course_id != "all":
+            course = Course.objects.get(id=course_id)
+            messages = Message.objects.filter(
+                thread__activity__course=course
+            ).select_related('thread__user', 'thread__activity')
+        else:
+            messages = Message.objects.all().select_related('thread__user', 'thread__activity')
+        
+        # Group by user
+        user_stats = {}
+        
+        for msg in messages:
+            user_id = msg.thread.user_id
+            username = msg.thread.user.username
+            
+            if user_id not in user_stats:
+                user_stats[user_id] = {
+                    "username": username,
+                    "total_turns": 0,
+                    "user_turns": 0,
+                    "model_turns": 0,
+                    "total_chars": 0,
+                    "activities": set(),
+                    "words": set(),
+                    "word_lengths": []
+                }
+            
+            user_stats[user_id]["total_turns"] += 1
+            
+            if msg.role == 'user':
+                user_stats[user_id]["user_turns"] += 1
+                user_stats[user_id]["total_chars"] += len(msg.content)
+                
+                # Track activities
+                user_stats[user_id]["activities"].add(msg.thread.activity_id)
+                
+                # Track vocabulary and word lengths
+                words = msg.content.lower().split()
+                user_stats[user_id]["words"].update(words)
+                user_stats[user_id]["word_lengths"].extend([len(w) for w in words])
+            else:
+                user_stats[user_id]["model_turns"] += 1
+        
+        # Calculate derived metrics
+        stats = []
+        for user_id, user_data in user_stats.items():
+            if user_data["model_turns"] > 0:
+                turn_ratio = user_data["user_turns"] / user_data["model_turns"]
+            else:
+                turn_ratio = user_data["user_turns"]
+                
+            avg_word_length = (
+                sum(user_data["word_lengths"]) / len(user_data["word_lengths"]) 
+                if user_data["word_lengths"] else 0
+            )
+            
+            stats.append({
+                "username": user_data["username"],
+                "total_turns": user_data["total_turns"],
+                "user_turns": user_data["user_turns"],
+                "model_turns": user_data["model_turns"],
+                "turn_ratio": turn_ratio,
+                "num_activities": len(user_data["activities"]),
+                "vocab_size": len(user_data["words"]),
+                "avg_word_length": avg_word_length
+            })
+        
+        return {"stats": stats}
+    except Exception as e:
+        return {"stats": [], "error": str(e)}
+
+@dashboard_router.get("/generate_summary/", response=SummaryResponseSchema)
+def generate_activity_summary(request, activity_id: int):
+    """Generate an AI summary of student conversations in an activity."""
+    try:
+        activity = Activity.objects.get(id=activity_id)
+        
+        # Get all user messages for this activity
+        messages = Message.objects.filter(
+            thread__activity=activity,
+            role='user'
+        ).order_by('timestamp')
+        
+        if not messages:
+            return {"summary": "No student messages found for this activity."}
+        
+        # Prepare message content
+        message_texts = [msg.content for msg in messages]
+        content = "\n".join(message_texts)
+        
+        # For a real implementation, you would call an AI service here
+        # In this example, we'll return a placeholder message
+        summary = (
+            "This is a placeholder for the AI-generated summary. "
+            "In a production environment, this would call an external "
+            "AI service like OpenAI's GPT to analyze the conversation. "
+            f"Activity: {activity.title}, Messages: {len(message_texts)}"
+        )
+        
+        return {"summary": summary}
+    except Activity.DoesNotExist:
+        return {"summary": "Activity not found."}
+    except Exception as e:
+        return {"summary": f"Error generating summary: {str(e)}"}
+
+@dashboard_router.get("/generate_student_analysis/", response=StudentAnalysisSchema)
+def generate_student_analysis(request, student_id: int, activity_id: str = "all"):
+    """Generate an AI analysis of a student's conversation patterns."""
+    try:
+        student = User.objects.get(id=student_id)
+        
+        # Filter messages
+        if activity_id != "all":
+            activity = Activity.objects.get(id=activity_id)
+            messages = Message.objects.filter(
+                thread__user=student,
+                thread__activity=activity,
+                role='user'
+            ).order_by('timestamp')
+            context = f"for activity '{activity.title}'"
+        else:
+            messages = Message.objects.filter(
+                thread__user=student,
+                role='user'
+            ).order_by('timestamp')
+            context = "across all activities"
+        
+        if not messages:
+            return {"analysis": f"No data found for student {student.username} {context}."}
+        
+        # For a real implementation, you would call an AI service here
+        # In this example, we'll return a placeholder message
+        analysis = (
+            f"This is a placeholder for the AI-generated analysis of student {student.username}'s "
+            f"conversation patterns {context}. In a production environment, this would "
+            "call an external AI service like OpenAI's GPT to analyze the student's "
+            f"communication style, engagement level, and learning patterns. "
+            f"Total messages: {messages.count()}"
+        )
+        
+        return {"analysis": analysis}
+    except User.DoesNotExist:
+        return {"analysis": "Student not found."}
+    except Activity.DoesNotExist:
+        return {"analysis": "Activity not found."}
+    except Exception as e:
+        return {"analysis": f"Error generating analysis: {str(e)}"}
+
+@dashboard_router.get("/student_clusters/", response=ClusterResponseSchema)
+def get_student_clusters(request, course_id: str = "all", n_clusters: int = 3):
+    """Get student clusters based on conversation patterns."""
+    try:
+        # Fetch message data
+        if course_id != "all":
+            course = Course.objects.get(id=course_id)
+            messages = Message.objects.filter(
+                thread__activity__course=course
+            ).select_related('thread__user', 'thread__activity')
+        else:
+            messages = Message.objects.all().select_related('thread__user', 'thread__activity')
+        
+        # Convert messages to format expected by clustering module
+        message_data = []
+        for msg in messages:
+            message_data.append({
+                'user_id': msg.thread.user_id,
+                'username': msg.thread.user.username,
+                'content': msg.content,
+                'role': msg.role,
+                'activity_id': msg.thread.activity_id,
+                'timestamp': msg.timestamp.isoformat()
+            })
+        
+        # Extract features for clustering
+        user_features = cluster_students.extract_features(message_data)
+        
+        if user_features.empty:
+            return {
+                "clusters": [],
+                "features": []
+            }
+        
+        # Run clustering
+        n_clusters = min(n_clusters, len(user_features))
+        if n_clusters < 2:
+            n_clusters = 2
+            
+        clustered_features = cluster_students.run_clustering(
+            user_features, 
+            n_clusters=n_clusters
+        )
+        
+        # Get descriptive names for clusters
+        cluster_names = cluster_students.get_cluster_names(clustered_features)
+        
+        # Prepare response data
+        clusters = []
+        for cluster_id in sorted(clustered_features['cluster'].unique()):
+            cluster_users = clustered_features[clustered_features['cluster'] == cluster_id]
+            clusters.append({
+                'id': int(cluster_id),
+                'name': cluster_names.get(cluster_id, f"Cluster {cluster_id}"),
+                'size': len(cluster_users),
+                'users': cluster_users[['user_id', 'username']].to_dict('records')
+            })
+        
+        # Return selected features for visualization
+        features_to_return = [
+            'user_id', 'username', 'num_messages', 'avg_length',
+            'vocab_size', 'lexical_diversity', 'cluster'
+        ]
+        available_features = [f for f in features_to_return if f in clustered_features.columns]
+        
+        feature_data = clustered_features[available_features].to_dict('records')
+        
+        return {
+            "clusters": clusters,
+            "features": feature_data
+        }
+    except Exception as e:
+        return {
+            "clusters": [],
+            "features": [],
+            "error": str(e)
+        }
+
+api.add_router("/dashboard", dashboard_router, tags=["Dashboard"])

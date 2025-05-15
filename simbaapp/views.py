@@ -6,6 +6,7 @@ import requests
 from django.urls import reverse
 from django.conf import settings
 from .models import User, Course, Activity, CourseEnrollment, Message
+import json
 
 def login_view(request):
     if request.method == 'POST':
@@ -347,24 +348,48 @@ def dashboard_view(request):
         messages.error(request, "Only teachers can access the dashboard.")
         return redirect('courses')
 
+    # Get filter parameters
     courses = Course.objects.filter(owner=user).order_by('-created_at')
     selected_course_id = request.GET.get('course_id')
-    if selected_course_id:
+    selected_activity_id = request.GET.get('activity_id')
+    
+    if selected_course_id and selected_course_id != 'all':
         selected_course = courses.filter(id=selected_course_id).first()
     else:
         selected_course = courses.first()
+        selected_course_id = selected_course.id if selected_course else None
+    
     if not selected_course:
         messages.info(request, "No courses found. Create one first.")
         return redirect('create_course')
 
+    # Get activities for selected course
+    activities = Activity.objects.filter(course=selected_course).order_by('-created_at')
+    
+    # Get students enrolled in the course
     students = CourseEnrollment.objects.filter(course=selected_course).select_related('user')
-    activities_count = Activity.objects.filter(course=selected_course).count()
-    student_messages_qs = Message.objects.filter(
-        thread__activity__course=selected_course,
-        role='student'
-    ).select_related('thread__user')
+    all_students = [{'id': s.user.id, 'username': s.user.username} for s in students]
+    
+    # Get base message query
+    base_msg_query = Message.objects.filter(
+        thread__activity__course=selected_course
+    ).select_related('thread__user', 'thread__activity')
+    
+    # Filter by specific activity if needed
+    if selected_activity_id and selected_activity_id != 'all':
+        activity_messages = base_msg_query.filter(thread__activity_id=selected_activity_id)
+        selected_activity = activities.filter(id=selected_activity_id).first()
+    else:
+        activity_messages = base_msg_query
+        selected_activity = None
+    
+    # Get messages from students
+    student_messages_qs = activity_messages.filter(role='user')
+    
+    # Calculate total messages
     total_messages = student_messages_qs.count()
-
+    
+    # Calculate message lengths and counts per student
     counts = {}
     lengths = {}
     for msg in student_messages_qs:
@@ -372,6 +397,7 @@ def dashboard_view(request):
         counts[username] = counts.get(username, 0) + 1
         lengths[username] = lengths.get(username, 0) + len(msg.content)
     
+    # Per-student statistics
     stats_per_student = []
     for username, count in counts.items():
         avg_len = lengths[username] / count if count else 0
@@ -380,19 +406,123 @@ def dashboard_view(request):
             'message_count': count,
             'avg_length': round(avg_len, 2)
         })
-
-    last_messages = student_messages_qs.order_by('-timestamp')[:10]
-
+    
+    # Calculate average message length
+    if total_messages > 0:
+        avg_message_length = sum(lengths.values()) / total_messages
+    else:
+        avg_message_length = 0
+    
+    # Calculate activity statistics for charts
+    activity_stats = {}
+    for activity in activities:
+        activity_msgs = Message.objects.filter(
+            thread__activity=activity,
+            role='user'
+        )
+        msg_count = activity_msgs.count()
+        
+        if msg_count > 0:
+            total_length = sum([len(msg.content) for msg in activity_msgs])
+            avg_length = total_length / msg_count
+        else:
+            avg_length = 0
+            
+        activity_stats[activity.id] = {
+            'name': activity.title or f"Activity {activity.id}",
+            'message_count': msg_count,
+            'avg_length': round(avg_length, 2)
+        }
+    
+    # Prepare activity data for charts
+    activity_names = [stats['name'] for activity_id, stats in activity_stats.items()]
+    activity_message_counts = [stats['message_count'] for activity_id, stats in activity_stats.items()]
+    activity_avg_lengths = [stats['avg_length'] for activity_id, stats in activity_stats.items()]
+    
+    # Calculate student segmentation data (for scatter plot)
+    if counts:
+        avg_count = sum(counts.values()) / len(counts)
+        avg_length = sum(lengths.values()) / len(lengths)
+    else:
+        avg_count = 0
+        avg_length = 0
+    
+    # Segment students by message count and length
+    segment_many_long = []
+    segment_few_long = []
+    segment_many_short = []
+    segment_few_short = []
+    
+    for username, count in counts.items():
+        length = lengths[username]
+        point = {'x': length, 'y': count}
+        
+        if count > avg_count and length > avg_length:
+            segment_many_long.append(point)
+        elif count <= avg_count and length > avg_length:
+            segment_few_long.append(point)
+        elif count > avg_count and length <= avg_length:
+            segment_many_short.append(point)
+        else:
+            segment_few_short.append(point)
+    
+    # Calculate average time per student (from first to last message)
+    avg_time_seconds = 0
+    student_duration_data = {}
+    
+    for thread in student_messages_qs.values('thread').distinct():
+        thread_messages = Message.objects.filter(thread_id=thread['thread']).order_by('timestamp')
+        if thread_messages.count() > 1:
+            first_msg = thread_messages.first()
+            last_msg = thread_messages.last()
+            if first_msg and last_msg:
+                duration = (last_msg.timestamp - first_msg.timestamp).total_seconds()
+                student_id = first_msg.thread.user_id
+                student_duration_data[student_id] = student_duration_data.get(student_id, 0) + duration
+    
+    if student_duration_data:
+        avg_time_seconds = sum(student_duration_data.values()) / len(student_duration_data)
+        
+    # Format as hours and minutes
+    hours = int(avg_time_seconds // 3600)
+    minutes = int((avg_time_seconds % 3600) // 60)
+    avg_time_per_student = f"{hours}h {minutes}m"
+    
+    # Get recent raw messages for Raw Data tab
+    raw_messages = base_msg_query.order_by('-timestamp')[:100]
+    
     context = {
         'courses': courses,
         'selected_course': selected_course,
+        'selected_activity': selected_activity,
+        'activities': activities,
         'students_count': students.count(),
-        'activities_count': activities_count,
+        'activities_count': activities.count(),
         'total_messages': total_messages,
+        'avg_message_length': round(avg_message_length, 2),
+        'avg_time_per_student': avg_time_per_student,
         'stats_per_student': stats_per_student,
-        'last_messages': last_messages,
-        'enrolled_courses': courses  
+        'all_students': all_students,
+        'raw_messages': raw_messages,
+        'enrolled_courses': courses,
+        # Chart data
+        'activity_names': activity_names,
+        'activity_message_counts': activity_message_counts,
+        'activity_avg_lengths': activity_avg_lengths,
+        'segment_many_long': segment_many_long,
+        'segment_few_long': segment_few_long,
+        'segment_many_short': segment_many_short,
+        'segment_few_short': segment_few_short
     }
+    # JSON string versions for template parsing
+    context['activity_names_json'] = json.dumps(activity_names)
+    context['activity_message_counts_json'] = json.dumps(activity_message_counts)
+    context['activity_avg_lengths_json'] = json.dumps(activity_avg_lengths)
+    context['segment_many_long_json'] = json.dumps(segment_many_long)
+    context['segment_few_long_json'] = json.dumps(segment_few_long)
+    context['segment_many_short_json'] = json.dumps(segment_many_short)
+    context['segment_few_short_json'] = json.dumps(segment_few_short)
+    
     return render(request, 'dashboard.html', context)
     
 def edit_course_view(request, course_id):

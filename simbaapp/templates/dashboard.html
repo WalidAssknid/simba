@@ -190,6 +190,93 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
+  
+  /* Cluster visualization styles */
+  .cluster-bubbles {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+    gap: 30px;
+    flex-direction: row;
+  }
+  
+  .cluster-bubble {
+    border-radius: 50%;
+    margin: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 10px;
+    cursor: pointer;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+    min-width: 150px;
+    min-height: 150px;
+    aspect-ratio: 1/1;
+    position: relative;
+  }
+  
+  .cluster-bubble:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+  }
+  
+  .cluster-label {
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    font-size: 16px;
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+  
+  .cluster-size {
+    font-size: 14px;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    margin-top: 5px;
+  }
+  
+  .cluster-tooltip {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    width: 200px;
+    z-index: 10;
+  }
+  
+  .cluster-bubble:hover .cluster-tooltip {
+    display: block;
+  }
+  
+  .cluster-details {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  
+  .cluster-details h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #333;
+  }
+  
+  .cluster-details ul {
+    padding-left: 20px;
+    margin-top: 10px;
+  }
 </style>
 {% endblock %}
 
@@ -201,33 +288,33 @@
 <div class="filters">
   <div>
     <select id="course-filter" onchange="updateDashboard()">
-      <option value="all">All Courses</option>
+      <option value="all" {% if not selected_course_id %}selected{% endif %}>All Courses</option>
       {% for c in courses %}
-        <option value="{{ c.id }}" {% if c == selected_course %}selected{% endif %}>{{ c.title }}</option>
+        <option value="{{ c.id }}" {% if selected_course_id and c.id|stringformat:"i" == selected_course_id|stringformat:"i" %}selected{% endif %}>{{ c.title }}</option>
       {% endfor %}
     </select>
   </div>
   <div>
     <select id="activity-filter" onchange="updateDashboard()">
-      <option value="all">All Activities</option>
-      {% if selected_course %}
-        {% for activity in activities %}
-          <option value="{{ activity.id }}">{{ activity.title }}</option>
-        {% endfor %}
-      {% endif %}
+      <option value="all" {% if not selected_activity %}selected{% endif %}>All Activities</option>
+      {% for activity in activities %}
+        <option value="{{ activity.id }}" {% if selected_activity and activity.id == selected_activity.id %}selected{% endif %}>
+          {{ activity.title }}{% if not selected_course_id %} ({{ activity.course.title }}){% endif %}
+        </option>
+      {% endfor %}
     </select>
   </div>
 </div>
 
 <div class="tabs">
-  <div class="tab active" data-tab="conversation-stats">Conversation Stats</div>
-  <div class="tab" data-tab="student-stats">Student Stats</div>
-  <div class="tab" data-tab="student-clusters">Student Clusters</div>
-  <div class="tab" data-tab="raw-data">Raw Data</div>
+  <div class="tab {% if active_tab == 'conversation-stats' %}active{% endif %}" data-tab="conversation-stats">Conversation Stats</div>
+  <div class="tab {% if active_tab == 'student-stats' %}active{% endif %}" data-tab="student-stats">Student Stats</div>
+  <div class="tab {% if active_tab == 'student-clusters' %}active{% endif %}" data-tab="student-clusters">Student Clusters</div>
+  <div class="tab {% if active_tab == 'raw-data' %}active{% endif %}" data-tab="raw-data">Raw Data</div>
 </div>
 
 <!-- Conversation Stats Tab -->
-<div id="conversation-stats" class="tab-content active">
+<div id="conversation-stats" class="tab-content {% if active_tab == 'conversation-stats' %}active{% endif %}">
   <div class="metric-cards">
     <div class="metric-card">
       <h3>Total Students</h3>
@@ -294,7 +381,8 @@
   <div class="summary-container">
     <h3>Message Summary</h3>
     <div id="summary-content">
-      <p>Select an activity and click Generate to create an AI summary of conversations.</p>
+      <p><i>Select a specific activity (not "All Activities") and click Generate to create an AI-powered summary of student conversations.</i></p>
+      <p><small>This feature uses OpenAI's API to analyze student messages and provide insights.</small></p>
     </div>
     <button id="generate-summary" class="btn-generate">Generate Summary</button>
     <div id="summary-spinner" class="spinner"></div>
@@ -302,7 +390,7 @@
 </div>
 
 <!-- Student Stats Tab -->
-<div id="student-stats" class="tab-content">
+<div id="student-stats" class="tab-content {% if active_tab == 'student-stats' %}active{% endif %}">
   <div class="filters">
     <select id="student-filter" onchange="loadStudentData()">
       <option value="">Select a student</option>
@@ -348,7 +436,8 @@
       <div class="summary-container">
         <h3>Student Analysis</h3>
         <div id="student-summary-content">
-          <p>Click Generate to analyze this student's conversation patterns.</p>
+          <p><i>Select a student above to view their data, then click Generate Analysis for an AI-powered assessment of their conversation patterns.</i></p>
+          <p><small>This feature uses OpenAI's API to analyze the student's communication style, engagement level, and identify potential misconceptions.</small></p>
         </div>
         <button id="generate-student-summary" class="btn-generate">Generate Analysis</button>
         <div id="student-summary-spinner" class="spinner"></div>
@@ -358,14 +447,14 @@
 </div>
 
 <!-- Student Clusters Tab -->
-<div id="student-clusters" class="tab-content">
+<div id="student-clusters" class="tab-content {% if active_tab == 'student-clusters' %}active{% endif %}">
   <div class="chart-container">
-    <h3>Student Clustering Analysis</h3>
-    <p>Students are automatically grouped based on conversation patterns such as message frequency, length, and vocabulary diversity.</p>
+    <h3>Student Group Analysis</h3>
+    <p>Students are grouped based on similar communication patterns. Groups help identify distinct learning styles and engagement levels.</p>
     
     <div class="filters">
       <div>
-        <label for="cluster-count">Number of clusters:</label>
+        <label for="cluster-count">Number of groups:</label>
         <select id="cluster-count" onchange="loadClusters()">
           <option value="2">2</option>
           <option value="3" selected>3</option>
@@ -373,18 +462,19 @@
           <option value="5">5</option>
         </select>
       </div>
-      <button class="btn-generate" onclick="loadClusters()">Update Clusters</button>
+      <button class="btn-generate" onclick="loadClusters()">Update Groups</button>
     </div>
     
     <div id="cluster-spinner" class="spinner"></div>
+    <h4 style="text-align: center; margin-top: 20px; margin-bottom: 10px;">Student Groups</h4>
     <div id="cluster-visualization" style="height: 400px;"></div>
   </div>
   
   <div class="two-columns">
     <div class="chart-container">
-      <h3>Cluster Details</h3>
+      <h3>Group Details</h3>
       <div id="cluster-details">
-        <p>Select a cluster from the visualization to see details.</p>
+        <p>Select a group from the visualization to see details.</p>
       </div>
     </div>
     
@@ -423,9 +513,12 @@
 </div>
 
 <!-- Raw Data Tab -->
-<div id="raw-data" class="tab-content">
+<div id="raw-data" class="tab-content {% if active_tab == 'raw-data' %}active{% endif %}">
   <div class="chart-container">
     <h3>Raw Conversation Data</h3>
+    <div style="margin-bottom: 10px; text-align: right;">
+      <button id="export-csv" class="btn-generate">Export to CSV</button>
+    </div>
     <div style="max-height: 400px; overflow: auto;">
       <table class="engagement-table">
         <thead>
@@ -493,18 +586,60 @@
   const segmentManyShort = JSON.parse('{{ segment_many_short_json|escapejs }}');
   const segmentFewShort = JSON.parse('{{ segment_few_short_json|escapejs }}');
   // Tab switching functionality
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      
-      tab.classList.add('active');
-      document.getElementById(tab.dataset.tab).classList.add('active');
+  document.addEventListener('DOMContentLoaded', () => {
+    // Initialize charts
+    initializeCharts();
+    
+    // Get current active tab
+    const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
+    
+    // Get URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const selectedStudentId = urlParams.get('student_id');
+    
+    // Load tab-specific data
+    if (activeTab === 'raw-data') {
+      updateConversationStats();
+    } else if (activeTab === 'student-clusters') {
+      // Load clusters data for cluster tab
+      loadClusters();
+    } else if (activeTab === 'student-stats' && selectedStudentId) {
+      // If there's a selected student in the URL, restore that selection
+      document.getElementById('student-filter').value = selectedStudentId;
+      loadStudentData();
+    }
+    
+    // Add click event listeners to tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        switchToTab(tab.dataset.tab);
+      });
     });
   });
-
+  
+  // Function to switch to a specific tab
+  function switchToTab(tabId) {
+    // Remove active class from all tabs and content
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    
+    // Add active class to selected tab and content
+    const tabElement = document.querySelector(`.tab[data-tab="${tabId}"]`);
+    if (tabElement) {
+      tabElement.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+      
+      // Load tab-specific data if needed
+      if (tabId === 'raw-data') {
+        updateConversationStats();
+      } else if (tabId === 'student-clusters' && !clusterData) {
+        loadClusters();
+      }
+    }
+  }
+  
   // Initialize charts
-  document.addEventListener('DOMContentLoaded', () => {
+  function initializeCharts() {
     // Activity Stats Chart
     const activityCtx = document.getElementById('activity-stats-chart').getContext('2d');
     const activityChart = new Chart(activityCtx, {
@@ -586,14 +721,48 @@
         }
       }
     });
-  });
+  }
   
   // Function to update dashboard based on filters
   function updateDashboard() {
     const courseId = document.getElementById('course-filter').value;
     const activityId = document.getElementById('activity-filter').value;
     
-    window.location.href = `/dashboard/?course_id=${courseId}&activity_id=${activityId}`;
+    // Get the currently active tab
+    const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
+    
+    // Get current URL parameters
+    const url = new URL(window.location);
+    
+    // Update course parameter
+    if (courseId === 'all') {
+      // For "All Courses", remove the course_id parameter
+      url.searchParams.delete('course_id');
+    } else {
+      // For specific courses, set the course_id parameter
+      url.searchParams.set('course_id', courseId);
+    }
+    
+    // Update activity parameter
+    if (activityId === 'all') {
+      url.searchParams.delete('activity_id');
+    } else {
+      url.searchParams.set('activity_id', activityId);
+    }
+    
+    // Always set the active tab
+    url.searchParams.set('active_tab', activeTab);
+    
+    // Preserve student_id if in student-stats tab
+    if (activeTab === 'student-stats') {
+      const studentId = document.getElementById('student-filter').value;
+      if (studentId) {
+        url.searchParams.set('student_id', studentId);
+      }
+    }
+    
+    // Redirect to the updated URL
+    window.location.href = url.toString();
   }
   
   // Load student data for Student Stats tab
@@ -602,6 +771,11 @@
     if (!studentId) return;
     
     document.getElementById('student-metrics').style.display = 'block';
+    
+    // Update URL with student ID without refreshing the page
+    const url = new URL(window.location);
+    url.searchParams.set('student_id', studentId);
+    window.history.replaceState({}, '', url);
     
     // Fetch student data via API
     fetch(`/api/dashboard/student/${studentId}/?course_id=${document.getElementById('course-filter').value}`)
@@ -745,7 +919,8 @@
     const activityId = document.getElementById('activity-filter').value;
     
     if (activityId === 'all') {
-      alert('Please select a specific activity first');
+      const summaryContent = document.getElementById('summary-content');
+      summaryContent.innerHTML = '<p class="error" style="color:red;font-weight:bold">Please select a specific activity first. Summaries can only be generated for individual activities.</p>';
       return;
     }
     
@@ -753,7 +928,7 @@
     const spinner = document.getElementById('summary-spinner');
     
     spinner.style.display = 'block';
-    summaryContent.innerHTML = '<p>Generating summary...</p>';
+    summaryContent.innerHTML = '<p>Generating summary with AI... This may take a moment.</p>';
     
     fetch(`/api/dashboard/generate_summary/?activity_id=${activityId}`)
       .then(response => response.json())
@@ -763,7 +938,7 @@
       })
       .catch(error => {
         spinner.style.display = 'none';
-        summaryContent.innerHTML = `<p>Error generating summary: ${error}</p>`;
+        summaryContent.innerHTML = `<p class="error" style="color:red">Error generating summary: ${error}</p>`;
       });
   });
   
@@ -773,7 +948,8 @@
     const activityId = document.getElementById('activity-filter').value;
     
     if (!studentId) {
-      alert('Please select a student first');
+      const summaryContent = document.getElementById('student-summary-content');
+      summaryContent.innerHTML = '<p class="error" style="color:red;font-weight:bold">Please select a student first.</p>';
       return;
     }
     
@@ -781,7 +957,7 @@
     const spinner = document.getElementById('student-summary-spinner');
     
     spinner.style.display = 'block';
-    summaryContent.innerHTML = '<p>Analyzing student data...</p>';
+    summaryContent.innerHTML = '<p>Analyzing student data with AI... This may take a moment.</p>';
     
     fetch(`/api/dashboard/generate_student_analysis/?student_id=${studentId}&activity_id=${activityId}`)
       .then(response => response.json())
@@ -791,7 +967,7 @@
       })
       .catch(error => {
         spinner.style.display = 'none';
-        summaryContent.innerHTML = `<p>Error generating analysis: ${error}</p>`;
+        summaryContent.innerHTML = `<p class="error" style="color:red">Error generating analysis: ${error}</p>`;
       });
   });
   
@@ -839,14 +1015,30 @@
     const courseId = document.getElementById('course-filter').value;
     const clusterCount = document.getElementById('cluster-count').value;
     const spinner = document.getElementById('cluster-spinner');
+    const clusterVisContainer = document.getElementById('cluster-visualization');
     
     spinner.style.display = 'block';
+    clusterVisContainer.innerHTML = '<p>Loading clusters...</p>';
     
     fetch(`/api/dashboard/student_clusters/?course_id=${courseId}&n_clusters=${clusterCount}`)
       .then(response => response.json())
       .then(data => {
         spinner.style.display = 'none';
         clusterData = data;
+        
+        console.log("Cluster data received:", data);
+        
+        if (data.error) {
+          clusterVisContainer.innerHTML = `<p class="error">Error generating clusters: ${data.error}</p>`;
+          console.error("Error in cluster data:", data.error);
+          return;
+        }
+        
+        if (!data.clusters || data.clusters.length === 0) {
+          clusterVisContainer.innerHTML = '<p>Could not generate clusters. Please ensure there are enough messages from at least 2 students.</p>';
+          console.log("No clusters data available");
+          return;
+        }
         
         // Visualize clusters
         visualizeClusters(data.clusters);
@@ -856,6 +1048,7 @@
       })
       .catch(error => {
         spinner.style.display = 'none';
+        clusterVisContainer.innerHTML = `<p class="error">Error loading clusters: ${error}</p>`;
         console.error('Error fetching clusters:', error);
       });
   }
@@ -865,12 +1058,18 @@
     container.innerHTML = '';
     
     if (!clusters || clusters.length === 0) {
-      container.innerHTML = '<p>No clustering data available.</p>';
+      container.innerHTML = '<p>Not enough data to create clusters. Add more students or messages.</p>';
       return;
     }
     
     // Create cluster bubbles
     const totalStudents = clusters.reduce((sum, c) => sum + c.size, 0);
+    
+    if (totalStudents === 0) {
+      container.innerHTML = '<p>No students with sufficient data for clustering.</p>';
+      return;
+    }
+    
     let html = '<div class="cluster-bubbles">';
     
     // Define colors for clusters
@@ -882,16 +1081,49 @@
       'rgba(153, 102, 255, 0.7)'
     ];
     
+    // Define tooltips for clusters
+    const getTooltip = (clusterName) => {
+      // Extract base name by removing anything in parentheses
+      const baseName = clusterName.split(' (')[0].trim();
+      
+      if (baseName.includes('Diverse Vocabulary')) {
+        return 'Students who use a wide variety of words and expressions in their conversations.';
+      } else if (baseName.includes('Simple Vocabulary')) {
+        return 'Students who use a more limited set of words, potentially repeating the same terms.';
+      } else if (baseName.includes('Frequent Writers')) {
+        return 'Students who participate more often than average in conversations.';
+      } else if (baseName.includes('Infrequent Writers')) {
+        return 'Students who participate less often than average in conversations.';
+      } else if (baseName.includes('Long Messages')) {
+        return 'Students who tend to write longer messages than average.';
+      } else if (baseName.includes('Short Messages')) {
+        return 'Students who tend to write shorter messages than average.';
+      } else if (baseName.includes('Balanced')) {
+        return 'Students with balanced communication patterns that don\'t show any extreme tendencies.';
+      } else {
+        return 'A group of students with similar conversation patterns.';
+      }
+    };
+    
+    // Calculate bubble size based on number of clusters
+    // For horizontal layout, ensure they're not too big
+    const maxBubbleSize = Math.min(40, 100 / Math.ceil(clusters.length / 2));
+    
     clusters.forEach((cluster, index) => {
-      const sizePercent = Math.max(10, (cluster.size / totalStudents) * 100);
+      // Base size on relative student count with constraints for min/max size
+      const relativeSize = (cluster.size / totalStudents);
+      const sizePercent = Math.max(25, Math.min(maxBubbleSize, 25 + (relativeSize * 15)));
+      
       const color = colors[index % colors.length];
+      const tooltip = getTooltip(cluster.name);
       
       html += `
         <div class="cluster-bubble" 
              style="width: ${sizePercent}%; height: ${sizePercent}%; background-color: ${color};"
              onclick="showClusterDetails(${cluster.id})">
           <div class="cluster-label">${cluster.name}</div>
-          <div class="cluster-size">${cluster.size} students</div>
+          <div class="cluster-size">${cluster.size} student${cluster.size !== 1 ? 's' : ''}</div>
+          <div class="cluster-tooltip">${tooltip}</div>
         </div>
       `;
     });
@@ -899,60 +1131,91 @@
     html += '</div>';
     container.innerHTML = html;
     
-    // Add styles for bubbles
-    const style = document.createElement('style');
-    style.textContent = `
-      .cluster-bubbles {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        align-items: center;
-        height: 100%;
-      }
-      .cluster-bubble {
-        border-radius: 50%;
-        margin: 10px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        padding: 10px;
-        cursor: pointer;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        transition: transform 0.3s;
-      }
-      .cluster-bubble:hover {
-        transform: scale(1.05);
-      }
-      .cluster-label {
-        font-weight: bold;
-        color: white;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-      }
-      .cluster-size {
-        font-size: 0.8em;
-        color: white;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-      }
-    `;
-    document.head.appendChild(style);
+    // Show details for the first cluster
+    if (clusters.length > 0) {
+      showClusterDetails(clusters[0].id);
+    }
   }
   
   function showClusterDetails(clusterId) {
-    if (!clusterData) return;
+    if (!clusterData || !clusterData.clusters) {
+      console.error("No cluster data available");
+      document.getElementById('cluster-details').innerHTML = 
+        '<p>No group data available. Try updating the groups.</p>';
+      return;
+    }
     
     const cluster = clusterData.clusters.find(c => c.id === clusterId);
-    if (!cluster) return;
+    if (!cluster) {
+      console.error(`Cluster with ID ${clusterId} not found`);
+      document.getElementById('cluster-details').innerHTML = 
+        '<p>Selected group not found. Try updating the groups.</p>';
+      return;
+    }
+    
+    // Generate cluster description based on the name
+    const getClusterDescription = (clusterName) => {
+      // Extract base name by removing anything in parentheses
+      const baseName = clusterName.split(' (')[0].trim();
+      // Extract distinction if present
+      const distinction = clusterName.includes('(') ? 
+        clusterName.substring(clusterName.indexOf('(') + 1, clusterName.indexOf(')')).trim() : '';
+      
+      let baseDescription = '';
+      
+      if (baseName.includes('Diverse Vocabulary')) {
+        baseDescription = `Students in this group use a richer vocabulary than average, with more diverse word choices 
+                and fewer repetitions. This may indicate higher linguistic creativity or domain knowledge.`;
+      } else if (baseName.includes('Simple Vocabulary')) {
+        baseDescription = `Students in this group tend to use simpler vocabulary with more word repetition. 
+                This could indicate either a more focused communication style or potential areas for vocabulary development.`;
+      } else if (baseName.includes('Frequent Writers')) {
+        baseDescription = `This group is characterized by higher-than-average participation rates. 
+                These students send more messages than others, suggesting high engagement with the activities.`;
+      } else if (baseName.includes('Infrequent Writers')) {
+        baseDescription = `Students in this group participate less frequently than average, sending fewer messages.
+                This may indicate either a more thoughtful approach, time constraints, or potential disengagement.`;
+      } else if (baseName.includes('Long Messages')) {
+        baseDescription = `This group tends to write longer, more detailed messages. 
+                These students may provide more comprehensive responses or explanations in their conversations.`;
+      } else if (baseName.includes('Short Messages')) {
+        baseDescription = `Students in this group typically write shorter, more concise messages.
+                This could indicate a preference for brevity or opportunities for communication development.`;
+      } else if (baseName.includes('Balanced')) {
+        baseDescription = `This group shows balanced communication patterns across all measured dimensions.
+                Their message frequency, length, and vocabulary diversity are all close to the average.`;
+      } else {
+        baseDescription = `A group of students with similar conversation patterns.`;
+      }
+      
+      // Add distinction information if present
+      if (distinction) {
+        if (distinction.includes('Higher Length')) {
+          baseDescription += ` Within this category, they tend to write longer messages than other similar students.`;
+        } else if (distinction.includes('Lower Length')) {
+          baseDescription += ` Within this category, they tend to write shorter messages than other similar students.`;
+        } else if (distinction.includes('More Active')) {
+          baseDescription += ` Within this category, they engage more frequently than other similar students.`;
+        } else if (distinction.includes('Less Active')) {
+          baseDescription += ` Within this category, they engage less frequently than other similar students.`;
+        }
+      }
+      
+      return baseDescription;
+    };
+    
+    const clusterDescription = getClusterDescription(cluster.name);
     
     const container = document.getElementById('cluster-details');
     container.innerHTML = `
       <h4>${cluster.name}</h4>
+      <p>${clusterDescription}</p>
       <p><strong>Number of students:</strong> ${cluster.size}</p>
-      <h5>Students in this cluster:</h5>
+      <h5>Students in this group:</h5>
       <ul>
         ${cluster.users.map(user => `<li>${user.username}</li>`).join('')}
       </ul>
+      <p><em>Tip: Hover over the group bubble to see a brief description of what this type means.</em></p>
     `;
     
     // Update radar chart for this cluster
@@ -960,11 +1223,19 @@
   }
   
   function updateRadarChart(clusterId) {
-    if (!clusterData) return;
+    if (!clusterData || !clusterData.features || clusterData.features.length === 0) {
+      console.log("No features data available for radar chart");
+      return;
+    }
     
     // Calculate mean values for the cluster
     const clusterFeatures = clusterData.features.filter(f => f.cluster === clusterId);
     const allFeatures = clusterData.features;
+    
+    if (clusterFeatures.length === 0) {
+      console.error(`No features found for cluster ${clusterId}`);
+      return;
+    }
     
     // Features to show in radar
     const radarFeatures = [
@@ -976,14 +1247,40 @@
     const overallMeans = {};
     
     radarFeatures.forEach(feature => {
+      // Check if feature exists in the data
+      if (!clusterFeatures[0].hasOwnProperty(feature)) {
+        console.warn(`Feature ${feature} not found in cluster data`);
+        return;
+      }
+      
       clusterMeans[feature] = clusterFeatures.reduce((sum, f) => sum + f[feature], 0) / clusterFeatures.length;
-      overallMeans[feature] = allFeatures.reduce((sum, f) => sum + f[feature], 0) / allFeatures.length;
+      
+      // If there's only one cluster, compare to a baseline rather than overall mean
+      if (clusterData.clusters.length <= 1) {
+        overallMeans[feature] = clusterMeans[feature];
+      } else {
+        overallMeans[feature] = allFeatures.reduce((sum, f) => sum + f[feature], 0) / allFeatures.length;
+      }
     });
     
     // Normalize data (divide by overall mean)
-    const normalizedClusterData = radarFeatures.map(feature => 
-      clusterMeans[feature] / overallMeans[feature]
+    const normalizedClusterData = radarFeatures
+      .filter(feature => clusterFeatures[0].hasOwnProperty(feature))
+      .map(feature => {
+        // Avoid division by zero
+        if (overallMeans[feature] === 0) return 1;
+        return clusterMeans[feature] / overallMeans[feature];
+      });
+    
+    // Filter out any undefined features
+    const availableFeatures = radarFeatures.filter(feature => 
+      clusterFeatures[0].hasOwnProperty(feature)
     );
+    
+    if (availableFeatures.length === 0) {
+      console.error("No valid features available for radar chart");
+      return;
+    }
     
     // Create radar chart
     const ctx = document.getElementById('radar-chart').getContext('2d');
@@ -993,13 +1290,18 @@
       window.radarChart.destroy();
     }
     
+    // Map feature names to display labels
+    const featureLabels = {
+      'num_messages': 'Message Count',
+      'avg_length': 'Message Length',
+      'vocab_size': 'Vocabulary Size',
+      'lexical_diversity': 'Lexical Diversity'
+    };
+    
     window.radarChart = new Chart(ctx, {
       type: 'radar',
       data: {
-        labels: [
-          'Message Count', 'Message Length', 
-          'Vocabulary Size', 'Lexical Diversity'
-        ],
+        labels: availableFeatures.map(f => featureLabels[f] || f),
         datasets: [{
           label: 'Relative to Average',
           data: normalizedClusterData,
@@ -1027,10 +1329,41 @@
   }
   
   function updateScatterPlot() {
-    if (!clusterData || !clusterData.features || clusterData.features.length === 0) return;
+    if (!clusterData || !clusterData.features || clusterData.features.length === 0) {
+      const ctx = document.getElementById('scatter-chart').getContext('2d');
+      // Destroy previous chart if exists
+      if (window.scatterChart) {
+        window.scatterChart.destroy();
+      }
+      // Draw empty chart with message
+      window.scatterChart = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+          datasets: []
+        },
+        options: {
+          plugins: {
+            title: {
+              display: true,
+              text: 'Not enough data for visualization',
+              padding: 20,
+              font: { size: 16 }
+            }
+          }
+        }
+      });
+      return;
+    }
     
     const xFeature = document.getElementById('feature-x').value;
     const yFeature = document.getElementById('feature-y').value;
+    
+    // Ensure the features exist in the data
+    if (!clusterData.features[0].hasOwnProperty(xFeature) || 
+        !clusterData.features[0].hasOwnProperty(yFeature)) {
+      console.error(`Features ${xFeature} or ${yFeature} not found in data`);
+      return;
+    }
     
     // Prepare datasets, one for each cluster
     const datasets = [];
@@ -1050,18 +1383,26 @@
       const clusterFeatures = clusterData.features.filter(f => f.cluster === clusterId);
       const clusterName = clusterData.clusters.find(c => c.id === clusterId)?.name || `Cluster ${clusterId}`;
       
-      datasets.push({
-        label: clusterName,
-        data: clusterFeatures.map(f => ({
+      // Check for valid data points (no NaN or null values)
+      const validDataPoints = clusterFeatures
+        .filter(f => !isNaN(f[xFeature]) && !isNaN(f[yFeature]) && 
+                    f[xFeature] !== null && f[yFeature] !== null)
+        .map(f => ({
           x: f[xFeature],
           y: f[yFeature],
           username: f.username
-        })),
-        backgroundColor: colors[index % colors.length],
-        borderColor: colors[index % colors.length].replace('0.7', '1'),
-        pointRadius: 8,
-        pointHoverRadius: 10
-      });
+        }));
+      
+      if (validDataPoints.length > 0) {
+        datasets.push({
+          label: clusterName,
+          data: validDataPoints,
+          backgroundColor: colors[index % colors.length],
+          borderColor: colors[index % colors.length].replace('0.7', '1'),
+          pointRadius: 8,
+          pointHoverRadius: 10
+        });
+      }
     });
     
     // Create or update scatter plot
@@ -1070,6 +1411,24 @@
     // Destroy previous chart if exists
     if (window.scatterChart) {
       window.scatterChart.destroy();
+    }
+    
+    if (datasets.length === 0) {
+      window.scatterChart = new Chart(ctx, {
+        type: 'scatter',
+        data: { datasets: [] },
+        options: {
+          plugins: {
+            title: {
+              display: true,
+              text: 'No valid data points for selected features',
+              padding: 20,
+              font: { size: 16 }
+            }
+          }
+        }
+      });
+      return;
     }
     
     window.scatterChart = new Chart(ctx, {
@@ -1124,6 +1483,33 @@
     if (!clusterData) {
       loadClusters();
     }
+  });
+  
+  // Export Raw Data to CSV
+  document.getElementById('export-csv').addEventListener('click', function() {
+    const tableHeaders = Array.from(document.querySelectorAll('#raw-data .engagement-table thead th'))
+      .map(th => th.textContent);
+      
+    const tableRows = Array.from(document.querySelectorAll('#raw-data .engagement-table tbody tr'));
+    
+    const csvContent = [
+      tableHeaders.join(','),
+      ...tableRows.map(row => 
+        Array.from(row.querySelectorAll('td'))
+          .map(cell => `"${cell.textContent.replace(/"/g, '""')}"`)
+          .join(',')
+      )
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `simba_dashboard_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   });
 </script>
 {% endblock %}

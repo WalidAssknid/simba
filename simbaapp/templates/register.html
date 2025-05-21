@@ -10,6 +10,13 @@
         </div>
         
         <div class="auth-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-warning{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
             <form method="post" action="{% url 'register' %}">
                 {% csrf_token %}
                 <div class="form-group">
@@ -107,6 +114,10 @@
         padding: 30px 24px;
     }
     
+    .auth-body .alert {
+        margin-bottom: 20px;
+    }
+
     .auth-footer {
         padding: 16px 24px;
         background-color: #f8f8f8;

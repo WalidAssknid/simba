@@ -90,7 +90,7 @@
     </header>
     
     <main class="container">
-        {% if messages and request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'register' %}
+        {% if messages and not request.resolver_match.url_name == 'login' and not request.resolver_match.url_name == 'register' %}
             {% for message in messages %}
                 <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-warning{% endif %}">
                     {{ message }}

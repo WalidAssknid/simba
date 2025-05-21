@@ -3,15 +3,6 @@
 
 {% block content %}
 <div class="auth-container">
-    {% if messages %}
-        <div class="auth-messages">
-            {% for message in messages %}
-                <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-warning{% endif %}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
     
     <div class="auth-card">
         <div class="auth-header">
@@ -20,6 +11,13 @@
         </div>
         
         <div class="auth-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-warning{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
             <form method="post" action="{% url 'login' %}">
                 {% csrf_token %}
                 
@@ -62,24 +60,14 @@
     
     .auth-container {
         display: flex;
-        flex-direction: column;
+        /* flex-direction: column; */ /* Changed to row for default, card will be centered */
         justify-content: center;
         align-items: center;
         min-height: 100vh;
         padding: 20px;
     }
     
-    .auth-messages {
-        width: 100%;
-        max-width: 400px;
-        margin-bottom: 20px;
-    }
-    
-    .auth-messages .alert {
-        margin-bottom: 0;
-        border-radius: 4px;
-        color: white !important;
-    }
+    /* Removed .auth-messages block as messages are now inside .auth-body */
     
     .auth-card {
         background-color: white;
@@ -88,6 +76,7 @@
         width: 100%;
         max-width: 400px;
         overflow: hidden;
+        /* Messages will be inside this card, so it centers with messages */
     }
     
     .auth-header {
@@ -111,6 +100,11 @@
     
     .auth-body {
         padding: 30px 24px;
+    }
+
+    .auth-body .alert {
+        margin-bottom: 20px; /* Space below alert */
+        /* color: white !important; -- REMOVED THIS LINE */
     }
     
     .auth-footer {

@@ -642,9 +642,17 @@ def get_conversation_stats(request, course_id: str = "all"):
 def generate_activity_summary(request, activity_id: int):
     """Generate an AI summary of student conversations in an activity."""
     try:
+        from openai import OpenAI
+        import os
+        
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            return {"summary": "OpenAI API key not found. Please set the OPENAI_API_KEY environment variable."}
+        
+        openai_client = OpenAI(api_key=api_key)
+        
         activity = Activity.objects.get(id=activity_id)
         
-        # Get all user messages for this activity
         messages = Message.objects.filter(
             thread__activity=activity,
             role='user'
@@ -653,20 +661,37 @@ def generate_activity_summary(request, activity_id: int):
         if not messages:
             return {"summary": "No student messages found for this activity."}
         
-        # Prepare message content
         message_texts = [msg.content for msg in messages]
         content = "\n".join(message_texts)
         
-        # For a real implementation, you would call an AI service here
-        # In this example, we'll return a placeholder message
-        summary = (
-            "This is a placeholder for the AI-generated summary. "
-            "In a production environment, this would call an external "
-            "AI service like OpenAI's GPT to analyze the conversation. "
-            f"Activity: {activity.title}, Messages: {len(message_texts)}"
-        )
+        if len(content) > 15000:
+            content = content[:15000] + "...(truncated)"
         
-        return {"summary": summary}
+        prompt = f"""Based on the messages exchanged between students and SIMBA tutor, taking into consideration only the messages sent by the students:
+
+{content}
+
+Please provide a concise (less than 200 words) SUMMARY that:
+1. Summarizes the main points discussed by the students in bullet points
+2. Identifies the main difficulties or misconceptions presented by the students in bullet points
+"""
+        
+        try:
+            response = openai_client.chat.completions.create(
+                model="gpt-4o-mini",  
+                messages=[
+                    {"role": "system", "content": "You are a teacher assistant analyzing student conversations."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500
+            )
+            
+            summary = response.choices[0].message.content
+            return {"summary": summary}
+        except Exception as e:
+            print(f"OpenAI API error: {str(e)}")
+            return {"summary": f"Error generating summary with OpenAI: {str(e)}"}
+        
     except Activity.DoesNotExist:
         return {"summary": "Activity not found."}
     except Exception as e:
@@ -676,9 +701,17 @@ def generate_activity_summary(request, activity_id: int):
 def generate_student_analysis(request, student_id: int, activity_id: str = "all"):
     """Generate an AI analysis of a student's conversation patterns."""
     try:
+        from openai import OpenAI
+        import os
+        
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            return {"analysis": "OpenAI API key not found. Please set the OPENAI_API_KEY environment variable."}
+        
+        openai_client = OpenAI(api_key=api_key)
+        
         student = User.objects.get(id=student_id)
         
-        # Filter messages
         if activity_id != "all":
             activity = Activity.objects.get(id=activity_id)
             messages = Message.objects.filter(
@@ -697,17 +730,39 @@ def generate_student_analysis(request, student_id: int, activity_id: str = "all"
         if not messages:
             return {"analysis": f"No data found for student {student.username} {context}."}
         
-        # For a real implementation, you would call an AI service here
-        # In this example, we'll return a placeholder message
-        analysis = (
-            f"This is a placeholder for the AI-generated analysis of student {student.username}'s "
-            f"conversation patterns {context}. In a production environment, this would "
-            "call an external AI service like OpenAI's GPT to analyze the student's "
-            f"communication style, engagement level, and learning patterns. "
-            f"Total messages: {messages.count()}"
-        )
+        message_texts = [msg.content for msg in messages]
+        content = "\n".join(message_texts)
         
-        return {"analysis": analysis}
+        if len(content) > 15000:
+            content = content[:15000] + "...(truncated)"
+        
+        prompt = f"""You are a teacher assistant. Based on the messages exchanged between the student and an online tutor, here are the messages sent by the student {student.username} {context}:
+
+{content}
+
+Please provide a concise (less than 300 words) summary that:
+1. Summarizes the main points discussed by the student.
+2. Identifies the main difficulties or misconceptions presented by the student.
+3. Analyzes the student's communication style, engagement level, and learning patterns.
+For each point, give precise examples cited verbatim from the student's messages.
+"""
+        
+        try:
+            response = openai_client.chat.completions.create(
+                model="gpt-4o-mini",  # You can adjust the model as needed
+                messages=[
+                    {"role": "system", "content": "You are a teacher assistant analyzing student conversations."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=600
+            )
+            
+            analysis = response.choices[0].message.content
+            return {"analysis": analysis}
+        except Exception as e:
+            print(f"OpenAI API error: {str(e)}")
+            return {"analysis": f"Error generating analysis with OpenAI: {str(e)}"}
+        
     except User.DoesNotExist:
         return {"analysis": "Student not found."}
     except Activity.DoesNotExist:
@@ -719,7 +774,6 @@ def generate_student_analysis(request, student_id: int, activity_id: str = "all"
 def get_student_clusters(request, course_id: str = "all", n_clusters: int = 3):
     """Get student clusters based on conversation patterns."""
     try:
-        # Fetch message data
         if course_id != "all":
             course = Course.objects.get(id=course_id)
             messages = Message.objects.filter(
@@ -728,7 +782,8 @@ def get_student_clusters(request, course_id: str = "all", n_clusters: int = 3):
         else:
             messages = Message.objects.all().select_related('thread__user', 'thread__activity')
         
-        # Convert messages to format expected by clustering module
+        print(f"DEBUG: Retrieved {messages.count()} messages for clustering")
+        
         message_data = []
         for msg in messages:
             message_data.append({
@@ -740,29 +795,42 @@ def get_student_clusters(request, course_id: str = "all", n_clusters: int = 3):
                 'timestamp': msg.timestamp.isoformat()
             })
         
-        # Extract features for clustering
+        print(f"DEBUG: Converted {len(message_data)} messages to clustering format")
+        
         user_features = cluster_students.extract_features(message_data)
         
+        print(f"DEBUG: Extracted features for {len(user_features)} users")
+        if not user_features.empty:
+            print(f"DEBUG: User features columns: {user_features.columns.tolist()}")
+            print(f"DEBUG: First user features: {user_features.iloc[0].to_dict() if len(user_features) > 0 else 'No users'}")
+        
         if user_features.empty:
+            print("DEBUG: No user features extracted, returning empty result")
             return {
                 "clusters": [],
                 "features": []
             }
         
-        # Run clustering
         n_clusters = min(n_clusters, len(user_features))
         if n_clusters < 2:
             n_clusters = 2
             
+        print(f"DEBUG: Running clustering with n_clusters={n_clusters}")
         clustered_features = cluster_students.run_clustering(
             user_features, 
             n_clusters=n_clusters
         )
         
-        # Get descriptive names for clusters
-        cluster_names = cluster_students.get_cluster_names(clustered_features)
+        try:
+            cluster_names = cluster_students.get_cluster_names(clustered_features)
+            print(f"DEBUG: Generated cluster names: {cluster_names}")
+        except Exception as e:
+            print(f"ERROR in generating cluster names: {str(e)}")
+            cluster_names = {
+                cluster_id: f"Cluster {cluster_id}" 
+                for cluster_id in clustered_features['cluster'].unique()
+            }
         
-        # Prepare response data
         clusters = []
         for cluster_id in sorted(clustered_features['cluster'].unique()):
             cluster_users = clustered_features[clustered_features['cluster'] == cluster_id]
@@ -773,7 +841,6 @@ def get_student_clusters(request, course_id: str = "all", n_clusters: int = 3):
                 'users': cluster_users[['user_id', 'username']].to_dict('records')
             })
         
-        # Return selected features for visualization
         features_to_return = [
             'user_id', 'username', 'num_messages', 'avg_length',
             'vocab_size', 'lexical_diversity', 'cluster'
@@ -782,11 +849,16 @@ def get_student_clusters(request, course_id: str = "all", n_clusters: int = 3):
         
         feature_data = clustered_features[available_features].to_dict('records')
         
+        print(f"DEBUG: Returning {len(clusters)} clusters with {len(feature_data)} user features")
+        
         return {
             "clusters": clusters,
             "features": feature_data
         }
     except Exception as e:
+        print(f"ERROR in student_clusters: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {
             "clusters": [],
             "features": [],

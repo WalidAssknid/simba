@@ -87,6 +87,108 @@ async def api_get_messages_for_thread(thread_id: int):
             logger.error(f"Request Error getting messages: {e}")
             raise Exception(f"Request Error: Could not connect to API for messages.")
 
+async def _build_system_prompt(activity_data: dict, logger_instance: logging.Logger) -> str:
+    adj1 = activity_data.get('agent_attitude', 'friendly')
+    expert_mode = activity_data.get('expert_mode', False)
+    
+    course_info = activity_data.get('course', {})
+    if isinstance(course_info, dict):
+        courseName = course_info.get('title', 'this course')
+    else: 
+        courseName = 'this course'
+        logger_instance.warning(f"Course information might be missing or not in expected format in activity_data for activity {activity_data.get('id')}")
+
+    allow_emojis_flag = activity_data.get('allow_emojis', True)
+    questions_list = activity_data.get('questions', [])
+    activity_subjects = activity_data.get('subjects', '')
+    restrict_to_subject_flag = activity_data.get('restrict_to_subject', False)
+    trust_document_flag = activity_data.get('trust_document', True)
+    word_limit_val = activity_data.get('word_limit', 0)
+    custom_prompt_text = activity_data.get('custom_prompt', '')
+    allow_bot_to_ask_questions_flag = activity_data.get('allow_questions', True)
+
+    def emojiGen(useEmojis):
+        return ", using emojis where possible." if useEmojis else "."
+
+    def questionsGen_str(questions):
+        nstr = ""
+        if questions and isinstance(questions, list):
+            for i, q_item in enumerate(questions):
+                question_text = q_item if isinstance(q_item, str) else q_item.get('text', '') 
+                if question_text:
+                    nstr += f"Question {i+1} : {question_text} \n"
+        return nstr.strip()
+
+    def subjectsGen_str(subjects, restricted):
+        nstr = ""
+        if subjects:
+            nstr += "You should help the student to reflect in depth on the following course subjects :\n <Beginning of the course subjects>\n"
+            nstr += subjects
+            nstr += "\n<end of the course subjects>\n"
+        if restricted:
+            nstr += "You should only speak of those listed subjects. Avoid as much as possible speaking of other subjects, and steer back the student to the course subjects if he tries to deviate from them."
+        return nstr
+
+    def answersGen_str(is_expert_mode):
+        if is_expert_mode:
+            return "You should not give the answer, but guide the student to answer."
+        else:
+            return "You can provide an answer to the provided questions if the student asks for it."
+
+    def teachTypeGen_str(is_expert_mode):
+        if is_expert_mode:
+            return "Act as a Socratic tutor, taking the initiative in getting the students to answer the questions."
+        else:
+            return "Act as a standard teacher."
+
+    def teachingAdjGen_str(is_expert_mode):
+        return "socratic" if is_expert_mode else "standard"
+
+    def docsGen_str(mentiondocuments):
+        nstr = ""
+        if mentiondocuments:
+            nstr = "Encourage them to go and read a section of the provided documents to answer."
+        return nstr
+
+    def limitsGen_str(limit):
+        if limit and limit != 0:
+            return f"Your answers should be {limit} words maximum."
+        return ""
+
+    emojis_str = emojiGen(allow_emojis_flag)
+    questions_str = questionsGen_str(questions_list)
+    subjects_str = subjectsGen_str(activity_subjects, restrict_to_subject_flag)
+    teaching_adj_str = teachingAdjGen_str(expert_mode)
+    answers_text = answersGen_str(expert_mode)
+    teaching_type_text = teachTypeGen_str(expert_mode)
+    documents_str = docsGen_str(trust_document_flag)
+    limits_str = limitsGen_str(word_limit_val)
+
+    full_template = f"""You are a {adj1} {teaching_adj_str} tutor for the course '{courseName}'.
+
+Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.
+Respond in a {adj1}, concise and proactive way{emojis_str}
+
+Help the student answer the following questions:
+
+{questions_str}
+
+{subjects_str}
+
+{answers_text} {teaching_type_text}
+
+{documents_str}
+
+Your first message should begin with 'Hello! 😸 I am SIMBA, and I will help you reflect on the following questions: ' Followed by the questions to answer.
+
+{limits_str}"""
+    system_prompt = full_template.strip()
+    if expert_mode and custom_prompt_text:
+        system_prompt += f"\n\n{custom_prompt_text}"
+    if not allow_bot_to_ask_questions_flag:
+        system_prompt += "\n\nDo not provide questions to the student unless explicitly asked."
+    return system_prompt
+
 @cl.on_chat_start
 async def on_chat_start():
     referer_url = cl.user_session.get("http_referer", "")
@@ -110,7 +212,6 @@ async def on_chat_start():
 
     try:
         activity_data = await api_get_activity(activity_id)
-        activity_title = activity_data.get('title', 'Activity')
 
         thread_data = await api_get_or_create_thread(activity_id, user_id)
         thread_id = thread_data['id']
@@ -120,24 +221,32 @@ async def on_chat_start():
         cl.user_session.set("user_id", user_id)
         cl.user_session.set("username", username)
         cl.user_session.set("activity_data", activity_data)
-
-        welcome_message = f"Welcome to SIMBA! You are in the activity: **{activity_title}**."
-        await cl.Message(content=welcome_message).send()
-
-        questions = activity_data.get('questions', [])
-        main_question = questions[0] if questions and isinstance(questions, list) and questions else activity_data.get('title')
-
-        if main_question:
-            question_message = f"Main question for this activity: **{main_question}**"
-            await cl.Message(content=question_message).send()
         
         previous_messages_data = await api_get_messages_for_thread(thread_id)
-        for msg_data in previous_messages_data:
-            author = msg_data.get('metadata', {}).get('author') if msg_data.get('metadata') else msg_data.get('role')
-            if msg_data['role'] == 'assistant':
-                await cl.Message(content=msg_data['content'], author='Assistant').send()
-            else:
-                await cl.Message(content=msg_data['content'], author=author, type="user_message").send()
+        
+        if not previous_messages_data: 
+            system_prompt_content = await _build_system_prompt(activity_data, logger)
+            
+            openai_initial_messages = [{"role": "system", "content": system_prompt_content}]
+            
+            response = await client.chat.completions.create(
+                model=settings["model"],
+                messages=openai_initial_messages,
+                temperature=settings["temperature"],
+            )
+            ai_first_response_content = response.choices[0].message.content
+            
+            await api_create_message(thread_id, ai_first_response_content, "assistant", user_id, model_name=settings["model"])
+            await cl.Message(content=ai_first_response_content).send()
+            
+        else: 
+            if previous_messages_data: 
+                for msg_data in previous_messages_data:
+                    author = msg_data.get('metadata', {}).get('author') if msg_data.get('metadata') else msg_data.get('role')
+                    if msg_data['role'] == 'assistant':
+                        await cl.Message(content=msg_data['content'], author='Assistant').send()
+                    else:
+                        await cl.Message(content=msg_data['content'], author=author, type="user_message").send() 
         
     except Exception as e:
         logger.error(f"Error during chat start: {e}")
@@ -159,47 +268,13 @@ async def on_message(message: cl.Message):
     try:
         await api_create_message(thread_id, message.content, "user", user_id, username=username)
         
-        messages_history_data = await api_get_messages_for_thread(thread_id)
-        openai_messages = []
+        system_prompt_content = await _build_system_prompt(activity_data, logger)
+        
+        messages_history_data = await api_get_messages_for_thread(thread_id) # Get all, including new user message
+        openai_messages = [{"role": "system", "content": system_prompt_content}]
 
-        attitude = activity_data.get('agent_attitude', 'friendly')
-        subjects = activity_data.get('subjects', '')
-        restrict = activity_data.get('restrict_to_subject', False)
-        allow_q = activity_data.get('allow_questions', True)
-        allow_e = activity_data.get('allow_emojis', True)
-        trust_doc = activity_data.get('trust_document', True)
-        expert = activity_data.get('expert_mode', False)
-        custom_p = activity_data.get('custom_prompt', '')
-        description = activity_data.get('description', '')
-        questions = activity_data.get('questions', [])
-        main_question = questions[0] if questions and isinstance(questions, list) and questions else activity_data.get('title')
-
-        system_prompt = "You are an intelligent study assistant for students and teachers."
-        system_prompt += f" Your attitude should be {attitude}."
-        if description:
-            system_prompt += f" Activity description: {description}."
-        if main_question:
-            system_prompt += f" The main question for this activity is: {main_question}."
-        if subjects:
-            system_prompt += f" Subjects: {subjects}."
-        if restrict:
-            system_prompt += " Only answer questions related to the course subjects."
-        if not allow_q:
-            system_prompt += " Do not provide questions to the student unless explicitly asked."
-        if not allow_e:
-            system_prompt += " Do not use emojis in your responses."
-        else:
-            system_prompt += " You can use emojis to make the conversation more engaging."
-        if trust_doc:
-            system_prompt += " Trust the provided document to help answer questions."
-        if expert and custom_p:
-            system_prompt += f" {custom_p}"
-        if questions:
-            system_prompt += f" Example questions for this activity: {', '.join(questions)}."
-
-        openai_messages.append({"role": "system", "content": system_prompt})
         for msg_data in messages_history_data:
-            openai_role = msg_data['role'] if msg_data['role'] in ["assistant", "user"] else "user"
+            openai_role = msg_data['role'] if msg_data['role'] in ["assistant", "user"] else "user" 
             openai_messages.append({"role": openai_role, "content": msg_data['content']})
             
         response = await client.chat.completions.create(

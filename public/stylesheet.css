@@ -1,0 +1,7 @@
+#new-chat-button {
+    display: none;
+}
+
+.bg-primary {
+    background-color: rgb(255, 112, 67) !important;
+}

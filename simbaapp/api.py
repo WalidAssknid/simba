@@ -29,7 +29,6 @@ from .schemas import (
 
 from django.shortcuts import get_object_or_404
 from http import HTTPStatus
-import json
 from . import cluster_students
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
@@ -234,11 +233,9 @@ def update_activity_api(request, activity_id: int, payload: ActivityUpdateSchema
         user = User.objects.get(id=user_id)
         activity = Activity.objects.select_related('course').get(id=activity_id)
         
-        # Check if user is the owner of the course
         if activity.course.owner_id != user.id or user.role != 'teacher':
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can update this activity."}
         
-        # Update activity fields
         activity.title = payload.title if payload.title is not None else activity.title
         activity.description = payload.description if payload.description is not None else activity.description
         activity.expert_mode = payload.expert_mode
@@ -271,11 +268,9 @@ def delete_activity_api(request, activity_id: int, user_id: int):
         user = User.objects.get(id=user_id)
         activity = Activity.objects.select_related('course').get(id=activity_id)
         
-        # Check if user is the owner of the course
         if activity.course.owner_id != user.id or user.role != 'teacher':
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can delete this activity."}
         
-        # Delete the activity
         activity.delete()
         
         return HTTPStatus.NO_CONTENT, None
@@ -445,17 +440,6 @@ def get_course_participants_api(request, course_id: int):
     except Exception as e:
         return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to get participants: {str(e)}"}
 
-# --- Remove old Django view-based endpoints --- 
-# The functions get_course_info and get_course_participants are now deprecated
-# as they rely on Django sessions and aren't standard Ninja endpoints.
-# They should be replaced with proper Ninja endpoints using authentication.
-
-# Placeholder for global authentication (optional)
-# class GlobalAuth(HttpBearer):
-#     def authenticate(self, request, token):
-#         # Implement token validation logic here if needed globally
-#         # For JWT, NinjaJWTAuthController handles specific routes
-#         pass
 
 # api = NinjaAPI(auth=GlobalAuth()) # Apply auth globally if needed
 
@@ -484,6 +468,10 @@ class ClusterResponseSchema(Schema):
     clusters: list
     features: list
 
+class WordFrequencySchema(Schema):
+    words: list
+    students: list
+
 @dashboard_router.get("/student/{student_id}/", response=StudentDataSchema)
 def get_student_data(request, student_id: int, course_id: str = "all"):
     """Get detailed data for a specific student."""
@@ -503,21 +491,17 @@ def get_student_data(request, student_id: int, course_id: str = "all"):
                 role='user'
             ).select_related('thread__activity').order_by('timestamp')
         
-        # Count unique activities the student has participated in
         activities = set([msg.thread.activity_id for msg in messages])
         activities_count = len(activities)
         
-        # Calculate total messages and characters
         messages_count = messages.count()
         total_chars = sum([len(msg.content) for msg in messages])
         
-        # Prepare engagement data (messages per activity)
         activity_counts = {}
         for msg in messages:
             activity_name = msg.thread.activity.title or f"Activity {msg.thread.activity.id}"
             activity_counts[activity_name] = activity_counts.get(activity_name, 0) + 1
         
-        # Get recent conversation for display
         recent_thread = Thread.objects.filter(user=student).order_by('-updated_at').first()
         conversation = []
         
@@ -528,17 +512,14 @@ def get_student_data(request, student_id: int, course_id: str = "all"):
                 for msg in conversation
             ]
         
-        # Create length distribution data
         all_user_messages = Message.objects.filter(role='user')
         message_lengths = [len(msg.content) for msg in all_user_messages]
         student_avg_length = total_chars / messages_count if messages_count > 0 else 0
         
-        # Create bins for histogram
         max_length = max(message_lengths) if message_lengths else 1000
         bins = list(range(0, max_length + 200, 200))
         values = [0] * len(bins)
         
-        # Count messages in each bin
         for length in message_lengths:
             bin_index = min(length // 200, len(bins) - 1)
             values[bin_index] += 1
@@ -575,7 +556,6 @@ def get_conversation_stats(request, course_id: str = "all"):
         else:
             messages = Message.objects.all().select_related('thread__user', 'thread__activity')
         
-        # Group by user
         user_stats = {}
         
         for msg in messages:
@@ -600,17 +580,14 @@ def get_conversation_stats(request, course_id: str = "all"):
                 user_stats[user_id]["user_turns"] += 1
                 user_stats[user_id]["total_chars"] += len(msg.content)
                 
-                # Track activities
                 user_stats[user_id]["activities"].add(msg.thread.activity_id)
                 
-                # Track vocabulary and word lengths
                 words = msg.content.lower().split()
                 user_stats[user_id]["words"].update(words)
                 user_stats[user_id]["word_lengths"].extend([len(w) for w in words])
             else:
                 user_stats[user_id]["model_turns"] += 1
         
-        # Calculate derived metrics
         stats = []
         for user_id, user_data in user_stats.items():
             if user_data["model_turns"] > 0:
@@ -862,6 +839,50 @@ def get_student_clusters(request, course_id: str = "all", n_clusters: int = 3):
         return {
             "clusters": [],
             "features": [],
+            "error": str(e)
+        }
+
+@dashboard_router.get("/word_frequencies/", response=WordFrequencySchema)
+def get_word_frequencies(request, course_id: str = "all", min_word_length: int = 3, max_words: int = 100):
+    """Get word frequencies from student messages for word cloud visualization."""
+    try:
+        if course_id != "all":
+            course = Course.objects.get(id=course_id)
+            messages = Message.objects.filter(
+                thread__activity__course=course
+            ).select_related('thread__user', 'thread__activity')
+        else:
+            messages = Message.objects.all().select_related('thread__user', 'thread__activity')
+        
+        print(f"DEBUG: Retrieved {messages.count()} messages for word frequency analysis")
+        
+        message_data = []
+        for msg in messages:
+            message_data.append({
+                'user_id': msg.thread.user_id,
+                'username': msg.thread.user.username,
+                'content': msg.content,
+                'role': msg.role,
+                'activity_id': msg.thread.activity_id,
+                'timestamp': msg.timestamp.isoformat()
+            })
+        
+        word_frequencies = cluster_students.extract_word_frequencies(
+            message_data,
+            min_word_length=min_word_length,
+            max_words=max_words
+        )
+        
+        print(f"DEBUG: Extracted {len(word_frequencies['words'])} words with frequencies")
+        
+        return word_frequencies
+    except Exception as e:
+        print(f"ERROR in word_frequencies: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "words": [],
+            "students": [],
             "error": str(e)
         }
 

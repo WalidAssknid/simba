@@ -35,9 +35,9 @@
                 Show Participants
             </button>
     {% if is_teacher %}
-            <a href="#" id="createActivityBtn" class="add-button" title="Create Activity">
+            <button id="createActivityBtn" class="add-button" title="Create Activity">
                 <i class="fas fa-plus"></i>
-            </a>
+            </button>
             {% endif %}
         </div>
     </div>
@@ -185,6 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Activity items click handler
     document.querySelectorAll('.activity-item').forEach(item => {
+        console.log('Adding click listener to activity:', item.dataset.activityId); // Debug log
         item.addEventListener('click', function(e) {
             // Prevent triggering if clicking on the menu toggle or menu
             if (!e.target.closest('.activity-options')) {
@@ -192,6 +193,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const activityTitle = this.querySelector('.activity-title').textContent;
                 const userId = '{{ request.session.user_id }}';
                 const username = '{{ request.session.username }}';
+                
+                console.log('Activity clicked:', activityId, activityTitle); // Debug log
                 
                 // Add pulse animation
                 this.classList.add('pulse');
@@ -206,6 +209,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Hide activities container and show chainlit container
                 activitiesContainer.classList.add('hidden');
                 chainlitContainer.classList.add('active');
+                
+                // Add chainlit-active class to body for better layout control
+                document.body.classList.add('chainlit-active');
             }
         });
     });
@@ -219,6 +225,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Show activities container
         activitiesContainer.classList.remove('hidden');
+        
+        // Remove chainlit-active class from body
+        document.body.classList.remove('chainlit-active');
         
         // Clear iframe after transition (to prevent unnecessary resource usage)
         setTimeout(() => {
@@ -238,17 +247,55 @@ document.addEventListener('DOMContentLoaded', function() {
             if (menu.classList.contains('active')) {
                 menu.classList.remove('active');
                 menu.classList.remove('position-left'); // Ensure position-left is also removed
+                menu.style.left = '';
+                menu.style.right = '';
+                menu.style.top = '';
                 return;
             }
 
             closeAllMenus(); // Close all other menus first
             menu.classList.add('active');
             
-            // Position menu: default is to the right (CSS). Flip if it overflows.
-            menu.classList.remove('position-left'); // Reset to default (right)
-            const rect = menu.getBoundingClientRect();
-            if (rect.right > window.innerWidth) {
-                menu.classList.add('position-left');
+            // Check if we're on mobile
+            const isMobile = window.innerWidth <= 768;
+            
+            if (isMobile) {
+                // On mobile, always position to the right of the toggle button
+                menu.classList.remove('position-left');
+                
+                const toggleRect = this.getBoundingClientRect();
+                const menuWidth = 140; 
+                
+                menu.style.position = 'fixed';
+                menu.style.left = (toggleRect.right + 5) + 'px';
+                menu.style.top = (toggleRect.top + 8) + 'px';
+                menu.style.right = 'auto';
+            } else {
+                menu.style.position = '';
+                menu.style.left = '';
+                menu.style.right = '';
+                menu.style.top = '';
+                
+                menu.classList.remove('position-left'); // Reset to default (right)
+                
+                // Wait for next frame to get accurate positioning
+                requestAnimationFrame(() => {
+                    const rect = menu.getBoundingClientRect();
+                    const viewportWidth = window.innerWidth;
+                    
+                    // If menu would overflow to the right, position it to the left
+                    if (rect.right > viewportWidth - 10) { // 10px margin from edge
+                        menu.classList.add('position-left');
+                    }
+                    
+                    // Double check if it's still overflowing after positioning left
+                    requestAnimationFrame(() => {
+                        const newRect = menu.getBoundingClientRect();
+                        if (newRect.left < 10) { // If it overflows to the left now
+                            menu.classList.remove('position-left'); // Go back to right positioning
+                        }
+                    });
+                });
             }
         });
     });

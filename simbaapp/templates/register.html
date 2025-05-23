@@ -63,6 +63,7 @@
     body {
         background-color: #f8f8f8;
         padding-left: 0 !important;
+        padding-top: 0 !important;
     }
     
     .sidebar, .header {
@@ -117,7 +118,7 @@
     .auth-body .alert {
         margin-bottom: 20px;
     }
-
+    
     .auth-footer {
         padding: 16px 24px;
         background-color: #f8f8f8;
@@ -134,6 +135,59 @@
         width: 100%;
         margin-top: 24px;
         padding: 12px;
+    }
+    
+    /* Mobile */
+    @media (max-width: 768px) {
+        .auth-container {
+            padding: 16px;
+            align-items: flex-start;
+            padding-top: 40px;
+        }
+        
+        .auth-card {
+            max-width: 100%;
+            margin-top: 0;
+        }
+        
+        .auth-header {
+            padding: 24px 20px;
+        }
+        
+        .auth-header h2 {
+            font-size: 1.6rem;
+        }
+        
+        .auth-body {
+            padding: 24px 20px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .auth-container {
+            padding: 12px;
+            padding-top: 30px;
+        }
+        
+        .auth-header {
+            padding: 20px 16px;
+        }
+        
+        .auth-header h2 {
+            font-size: 1.5rem;
+        }
+        
+        .auth-body {
+            padding: 20px 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-control {
+            padding: 10px;
+        }
     }
 </style>
 {% endblock %}

@@ -12,7 +12,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
 import django
 django.setup()
 from django.contrib.auth.hashers import make_password
-from simbaapp.models import User, Course, Activity
+from simbaapp.models import User, Course, Activity, CourseEnrollment
 
 # Check if user already exists
 if not User.objects.filter(username='prof').exists():
@@ -54,6 +54,34 @@ if not Activity.objects.filter(title='at').exists():
     print('Default activity created successfully')
 else:
     print('Default activity already exists')
+
+# Check if default student exists
+if not User.objects.filter(username='student').exists():
+    # Create a new student user
+    password = 'student'
+    password_hash = make_password(password)
+    
+    student = User.objects.create(
+        username='student',
+        email='student@gmail.com',
+        password_hash=password_hash,
+        role='student'
+    )
+    print('Default student user created successfully')
+else:
+    student = User.objects.get(username='student')
+    print('Default student user already exists')
+
+# Enroll student in the default course if not already enrolled
+course = Course.objects.get(title='ct')
+if not CourseEnrollment.objects.filter(user=student, course=course).exists():
+    CourseEnrollment.objects.create(
+        user=student,
+        course=course
+    )
+    print('Default student enrolled in default course successfully')
+else:
+    print('Default student already enrolled in default course')
 "
 
 PORT="${PORT:-8000}"

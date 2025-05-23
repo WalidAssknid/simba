@@ -191,6 +191,86 @@
     100% { transform: rotate(360deg); }
   }
   
+  /* Word cloud styles */
+  .word-cloud-container {
+    height: 400px;
+    position: relative;
+    margin-bottom: 30px;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: none;
+    border: 1px solid #e5e8ec;
+    overflow: hidden;
+  }
+  
+  .word-cloud {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    background: linear-gradient(to right, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.6) 100%);
+    backdrop-filter: blur(5px);
+  }
+  
+  .word {
+    position: absolute;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+    font-family: 'Arial', sans-serif;
+    white-space: nowrap;
+    user-select: none;
+    z-index: 1;
+    letter-spacing: 0.5px;
+  }
+  
+  .word:hover {
+    transform: scale(1.15) !important;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.15);
+    z-index: 10 !important;
+    letter-spacing: 1px;
+  }
+  
+  .word-details {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: none;
+    border: 1px solid #e5e8ec;
+    margin-bottom: 30px;
+    min-height: 200px;
+  }
+  
+  .word-details h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 18px;
+  }
+  
+  .word-details ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  
+  .word-details li {
+    padding: 8px 12px;
+    margin: 4px 0;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border-left: 3px solid #4a6cf7;
+  }
+  
+  .word-details p {
+    color: #666;
+    font-style: italic;
+    margin-bottom: 15px;
+  }
+  
   /* Cluster visualization styles */
   .cluster-bubbles {
     display: flex;
@@ -277,6 +357,341 @@
     padding-left: 20px;
     margin-top: 10px;
   }
+  
+  /* Mobile responsive adjustments */
+  @media (max-width: 768px) {
+    .dashboard-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .dashboard-header h2 {
+      font-size: 1.4rem;
+    }
+    
+    .filters {
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .filters > div {
+      width: 100%;
+    }
+    
+    .filters select {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 1rem;
+    }
+    
+    .filters label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    
+    .tabs {
+      overflow-x: auto;
+      white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 16px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    
+    .tabs::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .tab {
+      display: inline-block;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      min-width: max-content;
+      white-space: nowrap;
+    }
+    
+    .metric-cards {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    
+    .metric-card {
+      padding: 16px;
+    }
+    
+    .metric-card h3 {
+      font-size: 0.8rem;
+    }
+    
+    .metric-card p {
+      font-size: 1.4rem;
+    }
+    
+    .two-columns {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    
+    .chart-container {
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .chart-container h3 {
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+    }
+    
+    .engagement-table {
+      padding: 12px;
+      overflow-x: auto;
+    }
+    
+    .engagement-table table {
+      min-width: 500px;
+    }
+    
+    .engagement-table th,
+    .engagement-table td {
+      padding: 8px;
+      font-size: 0.9rem;
+    }
+    
+    .student-chat {
+      padding: 16px;
+      max-height: 300px;
+    }
+    
+    .user-message,
+    .model-message {
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      max-width: 90%;
+    }
+    
+    .summary-container {
+      padding: 16px;
+      min-height: 150px;
+    }
+    
+    .summary-container h3 {
+      font-size: 1.1rem;
+    }
+    
+    .btn-generate {
+      width: 100%;
+      padding: 12px 20px;
+      font-size: 1rem;
+    }
+    
+    .word-cloud-container {
+      height: 300px;
+      margin-bottom: 20px;
+    }
+    
+    .word-details {
+      padding: 16px;
+      margin-bottom: 20px;
+      min-height: 120px;
+    }
+    
+    .word-details h4 {
+      font-size: 1rem;
+    }
+    
+    .word-details ul {
+      max-height: 120px;
+    }
+    
+    .word-details li {
+      padding: 6px 10px;
+      font-size: 0.9rem;
+    }
+    
+    .cluster-bubbles {
+      flex-direction: column;
+      height: auto;
+      gap: 16px;
+      align-items: center;
+    }
+    
+    .cluster-bubble {
+      min-width: 120px;
+      min-height: 120px;
+      margin: 8px;
+    }
+    
+    .cluster-label {
+      font-size: 0.9rem;
+    }
+    
+    .cluster-size {
+      font-size: 0.8rem;
+    }
+    
+    .cluster-tooltip {
+      width: 180px;
+      font-size: 0.8rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .dashboard-header h2 {
+      font-size: 1.2rem;
+    }
+    
+    .metric-cards {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    
+    .metric-card {
+      padding: 12px;
+      text-align: left;
+    }
+    
+    .metric-card h3 {
+      font-size: 0.75rem;
+      margin-bottom: 8px;
+    }
+    
+    .metric-card p {
+      font-size: 1.2rem;
+    }
+    
+    .chart-container {
+      padding: 12px;
+    }
+    
+    .chart-container h3 {
+      font-size: 1rem;
+    }
+    
+    .engagement-table {
+      padding: 8px;
+    }
+    
+    .engagement-table th,
+    .engagement-table td {
+      padding: 6px;
+      font-size: 0.8rem;
+    }
+    
+    .student-chat {
+      padding: 12px;
+      max-height: 250px;
+    }
+    
+    .user-message,
+    .model-message {
+      padding: 6px 10px;
+      font-size: 0.85rem;
+    }
+    
+    .summary-container {
+      padding: 12px;
+      min-height: 120px;
+    }
+    
+    .summary-container h3 {
+      font-size: 1rem;
+    }
+    
+    .btn-generate {
+      padding: 10px 16px;
+      font-size: 0.9rem;
+    }
+    
+    .word-cloud-container {
+      height: 250px;
+    }
+    
+    .word-details {
+      padding: 12px;
+      min-height: 100px;
+    }
+    
+    .word-details h4 {
+      font-size: 0.9rem;
+    }
+    
+    .word-details li {
+      padding: 4px 8px;
+      font-size: 0.8rem;
+    }
+    
+    .cluster-bubble {
+      min-width: 100px;
+      min-height: 100px;
+    }
+    
+    .cluster-label {
+      font-size: 0.8rem;
+    }
+    
+    .cluster-size {
+      font-size: 0.7rem;
+    }
+    
+    .cluster-tooltip {
+      width: 160px;
+      font-size: 0.7rem;
+    }
+    
+    .tabs {
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 0;
+    }
+    
+    .tab {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+    }
+  }
+  
+  /* Chart containers mobile adjustments */
+  .chart-container canvas {
+    position: relative !important;
+    max-width: 100% !important;
+    max-height: 300px !important;
+  }
+  
+  /* Small mobile chart adjustments */
+  .chart-container canvas {
+    max-height: 250px !important;
+  }
+  
+  /* Ensure tables don't overflow */
+  .engagement-table {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .engagement-table table {
+    min-width: 400px;
+    width: 100%;
+  }
+  
+  /* Specific chart adjustments for mobile */
+  #activity-stats-chart,
+  #segmentation-chart {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  /* Force chart responsiveness */
+  .chart-container {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+  }
 </style>
 {% endblock %}
 
@@ -289,10 +704,10 @@
   <div>
     <select id="course-filter" onchange="updateDashboard()">
       <option value="all" {% if not selected_course_id %}selected{% endif %}>All Courses</option>
-      {% for c in courses %}
+    {% for c in courses %}
         <option value="{{ c.id }}" {% if selected_course_id and c.id|stringformat:"i" == selected_course_id|stringformat:"i" %}selected{% endif %}>{{ c.title }}</option>
-      {% endfor %}
-    </select>
+    {% endfor %}
+  </select>
   </div>
   <div>
     <select id="activity-filter" onchange="updateDashboard()">
@@ -309,7 +724,7 @@
 <div class="tabs">
   <div class="tab {% if active_tab == 'conversation-stats' %}active{% endif %}" data-tab="conversation-stats">Conversation Stats</div>
   <div class="tab {% if active_tab == 'student-stats' %}active{% endif %}" data-tab="student-stats">Student Stats</div>
-  <div class="tab {% if active_tab == 'student-clusters' %}active{% endif %}" data-tab="student-clusters">Student Clusters</div>
+  <div class="tab {% if active_tab == 'student-engagement' %}active{% endif %}" data-tab="student-engagement">Students Engagement</div>
   <div class="tab {% if active_tab == 'raw-data' %}active{% endif %}" data-tab="raw-data">Raw Data</div>
 </div>
 
@@ -325,9 +740,9 @@
       <p>{{ activities_count }}</p>
     </div>
     <div class="metric-card">
-      <h3>Total Messages</h3>
-      <p>{{ total_messages }}</p>
-    </div>
+    <h3>Total Messages</h3>
+    <p>{{ total_messages }}</p>
+  </div>
     <div class="metric-card">
       <h3>Avg Message Length</h3>
       <p>{{ avg_message_length }}</p>
@@ -336,34 +751,34 @@
       <h3>Avg Time per Student</h3>
       <p>{{ avg_time_per_student }}</p>
     </div>
-  </div>
-  
+</div>
+
   <div class="two-columns">
     <div class="chart-container">
       <h3>Student Engagement</h3>
       <div class="engagement-table">
         <table>
-          <thead>
-            <tr>
+  <thead>
+    <tr>
               <th>Student</th>
               <th>Messages</th>
               <th>Avg Length</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for stat in stats_per_student %}
-            <tr>
-              <td>{{ stat.username }}</td>
-              <td>{{ stat.message_count }}</td>
-              <td>{{ stat.avg_length }}</td>
-            </tr>
-            {% empty %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for stat in stats_per_student %}
+      <tr>
+        <td>{{ stat.username }}</td>
+        <td>{{ stat.message_count }}</td>
+        <td>{{ stat.avg_length }}</td>
+      </tr>
+    {% empty %}
             <tr>
               <td colspan="3">No student data available</td>
             </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    {% endfor %}
+  </tbody>
+</table>
       </div>
     </div>
     
@@ -446,69 +861,74 @@
   </div>
 </div>
 
-<!-- Student Clusters Tab -->
-<div id="student-clusters" class="tab-content {% if active_tab == 'student-clusters' %}active{% endif %}">
+<!-- Students Engagement Tab (previously Student Clusters) -->
+<div id="student-engagement" class="tab-content {% if active_tab == 'student-engagement' %}active{% endif %}">
   <div class="chart-container">
-    <h3>Student Group Analysis</h3>
-    <p>Students are grouped based on similar communication patterns. Groups help identify distinct learning styles and engagement levels.</p>
+    <h3>Word Cloud Analysis</h3>
+    <p>The most frequently used words by students in their conversations. Click on any word to see which students used it.</p>
     
     <div class="filters">
       <div>
-        <label for="cluster-count">Number of groups:</label>
-        <select id="cluster-count" onchange="loadClusters()">
+        <label for="min-word-length">Minimum word length:</label>
+        <select id="min-word-length" onchange="loadWordCloud()">
           <option value="2">2</option>
           <option value="3" selected>3</option>
           <option value="4">4</option>
           <option value="5">5</option>
         </select>
       </div>
-      <button class="btn-generate" onclick="loadClusters()">Update Groups</button>
+      <div>
+        <label for="max-words">Maximum words:</label>
+        <select id="max-words" onchange="loadWordCloud()">
+          <option value="50">50</option>
+          <option value="100" selected>100</option>
+          <option value="150">150</option>
+          <option value="200">200</option>
+        </select>
+      </div>
+      <button class="btn-generate" onclick="loadWordCloud()">Update Word Cloud</button>
     </div>
     
-    <div id="cluster-spinner" class="spinner"></div>
-    <h4 style="text-align: center; margin-top: 20px; margin-bottom: 10px;">Student Groups</h4>
-    <div id="cluster-visualization" style="height: 400px;"></div>
+    <div id="word-cloud-spinner" class="spinner"></div>
+    <div id="word-cloud-container" class="word-cloud-container">
+      <div id="word-cloud" class="word-cloud"></div>
+    </div>
   </div>
   
   <div class="two-columns">
     <div class="chart-container">
-      <h3>Group Details</h3>
-      <div id="cluster-details">
-        <p>Select a group from the visualization to see details.</p>
+      <h3>Word Details</h3>
+      <div id="word-details" class="word-details">
+        <p>Click on a word in the cloud to see which students used it.</p>
       </div>
     </div>
     
     <div class="chart-container">
-      <h3>Feature Comparison</h3>
-      <canvas id="radar-chart"></canvas>
-    </div>
-  </div>
-  
-  <div class="chart-container">
-    <h3>Student Distribution by Features</h3>
-    <div class="filters">
-      <div>
-        <label for="feature-x">X-Axis:</label>
-        <select id="feature-x" onchange="updateScatterPlot()">
-          <option value="num_messages">Message Count</option>
-          <option value="avg_length">Average Length</option>
-          <option value="lexical_diversity">Lexical Diversity</option>
-          <option value="vocab_size">Vocabulary Size</option>
-        </select>
+      <h3>Student Distribution by Features</h3>
+      <div class="filters">
+        <div>
+          <label for="feature-x">X-Axis:</label>
+          <select id="feature-x" onchange="updateScatterPlot()">
+            <option value="num_messages">Message Count</option>
+            <option value="avg_length">Average Length</option>
+            <option value="lexical_diversity">Lexical Diversity</option>
+            <option value="vocab_size">Vocabulary Size</option>
+          </select>
+        </div>
+        
+        <div>
+          <label for="feature-y">Y-Axis:</label>
+          <select id="feature-y" onchange="updateScatterPlot()">
+            <option value="avg_length">Average Length</option>
+            <option value="num_messages">Message Count</option>
+            <option value="lexical_diversity">Lexical Diversity</option>
+            <option value="vocab_size">Vocabulary Size</option>
+          </select>
+        </div>
       </div>
       
-      <div>
-        <label for="feature-y">Y-Axis:</label>
-        <select id="feature-y" onchange="updateScatterPlot()">
-          <option value="avg_length">Average Length</option>
-          <option value="num_messages">Message Count</option>
-          <option value="lexical_diversity">Lexical Diversity</option>
-          <option value="vocab_size">Vocabulary Size</option>
-        </select>
-      </div>
+      <canvas id="scatter-chart"></canvas>
     </div>
-    
-    <canvas id="scatter-chart"></canvas>
   </div>
 </div>
 
@@ -521,31 +941,31 @@
     </div>
     <div style="max-height: 400px; overflow: auto;">
       <table class="engagement-table">
-        <thead>
-          <tr>
-            <th>User</th>
+  <thead>
+    <tr>
+      <th>User</th>
             <th>Activity</th>
-            <th>Role</th>
-            <th>Timestamp</th>
-            <th>Content</th>
-          </tr>
-        </thead>
-        <tbody>
+      <th>Role</th>
+      <th>Timestamp</th>
+      <th>Content</th>
+    </tr>
+  </thead>
+  <tbody>
           {% for msg in raw_messages %}
-          <tr>
-            <td>{{ msg.thread.user.username }}</td>
+      <tr>
+        <td>{{ msg.thread.user.username }}</td>
             <td>{{ msg.thread.activity.title }}</td>
-            <td>{{ msg.role }}</td>
-            <td>{{ msg.timestamp }}</td>
-            <td>{{ msg.content|truncatechars:100 }}</td>
-          </tr>
-          {% empty %}
+        <td>{{ msg.role }}</td>
+        <td>{{ msg.timestamp }}</td>
+        <td>{{ msg.content|truncatechars:100 }}</td>
+      </tr>
+    {% empty %}
           <tr>
             <td colspan="5">No messages available</td>
           </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    {% endfor %}
+  </tbody>
+</table>
     </div>
   </div>
   
@@ -585,6 +1005,30 @@
   const segmentFewLong = JSON.parse('{{ segment_few_long_json|escapejs }}');
   const segmentManyShort = JSON.parse('{{ segment_many_short_json|escapejs }}');
   const segmentFewShort = JSON.parse('{{ segment_few_short_json|escapejs }}');
+  
+  // Responsive chart handler
+  function handleChartResize() {
+    if (window.activityChart) {
+      window.activityChart.resize();
+    }
+    if (window.segmentationChart) {
+      window.segmentationChart.resize();
+    }
+    if (window.lengthChart) {
+      window.lengthChart.resize();
+    }
+    if (window.engagementChart) {
+      window.engagementChart.resize();
+    }
+    if (window.scatterChart) {
+      window.scatterChart.resize();
+    }
+  }
+  
+  // Add resize listener
+  window.addEventListener('resize', handleChartResize);
+  window.addEventListener('orientationchange', handleChartResize);
+  
   // Tab switching functionality
   document.addEventListener('DOMContentLoaded', () => {
     // Initialize charts
@@ -600,9 +1044,12 @@
     // Load tab-specific data
     if (activeTab === 'raw-data') {
       updateConversationStats();
-    } else if (activeTab === 'student-clusters') {
-      // Load clusters data for cluster tab
-      loadClusters();
+    } else if (activeTab === 'student-engagement') {
+      // Load word cloud data for engagement tab
+      // Make sure the word cloud is loaded after a small delay to ensure DOM is ready
+      setTimeout(() => {
+        loadWordCloud();
+      }, 100);
     } else if (activeTab === 'student-stats' && selectedStudentId) {
       // If there's a selected student in the URL, restore that selection
       document.getElementById('student-filter').value = selectedStudentId;
@@ -632,8 +1079,9 @@
       // Load tab-specific data if needed
       if (tabId === 'raw-data') {
         updateConversationStats();
-      } else if (tabId === 'student-clusters' && !clusterData) {
-        loadClusters();
+      } else if (tabId === 'student-engagement') {
+        // Always load word cloud when switching to this tab
+        loadWordCloud();
       }
     }
   }
@@ -662,6 +1110,7 @@
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         scales: {
           x: {
             ticks: {
@@ -705,6 +1154,7 @@
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         scales: {
           x: {
             title: {
@@ -721,6 +1171,10 @@
         }
       }
     });
+    
+    // Store chart references for responsive updates
+    window.activityChart = activityChart;
+    window.segmentationChart = segmentationChart;
   }
   
   // Function to update dashboard based on filters
@@ -761,7 +1215,25 @@
       }
     }
     
-    // Redirect to the updated URL
+    // Clear wordCloudData to force reload when filters change
+    wordCloudData = null;
+    
+    // If we're on the "Students Engagement" tab, load the word cloud data directly
+    // instead of refreshing the page to avoid the flickering and lost references
+    if (activeTab === 'student-engagement') {
+      const spinner = document.getElementById('word-cloud-spinner');
+      spinner.style.display = 'block';
+      
+      // Update URL history without refreshing
+      window.history.pushState({}, '', url.toString());
+      
+      // Load word cloud data directly
+      loadWordCloud();
+      
+      return false; // Prevent default form submission
+    }
+    
+    // Redirect to the updated URL for other tabs
     window.location.href = url.toString();
   }
   
@@ -830,6 +1302,7 @@
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         scales: {
           x: {
             title: {
@@ -904,6 +1377,7 @@
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: {
             position: 'right',
@@ -1009,7 +1483,6 @@
   // Load student clusters
   let clusterData = null;
   let scatterChart = null;
-  let radarChart = null;
   
   function loadClusters() {
     const courseId = document.getElementById('course-filter').value;
@@ -1072,15 +1545,6 @@
     
     let html = '<div class="cluster-bubbles">';
     
-    // Define colors for clusters
-    const colors = [
-      'rgba(54, 162, 235, 0.7)',
-      'rgba(255, 99, 132, 0.7)',
-      'rgba(75, 192, 192, 0.7)',
-      'rgba(255, 206, 86, 0.7)',
-      'rgba(153, 102, 255, 0.7)'
-    ];
-    
     // Define tooltips for clusters
     const getTooltip = (clusterName) => {
       // Extract base name by removing anything in parentheses
@@ -1114,7 +1578,7 @@
       const relativeSize = (cluster.size / totalStudents);
       const sizePercent = Math.max(25, Math.min(maxBubbleSize, 25 + (relativeSize * 15)));
       
-      const color = colors[index % colors.length];
+      const color = vibrantColors[index % vibrantColors.length];
       const tooltip = getTooltip(cluster.name);
       
       html += `
@@ -1217,115 +1681,6 @@
       </ul>
       <p><em>Tip: Hover over the group bubble to see a brief description of what this type means.</em></p>
     `;
-    
-    // Update radar chart for this cluster
-    updateRadarChart(clusterId);
-  }
-  
-  function updateRadarChart(clusterId) {
-    if (!clusterData || !clusterData.features || clusterData.features.length === 0) {
-      console.log("No features data available for radar chart");
-      return;
-    }
-    
-    // Calculate mean values for the cluster
-    const clusterFeatures = clusterData.features.filter(f => f.cluster === clusterId);
-    const allFeatures = clusterData.features;
-    
-    if (clusterFeatures.length === 0) {
-      console.error(`No features found for cluster ${clusterId}`);
-      return;
-    }
-    
-    // Features to show in radar
-    const radarFeatures = [
-      'num_messages', 'avg_length', 'vocab_size', 'lexical_diversity'
-    ];
-    
-    // Calculate means for this cluster and all students
-    const clusterMeans = {};
-    const overallMeans = {};
-    
-    radarFeatures.forEach(feature => {
-      // Check if feature exists in the data
-      if (!clusterFeatures[0].hasOwnProperty(feature)) {
-        console.warn(`Feature ${feature} not found in cluster data`);
-        return;
-      }
-      
-      clusterMeans[feature] = clusterFeatures.reduce((sum, f) => sum + f[feature], 0) / clusterFeatures.length;
-      
-      // If there's only one cluster, compare to a baseline rather than overall mean
-      if (clusterData.clusters.length <= 1) {
-        overallMeans[feature] = clusterMeans[feature];
-      } else {
-        overallMeans[feature] = allFeatures.reduce((sum, f) => sum + f[feature], 0) / allFeatures.length;
-      }
-    });
-    
-    // Normalize data (divide by overall mean)
-    const normalizedClusterData = radarFeatures
-      .filter(feature => clusterFeatures[0].hasOwnProperty(feature))
-      .map(feature => {
-        // Avoid division by zero
-        if (overallMeans[feature] === 0) return 1;
-        return clusterMeans[feature] / overallMeans[feature];
-      });
-    
-    // Filter out any undefined features
-    const availableFeatures = radarFeatures.filter(feature => 
-      clusterFeatures[0].hasOwnProperty(feature)
-    );
-    
-    if (availableFeatures.length === 0) {
-      console.error("No valid features available for radar chart");
-      return;
-    }
-    
-    // Create radar chart
-    const ctx = document.getElementById('radar-chart').getContext('2d');
-    
-    // Destroy previous chart if exists
-    if (window.radarChart) {
-      window.radarChart.destroy();
-    }
-    
-    // Map feature names to display labels
-    const featureLabels = {
-      'num_messages': 'Message Count',
-      'avg_length': 'Message Length',
-      'vocab_size': 'Vocabulary Size',
-      'lexical_diversity': 'Lexical Diversity'
-    };
-    
-    window.radarChart = new Chart(ctx, {
-      type: 'radar',
-      data: {
-        labels: availableFeatures.map(f => featureLabels[f] || f),
-        datasets: [{
-          label: 'Relative to Average',
-          data: normalizedClusterData,
-          backgroundColor: 'rgba(54, 162, 235, 0.2)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-          pointBackgroundColor: 'rgba(54, 162, 235, 1)',
-          pointBorderColor: '#fff',
-          pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: 'rgba(54, 162, 235, 1)'
-        }]
-      },
-      options: {
-        scales: {
-          r: {
-            beginAtZero: true,
-            min: 0,
-            max: 2,
-            ticks: {
-              stepSize: 0.5
-            }
-          }
-        }
-      }
-    });
   }
   
   function updateScatterPlot() {
@@ -1369,19 +1724,10 @@
     const datasets = [];
     const clusterIds = [...new Set(clusterData.features.map(f => f.cluster))];
     
-    // Define colors for clusters
-    const colors = [
-      'rgba(54, 162, 235, 0.7)',
-      'rgba(255, 99, 132, 0.7)',
-      'rgba(75, 192, 192, 0.7)',
-      'rgba(255, 206, 86, 0.7)',
-      'rgba(153, 102, 255, 0.7)'
-    ];
-    
     // Group data by cluster
     clusterIds.forEach((clusterId, index) => {
       const clusterFeatures = clusterData.features.filter(f => f.cluster === clusterId);
-      const clusterName = clusterData.clusters.find(c => c.id === clusterId)?.name || `Cluster ${clusterId}`;
+      const clusterName = clusterData.clusters && clusterData.clusters.find(c => c.id === clusterId)?.name || `Group ${clusterId + 1}`;
       
       // Check for valid data points (no NaN or null values)
       const validDataPoints = clusterFeatures
@@ -1397,8 +1743,8 @@
         datasets.push({
           label: clusterName,
           data: validDataPoints,
-          backgroundColor: colors[index % colors.length],
-          borderColor: colors[index % colors.length].replace('0.7', '1'),
+          backgroundColor: vibrantColors[index % vibrantColors.length],
+          borderColor: vibrantColors[index % vibrantColors.length].replace('0.7', '1'),
           pointRadius: 8,
           pointHoverRadius: 10
         });
@@ -1437,6 +1783,8 @@
         datasets: datasets
       },
       options: {
+        responsive: true,
+        maintainAspectRatio: false,
         scales: {
           x: {
             title: {
@@ -1478,11 +1826,9 @@
   // Load conversation stats on raw data tab activation
   document.querySelector('[data-tab="raw-data"]').addEventListener('click', updateConversationStats);
   
-  // Load clusters when cluster tab is activated
-  document.querySelector('[data-tab="student-clusters"]').addEventListener('click', function() {
-    if (!clusterData) {
-      loadClusters();
-    }
+  // Load word cloud when student engagement tab is activated
+  document.querySelector('[data-tab="student-engagement"]').addEventListener('click', function() {
+    // Will be handled by switchToTab function
   });
   
   // Export Raw Data to CSV
@@ -1511,5 +1857,326 @@
     link.click();
     document.body.removeChild(link);
   });
+  
+  // Word cloud variables
+  let wordCloudData = null;
+  
+  // Define a set of vibrant colors globally to be used across different functions
+  const vibrantColors = [
+    '#FF5F7E', '#36B5FF', '#5D5FEF', '#00CFB4', '#FF9F45',
+    '#6979F8', '#FF7D51', '#00C2A8', '#FF65A3', '#AF52DE',
+    '#47E6B1', '#FFC55C', '#7474BF', '#19D3F3', '#FD5B8F'
+  ];
+  
+  // Load and display word cloud
+  function loadWordCloud() {
+    // Get course ID from filter or URL parameter
+    let courseId = document.getElementById('course-filter').value;
+    if (courseId === "" || courseId === undefined) {
+      // Try to get from URL if not in select
+      const urlParams = new URLSearchParams(window.location.search);
+      courseId = urlParams.get('course_id') || 'all';
+    }
+    
+    const minWordLength = document.getElementById('min-word-length').value;
+    const maxWords = document.getElementById('max-words').value;
+    const spinner = document.getElementById('word-cloud-spinner');
+    const wordCloudContainer = document.getElementById('word-cloud');
+    
+    spinner.style.display = 'block';
+    wordCloudContainer.innerHTML = '';
+    
+    document.getElementById('word-details').innerHTML = '<p>Loading word data...</p>';
+    
+    fetch(`/api/dashboard/word_frequencies/?course_id=${courseId}&min_word_length=${minWordLength}&max_words=${maxWords}`)
+      .then(response => response.json())
+      .then(data => {
+        spinner.style.display = 'none';
+        wordCloudData = data;
+        
+        console.log("Word cloud data received:", data);
+        
+        if (data.error) {
+          wordCloudContainer.innerHTML = `<p class="error">Error generating word cloud: ${data.error}</p>`;
+          console.error("Error in word cloud data:", data.error);
+          return;
+        }
+        
+        if (!data.words || data.words.length === 0) {
+          wordCloudContainer.innerHTML = '<p>No word data available. Please ensure there are enough student messages.</p>';
+          console.log("No word data available");
+          return;
+        }
+        
+        // Visualize word cloud
+        visualizeWordCloud(data.words);
+        
+        // Update scatter plot if data is available
+        if (clusterData) {
+          updateScatterPlot();
+        } else {
+          // Load cluster data for scatter plot if not already loaded
+          loadFeatureData();
+        }
+      })
+      .catch(error => {
+        spinner.style.display = 'none';
+        wordCloudContainer.innerHTML = `<p class="error">Error loading word cloud: ${error}</p>`;
+        console.error('Error fetching word frequencies:', error);
+      });
+  }
+  
+  // Load feature data for scatter plot
+  function loadFeatureData() {
+    // Get course ID from filter or URL parameter
+    let courseId = document.getElementById('course-filter').value;
+    if (courseId === "" || courseId === undefined) {
+      // Try to get from URL if not in select
+      const urlParams = new URLSearchParams(window.location.search);
+      courseId = urlParams.get('course_id') || 'all';
+    }
+    
+    fetch(`/api/dashboard/student_clusters/?course_id=${courseId}&n_clusters=3`)
+      .then(response => response.json())
+      .then(data => {
+        clusterData = data;
+        updateScatterPlot();
+      })
+      .catch(error => {
+        console.error('Error fetching feature data:', error);
+      });
+  }
+  
+  // Visualize word cloud
+  function visualizeWordCloud(words) {
+    const container = document.getElementById('word-cloud');
+    container.innerHTML = '';
+    
+    if (!words || words.length === 0) {
+      container.innerHTML = '<p>No words available for visualization.</p>';
+      return;
+    }
+    
+    // Get min and max values for normalization
+    const values = words.map(w => w.value);
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    
+    // Ensure there's a reasonable range for font sizing
+    const normalizedRange = maxValue - minValue;
+    const effectiveMinValue = normalizedRange > 5 ? minValue : Math.max(1, minValue - 2);
+    const effectiveMaxValue = normalizedRange > 5 ? maxValue : minValue + 5;
+    
+    // Set word cloud dimensions
+    const containerWidth = container.clientWidth || 800;
+    const containerHeight = container.clientHeight || 400;
+    
+    // Sort words by frequency (most frequent first)
+    const sortedWords = [...words].sort((a, b) => b.value - a.value);
+    
+    // Calculate font sizes
+    const minFontSize = 12;
+    const maxFontSize = 36;
+    const placedWords = [];
+    
+    sortedWords.forEach((word, index) => {
+      // Calculate font size based on frequency
+      const normalizedValue = (word.value - effectiveMinValue) / (effectiveMaxValue - effectiveMinValue);
+      const fontSize = minFontSize + (normalizedValue * (maxFontSize - minFontSize));
+      
+      // Select color - use consistent colors for words with similar frequencies
+      // This creates a better visual mapping between size and color
+      const colorIndex = Math.floor(normalizedValue * (vibrantColors.length - 1));
+      const color = vibrantColors[colorIndex];
+      
+      // Create word element
+      const wordElement = document.createElement('div');
+      wordElement.className = 'word';
+      wordElement.textContent = word.text;
+      wordElement.style.fontSize = `${fontSize}px`;
+      wordElement.style.color = color;
+      wordElement.style.fontWeight = normalizedValue > 0.7 ? 'bold' : normalizedValue > 0.4 ? '600' : 'normal';
+      wordElement.style.cursor = 'pointer';
+      wordElement.style.userSelect = 'none';
+      wordElement.style.transition = 'all 0.3s ease';
+      
+      // Add slight rotation for visual interest, but only for some words
+      if (Math.random() > 0.7) {
+        const rotation = Math.random() * 20 - 10; // -10 to +10 degrees
+        wordElement.style.transform = `rotate(${rotation}deg)`;
+      }
+      
+      // Add to container temporarily to measure dimensions
+      container.appendChild(wordElement);
+      const rect = wordElement.getBoundingClientRect();
+      const wordWidth = rect.width;
+      const wordHeight = rect.height;
+      
+      // Find a position that doesn't overlap with existing words
+      let position = findNonOverlappingPosition(
+        wordWidth, 
+        wordHeight, 
+        containerWidth, 
+        containerHeight, 
+        placedWords,
+        index
+      );
+      
+      // Set final position
+      wordElement.style.left = `${position.x}px`;
+      wordElement.style.top = `${position.y}px`;
+      
+      // Store position for collision detection
+      placedWords.push({
+        x: position.x,
+        y: position.y,
+        width: wordWidth,
+        height: wordHeight,
+        element: wordElement
+      });
+      
+      // Add click handler
+      wordElement.addEventListener('click', () => showWordDetails(word));
+      
+      // Add hover effects
+      wordElement.addEventListener('mouseenter', () => {
+        // Save original transform if it exists
+        const originalTransform = wordElement.style.transform;
+        // Store it as a data attribute for later
+        wordElement.dataset.originalTransform = originalTransform;
+        // Apply new hover transform, preserving rotation
+        wordElement.style.transform = 'scale(1.15)';
+        wordElement.style.zIndex = '10';
+      });
+      
+      wordElement.addEventListener('mouseleave', () => {
+        // Restore original transform
+        wordElement.style.transform = wordElement.dataset.originalTransform || '';
+        wordElement.style.zIndex = '1';
+      });
+    });
+    
+    // Show details for the most common word
+    if (words.length > 0) {
+      showWordDetails(sortedWords[0]);
+    }
+  }
+  
+  // Function to find a position that doesn't overlap with existing words
+  function findNonOverlappingPosition(wordWidth, wordHeight, containerWidth, containerHeight, placedWords, wordIndex) {
+    const padding = 8; // Minimum space between words
+    const maxAttempts = 100;
+    
+    // For the first few words, try to place them in the center area
+    if (wordIndex < 3) {
+      const centerX = (containerWidth - wordWidth) / 2;
+      const centerY = (containerHeight - wordHeight) / 2;
+      
+      // Try center first
+      if (!checkCollision(centerX, centerY, wordWidth, wordHeight, placedWords, padding)) {
+        return { x: centerX, y: centerY };
+      }
+      
+      // Try positions around center in a spiral pattern
+      for (let radius = 50; radius < Math.min(containerWidth, containerHeight) / 2; radius += 30) {
+        for (let angle = 0; angle < 360; angle += 45) {
+          const x = centerX + Math.cos(angle * Math.PI / 180) * radius;
+          const y = centerY + Math.sin(angle * Math.PI / 180) * radius;
+          
+          if (x >= 0 && y >= 0 && x + wordWidth <= containerWidth && y + wordHeight <= containerHeight) {
+            if (!checkCollision(x, y, wordWidth, wordHeight, placedWords, padding)) {
+              return { x, y };
+            }
+          }
+        }
+      }
+    }
+    
+    // For other words, try a grid-based approach
+    const gridSize = 20;
+    const attempts = [];
+    
+    // Generate potential positions
+    for (let x = 0; x <= containerWidth - wordWidth; x += gridSize) {
+      for (let y = 0; y <= containerHeight - wordHeight; y += gridSize) {
+        if (!checkCollision(x, y, wordWidth, wordHeight, placedWords, padding)) {
+          // Calculate distance from center (prefer center positions)
+          const centerX = containerWidth / 2;
+          const centerY = containerHeight / 2;
+          const distance = Math.sqrt(Math.pow(x + wordWidth/2 - centerX, 2) + Math.pow(y + wordHeight/2 - centerY, 2));
+          
+          attempts.push({ x, y, distance });
+        }
+      }
+    }
+    
+    // Sort by distance from center and return the closest available position
+    attempts.sort((a, b) => a.distance - b.distance);
+    
+    if (attempts.length > 0) {
+      return { x: attempts[0].x, y: attempts[0].y };
+    }
+    
+    // Fallback: random position (shouldn't happen often)
+    let attempts_count = 0;
+    while (attempts_count < maxAttempts) {
+      const x = Math.random() * (containerWidth - wordWidth);
+      const y = Math.random() * (containerHeight - wordHeight);
+      
+      if (!checkCollision(x, y, wordWidth, wordHeight, placedWords, padding)) {
+        return { x, y };
+      }
+      attempts_count++;
+    }
+    
+    // Last resort: place it anywhere
+    return {
+      x: Math.min(wordIndex * 10, containerWidth - wordWidth),
+      y: Math.min(wordIndex * 5, containerHeight - wordHeight)
+    };
+  }
+  
+  // Function to check if a position would cause collision with existing words
+  function checkCollision(x, y, width, height, placedWords, padding) {
+    for (let placed of placedWords) {
+      if (x < placed.x + placed.width + padding &&
+          x + width + padding > placed.x &&
+          y < placed.y + placed.height + padding &&
+          y + height + padding > placed.y) {
+        return true; // Collision detected
+      }
+    }
+    return false; // No collision
+  }
+  
+  // Show details for selected word
+  function showWordDetails(word) {
+    const container = document.getElementById('word-details');
+    
+    if (!word) {
+      container.innerHTML = '<p>No word selected.</p>';
+      return;
+    }
+    
+    const studentCount = word.students ? word.students.length : 0;
+    
+    let html = `
+      <h4>"${word.text}"</h4>
+      <p>Used <strong>${word.value} times</strong> by ${studentCount} student${studentCount !== 1 ? 's' : ''}</p>
+    `;
+    
+    if (studentCount > 0) {
+      html += `
+        <h5>Students who used this word:</h5>
+        <ul>
+          ${word.student_names.map(name => `<li>${name}</li>`).join('')}
+        </ul>
+      `;
+    } else {
+      html += '<p>No student information available for this word.</p>';
+    }
+    
+    container.innerHTML = html;
+  }
 </script>
 {% endblock %}

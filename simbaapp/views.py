@@ -348,63 +348,45 @@ def dashboard_view(request):
         messages.error(request, "Only teachers can access the dashboard.")
         return redirect('courses')
 
-    # Get filter parameters
     courses = Course.objects.filter(owner=user).order_by('-created_at')
     selected_course_id = request.GET.get('course_id')
     selected_activity_id = request.GET.get('activity_id')
     
-    # Get active tab from URL parameter
     active_tab = request.GET.get('active_tab', 'conversation-stats')
+    if active_tab == 'student-clusters':
+        active_tab = 'student-engagement'
     
-    # Authoritative values to be determined
-    authoritative_id_for_logic_and_template = None  # Will be int or None
-    course_object_for_context = None                # Will be a Course instance
+    authoritative_id_for_logic_and_template = None  
+    course_object_for_context = None                
 
-    # Check if the teacher has any courses at all.
-    # The 'courses' variable is the queryset: Course.objects.filter(owner=user).order_by('-created_at')
     if not courses.exists():
         messages.info(request, "No courses found. Create one first.")
         return redirect('create_course')
 
-    # 'selected_course_id' (variable from outer scope) holds the string from request.GET.get('course_id') or None
-    if selected_course_id and selected_course_id != 'all': # A specific course ID string was provided
+    if selected_course_id and selected_course_id != 'all': 
         try:
             course_id_as_int = int(selected_course_id)
-            # Fetch from the teacher's courses queryset
             _fetched_course_obj = courses.filter(id=course_id_as_int).first()
             if _fetched_course_obj:
                 course_object_for_context = _fetched_course_obj
-                authoritative_id_for_logic_and_template = _fetched_course_obj.id # Actual int ID
+                authoritative_id_for_logic_and_template = _fetched_course_obj.id 
             else:
-                # Course ID provided, but not found in the teacher's courses queryset
                 messages.warning(request, f"Course ID '{selected_course_id}' not found or not accessible for your account. Defaulting to all courses.")
-                course_object_for_context = courses.first() # Fallback context object
-                # authoritative_id_for_logic_and_template remains None (All Courses mode)
+                course_object_for_context = courses.first() 
         except ValueError:
-            # The provided course_id string was not a valid integer
             messages.warning(request, f"Invalid course ID format: '{selected_course_id}'. Defaulting to all courses.")
-            course_object_for_context = courses.first() # Fallback context object
-            # authoritative_id_for_logic_and_template remains None (All Courses mode)
+            course_object_for_context = courses.first() 
     else:
-        # 'All Courses' was selected (selected_course_id was 'all', None, or empty string)
-        # authoritative_id_for_logic_and_template is already None (default)
-        course_object_for_context = courses.first() # Context object is the first course
+        course_object_for_context = courses.first() 
 
-    # Update the view's main variables that will be used for subsequent logic and passed to the template.
-    # `selected_course_id` will now consistently be an integer ID or None.
-    # `selected_course` will be the corresponding Course object for context.
     selected_course_id = authoritative_id_for_logic_and_template
     selected_course = course_object_for_context
 
-    # Get activities based on selected course or all courses
-    if selected_course_id is None:  # "All Courses" mode
-        # Get all activities across all courses owned by the teacher
+    if selected_course_id is None: 
         activities = Activity.objects.filter(course__in=courses).order_by('-created_at')
         
-        # Get all students enrolled in any of the teacher's courses
         students = CourseEnrollment.objects.filter(course__in=courses).select_related('user', 'course')
         
-        # Create a list of unique students with course information
         student_dict = {}
         for enrollment in students:
             if enrollment.user.id not in student_dict:
@@ -422,35 +404,27 @@ def dashboard_view(request):
             } for s in student_dict.values()
         ]
         
-        # Get base message query for all courses
         base_msg_query = Message.objects.filter(
             thread__activity__course__in=courses
         ).select_related('thread__user', 'thread__activity')
     else:
-        # Get activities for the selected course only
         activities = Activity.objects.filter(course=selected_course).order_by('-created_at')
         
-        # Get students enrolled in the selected course
         students = CourseEnrollment.objects.filter(course=selected_course).select_related('user')
         all_students = [{'id': s.user.id, 'username': s.user.username} for s in students]
         
-        # Get base message query for selected course
         base_msg_query = Message.objects.filter(
             thread__activity__course=selected_course
         ).select_related('thread__user', 'thread__activity')
     
-    # Handle selected activity
     selected_activity = None
     if selected_activity_id and selected_activity_id != 'all':
         selected_activity = activities.filter(id=selected_activity_id).first()
     
-    # Get messages from students
     student_messages_qs = base_msg_query.filter(role='user')
     
-    # Calculate total messages
     total_messages = student_messages_qs.count()
     
-    # Calculate message lengths and counts per student
     counts = {}
     lengths = {}
     for msg in student_messages_qs:
@@ -458,7 +432,6 @@ def dashboard_view(request):
         counts[username] = counts.get(username, 0) + 1
         lengths[username] = lengths.get(username, 0) + len(msg.content)
     
-    # Per-student statistics
     stats_per_student = []
     for username, count in counts.items():
         avg_len = lengths[username] / count if count else 0
@@ -467,14 +440,12 @@ def dashboard_view(request):
             'message_count': count,
             'avg_length': round(avg_len, 2)
         })
-    
-    # Calculate average message length
+
     if total_messages > 0:
         avg_message_length = sum(lengths.values()) / total_messages
     else:
         avg_message_length = 0
     
-    # Calculate activity statistics for charts
     activity_stats = {}
     for activity in activities:
         activity_msgs = Message.objects.filter(
@@ -495,12 +466,10 @@ def dashboard_view(request):
             'avg_length': round(avg_length, 2)
         }
     
-    # Prepare activity data for charts
     activity_names = [stats['name'] for activity_id, stats in activity_stats.items()]
     activity_message_counts = [stats['message_count'] for activity_id, stats in activity_stats.items()]
     activity_avg_lengths = [stats['avg_length'] for activity_id, stats in activity_stats.items()]
     
-    # Calculate student segmentation data (for scatter plot)
     if counts:
         avg_count = sum(counts.values()) / len(counts)
         avg_length = sum(lengths.values()) / len(lengths)
@@ -508,7 +477,6 @@ def dashboard_view(request):
         avg_count = 0
         avg_length = 0
     
-    # Segment students by message count and length
     segment_many_long = []
     segment_few_long = []
     segment_many_short = []
@@ -527,7 +495,6 @@ def dashboard_view(request):
         else:
             segment_few_short.append(point)
     
-    # Calculate average time per student (from first to last message)
     avg_time_seconds = 0
     student_duration_data = {}
     
@@ -544,12 +511,10 @@ def dashboard_view(request):
     if student_duration_data:
         avg_time_seconds = sum(student_duration_data.values()) / len(student_duration_data)
         
-    # Format as hours and minutes
     hours = int(avg_time_seconds // 3600)
     minutes = int((avg_time_seconds % 3600) // 60)
     avg_time_per_student = f"{hours}h {minutes}m"
     
-    # Get recent raw messages for Raw Data tab
     raw_messages = base_msg_query.order_by('-timestamp')[:100]
     
     context = {

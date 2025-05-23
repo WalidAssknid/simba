@@ -626,6 +626,39 @@ main.container {
   color: #666;
 }
 
+#activity-description,
+#course-description,
+#custom-prompt,
+textarea[name="description"] {
+  min-height: 100px;
+  resize: vertical;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.form-group {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.form-control {
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.modal-content,
+.form-container {
+  overflow-x: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 /* Course Detail Page */
 .course-details {
   background-color: white;
@@ -2360,24 +2393,3 @@ body.auth-page .header {
   box-sizing: border-box;
 }
 
-#activity-description,
-#course-description,
-#custom-prompt {
-  min-height: 100px;
-  resize: vertical;
-  overflow-x: hidden;
-  width: 100%;
-  max-width: 100%;
-  word-wrap: break-word;
-}
-
-.form-group {
-  width: 100%;
-  overflow: hidden;
-}
-
-.modal-content {
-  overflow-x: hidden;
-  max-width: 100%;
-  box-sizing: border-box;
-}

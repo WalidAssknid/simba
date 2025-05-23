@@ -246,7 +246,7 @@
   font-weight: bold;
   position: absolute;
   right: 16px;
-  top: -32px; /* Metade para cima no header */
+  top: -32px;
   z-index: 15;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
@@ -259,7 +259,7 @@
   border: 1px solid #ddd;
   margin: 32px auto;
   max-width: 600px;
-  grid-column: 1 / -1; /* Garante que ocupe toda a largura da grid */
+  grid-column: 1 / -1;
 }
 
 .empty-state h3 {
@@ -280,59 +280,47 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Prevent card clicks when clicking in dropdown area
     document.querySelectorAll('.card-options').forEach(optionsEl => {
         optionsEl.addEventListener('click', function(e) {
             e.stopPropagation();
         });
     });
 
-    // Ensure dropdown toggle works and prevent card link activation
     document.querySelectorAll('.dropdown-toggle').forEach(toggle => {
         toggle.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            // This isn't strictly necessary since we're using CSS hover
-            // But it helps ensure the dropdown works in all cases
             const menu = this.nextElementSibling;
             menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
         });
     });
 
-    // Store the current user ID for API calls
     const currentUserId = '{{ request.session.user_id }}';
     
-    // Edit Course handling
     const editCourseModal = document.getElementById('editCourseModal');
     const editTitleInput = document.getElementById('edit-title');
     const editDescriptionInput = document.getElementById('edit-description');
     const editCourseForm = document.getElementById('editCourseForm');
     let courseToEditId = null;
     
-    // Edit course click handlers
     document.querySelectorAll('.edit-course').forEach(editLink => {
         editLink.addEventListener('click', function(e) {
             e.preventDefault();
-            e.stopPropagation(); // Prevent card link from being triggered
+            e.stopPropagation();
             
-            // Get course data from data attributes
             courseToEditId = this.dataset.courseId;
             const courseTitle = this.dataset.courseTitle;
             const courseDescription = this.dataset.courseDescription;
             
-            // Fill the form
             editTitleInput.value = courseTitle;
             editDescriptionInput.value = courseDescription;
             
-            // Show the modal
             editCourseModal.style.display = 'block';
             
-            // Prevent event bubbling to parent elements
             return false;
         });
     });
     
-    // Close Edit Modal
     document.getElementById('closeEditModal').addEventListener('click', () => {
         editCourseModal.style.display = 'none';
     });
@@ -341,7 +329,6 @@ document.addEventListener('DOMContentLoaded', function() {
         editCourseModal.style.display = 'none';
     });
     
-    // Handle form submission
     editCourseForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -355,7 +342,6 @@ document.addEventListener('DOMContentLoaded', function() {
             description: editDescriptionInput.value
         };
 
-        // Call the API to update the course
         fetch(`/api/courses/${courseToEditId}?user_id=${currentUserId}`, {
             method: 'PUT',
             headers: {
@@ -365,7 +351,6 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => {
             if (response.ok) {
-                // Reload the page to show updated course
                 window.location.reload();
             } else {
                 return response.json().then(data => {
@@ -378,30 +363,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Delete Course handling
     const deleteCourseModal = document.getElementById('deleteCourseModal');
     const courseToDeleteNameElement = document.getElementById('courseToDeleteName');
     let courseToDeleteId = null;
     
-    // Delete course click handlers
     document.querySelectorAll('.delete-course').forEach(deleteLink => {
         deleteLink.addEventListener('click', function(e) {
             e.preventDefault();
-            e.stopPropagation(); // Prevent card link from being triggered
+            e.stopPropagation();
             
-            // Get course data from data attributes
             courseToDeleteId = this.dataset.courseId;
             const courseTitle = this.dataset.courseTitle;
             
-            // Set course name in confirmation dialog
             courseToDeleteNameElement.textContent = courseTitle;
             
-            // Show the modal
             deleteCourseModal.style.display = 'block';
         });
     });
     
-    // Close Delete Modal
     document.getElementById('closeDeleteModal').addEventListener('click', () => {
         deleteCourseModal.style.display = 'none';
     });
@@ -410,14 +389,12 @@ document.addEventListener('DOMContentLoaded', function() {
         deleteCourseModal.style.display = 'none';
     });
     
-    // Handle delete confirmation
     document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
         if (!courseToDeleteId) {
             alert('Error: Course ID is missing.');
             return;
         }
         
-        // Call the API to delete the course
         fetch(`/api/courses/${courseToDeleteId}?user_id=${currentUserId}`, {
             method: 'DELETE',
             headers: {
@@ -426,7 +403,6 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => {
             if (response.status === 204) {
-                // Reload the page to show updated course list
                 window.location.reload();
             } else {
                 return response.json().then(data => {
@@ -439,7 +415,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Close modals when clicking outside
     window.addEventListener('click', function(event) {
         if (event.target === editCourseModal) {
             editCourseModal.style.display = 'none';

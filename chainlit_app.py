@@ -6,17 +6,48 @@ import chainlit as cl
 import logging
 import urllib.parse
 import httpx
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Global parameter storage to help with iframe communication
+SIMBA_PARAM_STORAGE = {}
+
+# Special function to extract parameters from various sources
+def get_simba_params():
+    """Extract parameters from all possible sources"""
+    params = {}
+    
+    # Try to get from storage first
+    params.update(SIMBA_PARAM_STORAGE)
+    
+    # Try to get from URL params if cl.context is available
+    if hasattr(cl, 'context') and hasattr(cl.context, 'session'):
+        if hasattr(cl.context.session, 'root_url'):
+            url = cl.context.session.root_url
+            from urllib.parse import urlparse, parse_qs
+            parsed_url = urlparse(url)
+            url_params = parse_qs(parsed_url.query)
+            for key, values in url_params.items():
+                if values:
+                    params[key] = values[0]
+    
+    # Try to get from user_session
+    if hasattr(cl, 'user_session'):
+        for key in ['activity_id', 'user_id', 'username', 'thread_id']:
+            value = cl.user_session.get(key)
+            if value:
+                params[key] = value
+    
+    return params
 
 SIMBA_API_BASE_URL = os.getenv('SIMBA_API_URL', 'http://web:8000/api')
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
 if not django.apps.apps.ready:
     django.setup()
-from simbaapp.models import Activity, Message, Thread, User # Will not be used anymore
 
 client = AsyncOpenAI()
 
@@ -191,13 +222,66 @@ Your first message should begin with 'Hello! 😸 I am SIMBA, and I will help yo
 
 @cl.on_chat_start
 async def on_chat_start():
-    referer_url = cl.user_session.get("http_referer", "")
-    parsed_url = urllib.parse.urlparse(referer_url)
-    query_params = dict(urllib.parse.parse_qsl(parsed_url.query))
+    logger.info("Chainlit starting new chat session")
     
+    query_params = {}
+    try:
+        from urllib.parse import urlparse, parse_qs
+        current_url = ""
+        
+        if hasattr(cl, 'context') and hasattr(cl.context, 'session'):
+            if hasattr(cl.context.session, 'root_url'):
+                current_url = cl.context.session.root_url
+                logger.info(f"Got URL from context.session.root_url: {current_url}")
+            elif hasattr(cl.context.session, 'http_referer'):
+                current_url = cl.context.session.http_referer
+                logger.info(f"Got URL from context.session.http_referer: {current_url}")
+        
+        if not current_url and hasattr(cl, 'user_session'):
+            current_url = cl.user_session.get("http_referer", "")
+            logger.info(f"Got URL from user_session: {current_url}")
+        
+        if current_url:
+            parsed_url = urlparse(current_url)
+            url_params = parse_qs(parsed_url.query, keep_blank_values=True)
+            
+            for key, value_list in url_params.items():
+                if value_list:
+                    query_params[key] = value_list[0]
+            
+            logger.info(f"Parsed URL params: {query_params}")
+    except Exception as e:
+        logger.error(f"Error parsing URL parameters: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+    
+    if not query_params.get('activity_id') or not query_params.get('user_id'):
+        logger.info("URL parameters incomplete, trying get_simba_params()")
+        simba_params = get_simba_params()
+        logger.info(f"Got SIMBA params: {simba_params}")
+        for key, value in simba_params.items():
+            if key not in query_params or not query_params[key]:
+                query_params[key] = value
+        
     activity_id_str = query_params.get('activity_id')
     user_id_str = query_params.get('user_id')
     username = query_params.get('username', 'User')
+    thread_id_str = query_params.get('thread_id')
+    
+    logger.info(f"Final parameters - Activity: {activity_id_str}, User: {user_id_str}, Thread: {thread_id_str}")
+    
+    if activity_id_str:
+        SIMBA_PARAM_STORAGE['activity_id'] = activity_id_str
+        cl.user_session.set("activity_id", activity_id_str)
+    if user_id_str:
+        SIMBA_PARAM_STORAGE['user_id'] = user_id_str
+        cl.user_session.set("user_id", user_id_str)
+    if thread_id_str:
+        SIMBA_PARAM_STORAGE['thread_id'] = thread_id_str
+        cl.user_session.set("thread_id", thread_id_str)
+    if username:
+        SIMBA_PARAM_STORAGE['username'] = username
+        cl.user_session.set("username", username)
     
     if not activity_id_str or not user_id_str:
         await cl.Message(content=f"Invalid parameters. Activity ID and User ID are required. Received: {query_params}").send()
@@ -206,15 +290,24 @@ async def on_chat_start():
     try:
         activity_id = int(activity_id_str)
         user_id = int(user_id_str)
+        thread_id = int(thread_id_str) if thread_id_str else None
     except ValueError:
-        await cl.Message(content="Invalid Activity ID or User ID format.").send()
+        await cl.Message(content="Invalid Activity ID, User ID, or Thread ID format.").send()
         raise Exception("Invalid ID format")
 
     try:
         activity_data = await api_get_activity(activity_id)
 
-        thread_data = await api_get_or_create_thread(activity_id, user_id)
-        thread_id = thread_data['id']
+        if thread_id:
+            thread_data = {'id': thread_id}
+            logger.info(f"Using specific thread: {thread_id}")
+        else:
+            thread_data = await api_get_or_create_thread(activity_id, user_id)
+            thread_id = thread_data['id']
+            logger.info(f"Using default/created thread: {thread_id}")
+            
+            SIMBA_PARAM_STORAGE['thread_id'] = thread_id
+            cl.user_session.set("thread_id", thread_id)
         
         cl.user_session.set("thread_id", thread_id)
         cl.user_session.set("activity_id", activity_id)
@@ -223,6 +316,11 @@ async def on_chat_start():
         cl.user_session.set("activity_data", activity_data)
         
         previous_messages_data = await api_get_messages_for_thread(thread_id)
+        logger.info(f"Loaded {len(previous_messages_data) if previous_messages_data else 0} previous messages for thread {thread_id}")
+        
+        if previous_messages_data:
+            for i, msg in enumerate(previous_messages_data[:3]):
+                logger.info(f"Message {i+1} (Thread {thread_id}): Role={msg.get('role')}, Content={msg.get('content')[:50]}...")
         
         if not previous_messages_data: 
             system_prompt_content = await _build_system_prompt(activity_data, logger)
@@ -238,15 +336,20 @@ async def on_chat_start():
             
             await api_create_message(thread_id, ai_first_response_content, "assistant", user_id, model_name=settings["model"])
             await cl.Message(content=ai_first_response_content).send()
+            logger.info(f"Created initial message for new thread {thread_id}")
             
         else: 
             if previous_messages_data: 
-                for msg_data in previous_messages_data:
+                logger.info(f"Sending {len(previous_messages_data)} messages to Chainlit interface for thread {thread_id}")
+                for i, msg_data in enumerate(previous_messages_data):
                     author = msg_data.get('metadata', {}).get('author') if msg_data.get('metadata') else msg_data.get('role')
                     if msg_data['role'] == 'assistant':
                         await cl.Message(content=msg_data['content'], author='Assistant').send()
+                        logger.info(f"Sent assistant message {i+1}: {msg_data['content'][:30]}...")
                     else:
                         await cl.Message(content=msg_data['content'], author=author, type="user_message").send() 
+                        logger.info(f"Sent user message {i+1}: {msg_data['content'][:30]}...")
+                logger.info(f"Finished sending all {len(previous_messages_data)} messages for thread {thread_id}")
         
     except Exception as e:
         logger.error(f"Error during chat start: {e}")
@@ -257,11 +360,25 @@ async def on_chat_start():
 async def on_message(message: cl.Message):
     activity_id = cl.user_session.get("activity_id")
     user_id = cl.user_session.get("user_id")
-    username = cl.user_session.get("username")
+    username = cl.user_session.get("username", "User")
     thread_id = cl.user_session.get("thread_id")
     activity_data = cl.user_session.get("activity_data")
+    
+    if not activity_id or not user_id or not thread_id:
+        logger.info("Some parameters missing from session, checking SIMBA_PARAM_STORAGE")
+        if not activity_id:
+            activity_id = SIMBA_PARAM_STORAGE.get('activity_id')
+        if not user_id:
+            user_id = SIMBA_PARAM_STORAGE.get('user_id')
+        if not thread_id:
+            thread_id = SIMBA_PARAM_STORAGE.get('thread_id')
+        if not username:
+            username = SIMBA_PARAM_STORAGE.get('username', 'User')
+    
+    logger.info(f"Parameters for message - Activity: {activity_id}, User: {user_id}, Thread: {thread_id}")
 
     if not all([activity_id, user_id, thread_id, activity_data]):
+        logger.error(f"Missing required parameters - Activity: {activity_id}, User: {user_id}, Thread: {thread_id}")
         await cl.Message(content="Session error. Please refresh and try again.").send()
         return
 
@@ -270,7 +387,7 @@ async def on_message(message: cl.Message):
         
         system_prompt_content = await _build_system_prompt(activity_data, logger)
         
-        messages_history_data = await api_get_messages_for_thread(thread_id) # Get all, including new user message
+        messages_history_data = await api_get_messages_for_thread(thread_id)
         openai_messages = [{"role": "system", "content": system_prompt_content}]
 
         for msg_data in messages_history_data:

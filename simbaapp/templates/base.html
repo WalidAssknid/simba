@@ -133,12 +133,11 @@
             const userMenu = document.getElementById('userMenu');
             if (userMenu) {
                 userMenu.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent event bubbling
+                    e.stopPropagation();
                     const content = userMenu.querySelector('.user-menu-content');
                     content.style.display = content.style.display === 'block' ? 'none' : 'block';
                 });
                 
-                // Close menu when clicking outside
                 document.addEventListener('click', (e) => {
                     if (userMenu && !userMenu.contains(e.target)) {
                         const content = userMenu.querySelector('.user-menu-content');
@@ -153,20 +152,17 @@
             const sidebarOverlay = document.getElementById('sidebarOverlay');
             
             if (mobileMenuToggle && sidebar && sidebarOverlay) {
-                // Toggle sidebar on button click
                 mobileMenuToggle.addEventListener('click', (e) => {
                     e.stopPropagation();
                     sidebar.classList.toggle('mobile-active');
                     sidebarOverlay.classList.toggle('active');
                 });
                 
-                // Close sidebar when clicking overlay
                 sidebarOverlay.addEventListener('click', () => {
                     sidebar.classList.remove('mobile-active');
                     sidebarOverlay.classList.remove('active');
                 });
                 
-                // Close sidebar when clicking a link (for mobile navigation)
                 const sidebarLinks = sidebar.querySelectorAll('.sidebar-item');
                 sidebarLinks.forEach(link => {
                     link.addEventListener('click', () => {
@@ -177,7 +173,6 @@
                     });
                 });
                 
-                // Close sidebar on window resize if screen becomes larger
                 window.addEventListener('resize', () => {
                     if (window.innerWidth > 768) {
                         sidebar.classList.remove('mobile-active');

@@ -2,7 +2,7 @@
 {% block title %}Activities | SIMBA{% endblock %}
 
 {% block content %}
-<div class="action-bar">
+<div class="action-bar" data-is-teacher="{{ is_teacher|lower }}">
     <h3>Activities</h3>
     <!-- Filtro de cursos disponível para todos os usuários -->
     <select id="courseSelector" class="form-control course-selector">
@@ -109,14 +109,24 @@
 
 <div class="activities-list">
     {% for activity in activities %}
-    <div class="activity-item" data-course-id="{{ activity.course.id }}">
+    <div class="activity-item" data-course-id="{{ activity.course.id }}" data-activity-id="{{ activity.id }}">
         <div class="activity-options">
+            {% if is_teacher %}
             <button class="activity-menu-toggle">
                 <i class="fas fa-ellipsis-v"></i>
             </button>
+            {% endif %}
             <div class="activity-menu">
+                {% if is_teacher %}
                 <a href="#" class="activity-menu-item" data-action="edit" data-activity-id="{{ activity.id }}">
                     <i class="fas fa-edit"></i> Edit
+                </a>
+                <a href="#" class="activity-menu-item" data-action="chat" data-activity-id="{{ activity.id }}">
+                    <i class="fas fa-comment"></i> Chat with Activity
+                </a>
+                <a href="#" class="activity-menu-item" data-action="visibility" data-activity-id="{{ activity.id }}" data-is-visible="{{ activity.is_visible|yesno:'true,false' }}">
+                    <i class="fas fa-eye{% if not activity.is_visible %}-slash{% endif %}"></i> 
+                    {% if activity.is_visible %}Hide from Students{% else %}Show to Students{% endif %}
                 </a>
                 <a href="#" class="activity-menu-item" data-action="link" data-activity-id="{{ activity.id }}">
                     <i class="fas fa-link"></i> Get Activity Link
@@ -124,6 +134,7 @@
                 <a href="#" class="activity-menu-item delete-activity" data-action="delete" data-activity-id="{{ activity.id }}">
                     <i class="fas fa-trash"></i> Delete
                 </a>
+                {% endif %}
             </div>
         </div>
         <div class="activity-content">
@@ -165,6 +176,21 @@ document.addEventListener('DOMContentLoaded', function() {
     if (questionsHidden) {
         questionsHidden.value = JSON.stringify([]);
     }
+    
+    const isTeacher = document.querySelector('.action-bar').getAttribute('data-is-teacher') === 'true';
+    document.querySelectorAll('.activity-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            if (!e.target.closest('.activity-options')) {
+                const activityId = this.dataset.activityId;
+                
+                if (isTeacher) {
+                    window.location.href = `/dashboard/?activity_id=${activityId}&active_tab=conversation-stats`;
+                } else {
+                    window.location.href = `/chainlit/?activity_id=${activityId}`;
+                }
+            }
+        });
+    });
     
     const courseSelector = document.getElementById('courseSelector');
     if (courseSelector) {
@@ -251,7 +277,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         return response.json();
                     })
                     .then(activity => {
-                        // Log for debugging
                         console.log('Activity data received:', activity);
                         
                         const createModal = document.getElementById('activityModal');
@@ -378,6 +403,59 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.error('Error:', error);
                         alert('Failed to load activity details for editing.');
                     });
+            } else if (action === 'chat') {
+                const activityItem = document.querySelector(`.activity-item[data-activity-id="${activityId}"]`);
+                const courseId = activityItem ? activityItem.dataset.courseId : null;
+                
+                if (courseId) {
+                    window.location.href = `/courses/${courseId}/?expand_activity=${activityId}`;
+                } else {
+                    const userId = '{{ request.session.user_id }}';
+                    const username = '{{ request.session.username }}';
+                    window.location.href = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
+                }
+            } else if (action === 'visibility') {
+                const isVisible = this.dataset.isVisible === 'true';
+                const userId = '{{ request.session.user_id }}';
+                
+                fetch(`/api/activities/${activityId}/visibility?user_id=${userId}&is_visible=${!isVisible}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.message || 'Failed to update activity visibility');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(updatedActivity => {
+                    const menuItem = document.querySelector(`.activity-menu-item[data-action="visibility"][data-activity-id="${activityId}"]`);
+                    if (menuItem) {
+                        const newIsVisible = !isVisible;
+                        menuItem.dataset.isVisible = newIsVisible.toString();
+                        
+                        const icon = menuItem.querySelector('i');
+                        const text = menuItem.childNodes[menuItem.childNodes.length - 1];
+                        
+                        if (newIsVisible) {
+                            icon.className = 'fas fa-eye';
+                            text.textContent = ' Hide from Students';
+                        } else {
+                            icon.className = 'fas fa-eye-slash';
+                            text.textContent = ' Show to Students';
+                        }
+                    }
+                    
+                    alert(`Activity ${!isVisible ? 'shown to' : 'hidden from'} students successfully!`);
+                })
+                .catch(error => {
+                    console.error('Error updating activity visibility:', error);
+                    alert(`Failed to update activity visibility: ${error.message}`);
+                });
             } else if (action === 'link') {
                 document.getElementById('activityLinkDisplay').textContent = 
                     `${window.location.origin}/chainlit/?activity_id=${activityId}`;
@@ -393,7 +471,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                     })
                     .then(response => {
-                        if (response.status === 204) { // Success, no content
+                        if (response.status === 204) {
                             const activityItem = document.querySelector(`.activity-item[data-activity-id="${activityId}"]`);
                             if (activityItem) {
                                 activityItem.remove();
@@ -441,6 +519,30 @@ document.addEventListener('DOMContentLoaded', function() {
         const newQuestion = modal.querySelector('#new-question');
         const addQuestionBtn = modal.querySelector('#add-question');
         const questionsHidden = modal.querySelector('#questions-hidden');
+        
+        if (expertMode && !expertMode.closest('.checkbox-wrapper')) {
+            const expertModeGroup = expertMode.closest('.form-group');
+            if (expertModeGroup) {
+                const label = expertModeGroup.querySelector('label[for="activity-expert-mode"]');
+                const small = expertModeGroup.querySelector('small.form-text');
+                
+                expertModeGroup.className = 'form-group checkbox-group';
+                
+                const checkboxWrapper = document.createElement('div');
+                checkboxWrapper.className = 'checkbox-wrapper';
+                
+                expertMode.parentNode.removeChild(expertMode);
+                checkboxWrapper.appendChild(expertMode);
+                
+                if (label) {
+                    label.parentNode.removeChild(label);
+                    checkboxWrapper.appendChild(label);
+                }
+                
+                expertModeGroup.insertBefore(checkboxWrapper, expertModeGroup.firstChild);
+            }
+        }
+        
         let questions = [];
         
         if (questionsHidden.value) {

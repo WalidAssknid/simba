@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.conf import settings
 from .models import User, Course, Activity, CourseEnrollment, Message
 import json
+import logging
 
 def login_view(request):
     if request.method == 'POST':
@@ -94,23 +95,54 @@ def chainlit_view(request):
         return redirect('login')
     
     activity_id = request.GET.get('activity_id')
+    thread_id = request.GET.get('thread_id') 
     
     if not activity_id:
         return redirect('courses')
         
     try:
+        logger = logging.getLogger(__name__)
+        logger.info(f"chainlit_view called with activity_id={activity_id}, thread_id={thread_id}")
+        
         activity = Activity.objects.get(id=activity_id)
         user_id = request.session.get('user_id')
+        username = request.session.get('username', 'User')
         
-        if activity.user.id != user_id:
-            pass
+        if thread_id:
+            chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={thread_id}&lang=en"
+        else:
+            try:
+                from django.urls import reverse
+                api_url = request.build_absolute_uri(reverse('api-1.0.0:get_user_attempts_api', args=[activity_id, user_id]))
+                response = requests.get(api_url)
+                
+                if response.status_code == 200:
+                    attempts = response.json()
+                    if attempts:
+                        latest_thread_id = attempts[0]['id']
+                        chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={latest_thread_id}&lang=en"
+                    else:
+                        create_api_url = request.build_absolute_uri(reverse('api-1.0.0:create_new_attempt_api') + f"?activity_id={activity_id}&user_id={user_id}")
+                        create_response = requests.post(create_api_url)
+                        
+                        if create_response.status_code == 201:
+                            new_thread = create_response.json()
+                            chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={new_thread['id']}&lang=en"
+                        else:
+                            chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
+                else:
+                    chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
+                    
+            except Exception as e:
+                chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
                 
         context = {
             'activity': activity,
             'activity_id': activity_id,
             'user_id': user_id,
-            'username': request.session.get('username'),
-            'chainlit_url': f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(request.session.get('username', 'User'))}&lang=en"
+            'username': username,
+            'chainlit_url': chainlit_url,
+            'thread_id': thread_id
         }
         return render(request, 'chainlit.html', context)
     except Activity.DoesNotExist:
@@ -222,7 +254,10 @@ def course_detail_view(request, course_id):
         messages.error(request, "You do not have permission to access this course.")
         return redirect('courses')
     
-    activities = Activity.objects.filter(course=course).order_by('-created_at')
+    if is_teacher_of_course:
+        activities = Activity.objects.filter(course=course).order_by('-created_at')
+    else:
+        activities = Activity.objects.filter(course=course, is_visible=True).order_by('-created_at')
     
     participants = CourseEnrollment.objects.filter(course=course).select_related('user')
     
@@ -260,6 +295,28 @@ def create_activity_view(request, course_id):
         return redirect('courses')
         
     if request.method == 'POST':
+        from datetime import datetime
+        
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        
+        start_date_obj = None
+        end_date_obj = None
+        
+        if start_date:
+            try:
+                start_date_obj = datetime.fromisoformat(start_date)
+            except ValueError:
+                messages.error(request, "Invalid start date format.")
+                return redirect('course_detail', course_id=course_id)
+        
+        if end_date:
+            try:
+                end_date_obj = datetime.fromisoformat(end_date)
+            except ValueError:
+                messages.error(request, "Invalid end date format.")
+                return redirect('course_detail', course_id=course_id)
+        
         activity_data = {
             "course_id": course_id,
             "title": request.POST.get('activity_title', ''),
@@ -272,7 +329,12 @@ def create_activity_view(request, course_id):
             "restrict_to_subject": request.POST.get('restrict_to_subject') == 'on',
             "allow_questions": request.POST.get('allow_questions') == 'on',
             "allow_emojis": request.POST.get('allow_emojis') == 'on',
-            "trust_document": request.POST.get('trust_document') == 'on'
+            "trust_document": request.POST.get('trust_document') == 'on',
+            "word_limit": int(request.POST.get('word_limit', 0)) or 0,
+            "start_date": start_date_obj.isoformat() if start_date_obj else None,
+            "end_date": end_date_obj.isoformat() if end_date_obj else None,
+            "is_visible": request.POST.get('is_visible') == 'on',
+            "allow_redo": request.POST.get('allow_redo') == 'on'
         }
         
         api_url = request.build_absolute_uri(reverse('api-1.0.0:create_activity_api') + f"?user_id={user_id}")
@@ -283,7 +345,7 @@ def create_activity_view(request, course_id):
 
             if response.status_code == 201:
                 messages.success(request, "Activity created successfully!")
-                return redirect('course_detail', course_id=course_id) # Redirect back to course detail
+                return redirect('course_detail', course_id=course_id)
             else:
                 messages.error(request, response_data.get('message', 'Activity creation failed.'))
         
@@ -622,7 +684,8 @@ def activities_view(request):
         }
     else:
         enrolled_courses = Course.objects.filter(enrollments__user=user)
-        activities = Activity.objects.filter(course__in=enrolled_courses).order_by('-created_at')
+        # Students only see visible activities
+        activities = Activity.objects.filter(course__in=enrolled_courses, is_visible=True).order_by('-created_at')
         context = {
             'activities': activities,
             'is_teacher': False,

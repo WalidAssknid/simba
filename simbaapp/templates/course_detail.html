@@ -228,8 +228,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Remove chainlit-active class from body
         document.body.classList.remove('chainlit-active');
+
+        if (window.innerWidth >= 769) {
+            console.log('Chainlit container style after deactivation (desktop):',
+                'display =', window.getComputedStyle(chainlitContainer).display,
+                'pointer-events =', window.getComputedStyle(chainlitContainer).pointerEvents);
+        }
         
-        // Clear iframe after transition (to prevent unnecessary resource usage)
         setTimeout(() => {
             chainlitFrame.src = '';
         }, 300);
@@ -267,8 +272,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const menuWidth = 140; 
                 
                 menu.style.position = 'fixed';
-                menu.style.left = (toggleRect.right + 5) + 'px';
-                menu.style.top = (toggleRect.top + 8) + 'px';
+                menu.style.left = (toggleRect.right + 2) + 'px';
+                menu.style.top = (toggleRect.top + 2) + 'px';
                 menu.style.right = 'auto';
             } else {
                 menu.style.position = '';

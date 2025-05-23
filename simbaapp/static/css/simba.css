@@ -1,4 +1,3 @@
-
 /* ===== Variables and Base Styles ===== */
 :root {
   --primary-color: #d64000;
@@ -841,16 +840,18 @@ main.container {
   color: var(--text-color);
 }
 
-.form-control {
+.form-control, select {
   width: 100%;
   padding: 12px;
   border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 1rem;
   transition: border-color 0.2s ease;
+  color: var(--text-color);
+  background-color: white;
 }
 
-.form-control:focus {
+.form-control:focus, select:focus {
   border-color: var(--primary-color);
   outline: none;
   box-shadow: none;
@@ -1223,6 +1224,7 @@ body.auth-page .header {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
+  background-color: white;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='%23666'%3E%3Cpath d='M6 8L0 0h12L6 8z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 20px center;
@@ -1623,6 +1625,7 @@ body.auth-page .header {
   .course-selector {
     max-width: 100%;
     margin: 0 0 12px 0;
+    color: #333333 !important;
   }
 
   /* Empty state mobile */
@@ -1683,6 +1686,20 @@ body.auth-page .header {
     border: none;
     background-color: white;
     display: block;
+  }
+
+  /* Dashboard filters mobile */
+  .filters select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 1rem;
+    color: #333333 !important;
+    background-color: white;
+  }
+
+  select, .course-selector, .filters select {
+    color: #333333 !important;
+    background-color: white;
   }
 }
 
@@ -1909,6 +1926,7 @@ body.auth-page .header {
   width: 100%;
   padding: 10px 12px;
   font-size: 1rem;
+  background-color: white;
 }
 
 .tabs {

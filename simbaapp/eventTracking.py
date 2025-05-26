@@ -1,4 +1,5 @@
 from .models import Event
+import json
 
 #Base function
 
@@ -16,23 +17,23 @@ def recordEvent(userId, verb, object, context, timestamp):
 # All users events
 
 def accountCreated(userId,timestamp):
-    event = recordEvent(userId, 0, 0, {}, timestamp)
+    event = recordEvent(userId, 0, 0, json.dumps({}), timestamp)
     return event
 
 def loggedIn(userId,timestamp):
-    event = recordEvent(userId, 2, 0, {}, timestamp)
+    event = recordEvent(userId, 2, 0, json.dumps({}), timestamp)
     return event
 
 def loggedOut(userId,timestamp):
-    event = recordEvent(userId, 3, 0, {}, timestamp)
+    event = recordEvent(userId, 3, 0, json.dumps({}), timestamp)
     return event
 
 def openedChat(userId, threadId, timestamp):
-    event = recordEvent(userId, 2, 3, {"threadId" : threadId}, timestamp)
+    event = recordEvent(userId, 2, 3, json.dumps({"threadId" : threadId}), timestamp)
     return event
 
 def closedChat(userId, threadId, timestamp):
-    event = recordEvent(userId, 3, 3, {"threadId" : threadId}, timestamp)
+    event = recordEvent(userId, 3, 3, json.dumps({"threadId" : threadId}), timestamp)
     return event
 
 def sentMessage(userId, messageId, content, timestamp):
@@ -45,23 +46,23 @@ def sentMessage(userId, messageId, content, timestamp):
     :param timestamp: the timestamp from when the message was sent
     :return: the created event
     """
-    event = recordEvent(userId, 0, 4, {"messageId" : messageId, "messageContent" : content}, timestamp)
+    event = recordEvent(userId, 0, 4, json.dumps({"messageId" : messageId, "messageContent" : content}), timestamp)
     return event
 
 def joinedActivity(userId, activityId, timestamp):
-    event = recordEvent(userId, 4, 2, {"activityId" : activityId}, timestamp)
+    event = recordEvent(userId, 4, 2, json.dumps({"activityId" : activityId}), timestamp)
     return event
 
 def joinedCourse(userId, courseId, timestamp):
-    event = recordEvent(userId, 4, 1, {"courseId" : courseId}, timestamp)
+    event = recordEvent(userId, 4, 1, json.dumps({"courseId" : courseId}), timestamp)
     return event
 
 def openedCourse(userId, courseId, timestamp):
-    event = recordEvent(userId, 2, 1, {"courseId" : courseId}, timestamp)
+    event = recordEvent(userId, 2, 1, json.dumps({"courseId" : courseId}), timestamp)
     return event
 
 def closedCourse(userId, courseId, timestamp):
-    event = recordEvent(userId, 3, 1, {"courseId" : courseId}, timestamp)
+    event = recordEvent(userId, 3, 1, json.dumps({"courseId" : courseId}), timestamp)
     return event
 
 def modifiedProfile(userId, modification, timestamp):
@@ -73,7 +74,7 @@ def modifiedProfile(userId, modification, timestamp):
     :param timestamp: the timestamp from when the modification was done
     :return: the created event
     """
-    event = recordEvent(userId, 5, 0, {"modification" : modification}, timestamp)
+    event = recordEvent(userId, 5, 0, json.dumps({"modification" : modification}), timestamp)
     return event
 
 
@@ -88,7 +89,7 @@ def createdActivity(userId, activityId, activityParameters, timestamp):
     :param timestamp: the timestamp from when the activity was created
     :return: the created event
     """
-    event = recordEvent(userId, 0, 2, {"activityId" : activityId, "parameters" : activityParameters}, timestamp)
+    event = recordEvent(userId, 0, 2, json.dumps({"activityId" : activityId, "parameters" : activityParameters}), timestamp)
     return event
 
 def modifiedActivity(userId, activityId, activityParameters, timestamp):
@@ -101,7 +102,7 @@ def modifiedActivity(userId, activityId, activityParameters, timestamp):
     :param timestamp: the timestamp from when the activity was created
     :return: the created event
     """
-    event = recordEvent(userId, 5, 2, {"activityId" : activityId, "parameters" : activityParameters}, timestamp)
+    event = recordEvent(userId, 5, 2, json.dumps({"activityId" : activityId, "parameters" : activityParameters}), timestamp)
     return event
 
 def deletedActivity(userId, activityId, timestamp):
@@ -113,7 +114,7 @@ def deletedActivity(userId, activityId, timestamp):
     :param timestamp: the timestamp from when the activity was deleted
     :return: the created event
     """
-    event = recordEvent(userId, 1, 2, {"activityId" : activityId}, timestamp)
+    event = recordEvent(userId, 1, 2, json.dumps({"activityId" : activityId}), timestamp)
     return event
 
 def createdCourse(userId, courseId, courseParameters, timestamp):
@@ -126,7 +127,7 @@ def createdCourse(userId, courseId, courseParameters, timestamp):
     :param timestamp: the timestamp from when the course was created
     :return: the created event
     """
-    event = recordEvent(userId, 0, 1, {"courseId" : courseId, "parameters" : courseParameters}, timestamp)
+    event = recordEvent(userId, 0, 1, json.dumps({"courseId" : courseId, "parameters" : courseParameters}), timestamp)
     return event
 
 def modifiedCourse(userId, courseId, courseParameters, timestamp):
@@ -139,7 +140,7 @@ def modifiedCourse(userId, courseId, courseParameters, timestamp):
     :param timestamp: the timestamp from when the course was modified
     :return: the created event
     """
-    event = recordEvent(userId, 5, 1, {"courseId" : courseId, "parameters" : courseParameters}, timestamp)
+    event = recordEvent(userId, 5, 1, json.dumps({"courseId" : courseId, "parameters" : courseParameters}), timestamp)
     return event
 
 def deletedCourse(userId, courseId, timestamp):
@@ -151,6 +152,6 @@ def deletedCourse(userId, courseId, timestamp):
     :param timestamp: the timestamp from when the course was deleted
     :return: the created event
     """
-    event = recordEvent(userId, 1, 1, {"courseId" : courseId}, timestamp)
+    event = recordEvent(userId, 1, 1, json.dumps({"courseId" : courseId}), timestamp)
     return event
 

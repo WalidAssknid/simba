@@ -15,10 +15,29 @@
                 <textarea name="activity_description" id="activity-description" class="form-control" required></textarea>
                 <small class="form-text">Briefly explain the purpose or context of this activity.</small>
             </div>
-            <div class="form-group">
-                <label for="activity-expert-mode">Expert Mode</label>
-                <input type="checkbox" name="expert_mode" id="activity-expert-mode">
-                <small class="form-text">Allows you to customize the assistant's instructions for this activity.</small>
+            
+            <div class="form-group checkbox-group">
+                <div class="checkbox-wrapper">
+                    <input type="checkbox" name="is_visible" id="is-visible" checked>
+                    <label for="is-visible">
+                        Make activity visible to students
+                    </label>
+                </div>
+                <small class="form-text">
+                    Uncheck to hide this activity from students until you're ready.
+                </small>
+            </div>
+            
+            <div class="form-group checkbox-group">
+                <div class="checkbox-wrapper">
+                    <input type="checkbox" name="expert_mode" id="activity-expert-mode">
+                    <label for="activity-expert-mode">
+                        Allows you to customize the assistant's instructions for this activity.
+                    </label>
+                </div>
+                <small class="form-text">
+                    Expert Mode enables advanced customization options for the activity.
+                </small>
             </div>
             <div class="form-group" id="custom-prompt-group" style="display:none;">
                 <label for="custom-prompt">Custom assistant instructions</label>
@@ -118,6 +137,31 @@
                     </small>
                 </div>
             </div>
+            
+            <hr>
+            <h3 class="section-title">Activity Schedule & Settings</h3>
+            <div class="form-group">
+                <label for="start-date">Start Date (Optional)</label>
+                <input type="datetime-local" name="start_date" id="start-date" class="form-control">
+                <small class="form-text">When should this activity become available to students?</small>
+            </div>
+            <div class="form-group">
+                <label for="end-date">End Date (Optional)</label>
+                <input type="datetime-local" name="end_date" id="end-date" class="form-control">
+                <small class="form-text">When should this activity stop being available to students?</small>
+            </div>
+            <div class="form-group checkbox-group">
+                <div class="checkbox-wrapper">
+                    <input type="checkbox" name="allow_redo" id="allow-redo" checked>
+                    <label for="allow-redo">
+                        Allow students to redo this activity
+                    </label>
+                </div>
+                <small class="form-text">
+                    If enabled, students can start the activity again with a fresh conversation.
+                </small>
+            </div>
+            
             <div class="form-actions">
                 <button type="submit" class="btn">Create Activity</button>
             </div>
@@ -295,8 +339,19 @@
     
     .checkbox-wrapper {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 8px;
+    }
+    
+    .checkbox-wrapper input[type="checkbox"] {
+        margin-top: 2px;
+        flex-shrink: 0;
+    }
+    
+    .checkbox-wrapper label {
+        margin: 0;
+        cursor: pointer;
+        line-height: 1.4;
     }
     
     .form-actions {

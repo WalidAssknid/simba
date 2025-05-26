@@ -6,6 +6,14 @@ import requests
 from django.urls import reverse
 from django.conf import settings
 from .models import User, Course, Activity, CourseEnrollment, Message
+import json
+import logging
+
+def home_view(request):
+    # If user is already logged in, redirect to courses page
+    if request.session.get('user_id'):
+        return redirect('courses')
+    return render(request, 'home.html')
 
 def login_view(request):
     if request.method == 'POST':
@@ -93,23 +101,54 @@ def chainlit_view(request):
         return redirect('login')
     
     activity_id = request.GET.get('activity_id')
+    thread_id = request.GET.get('thread_id') 
     
     if not activity_id:
         return redirect('courses')
         
     try:
+        logger = logging.getLogger(__name__)
+        logger.info(f"chainlit_view called with activity_id={activity_id}, thread_id={thread_id}")
+        
         activity = Activity.objects.get(id=activity_id)
         user_id = request.session.get('user_id')
+        username = request.session.get('username', 'User')
         
-        if activity.user.id != user_id:
-            pass
+        if thread_id:
+            chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={thread_id}&lang=en"
+        else:
+            try:
+                from django.urls import reverse
+                api_url = request.build_absolute_uri(reverse('api-1.0.0:get_user_attempts_api', args=[activity_id, user_id]))
+                response = requests.get(api_url)
+                
+                if response.status_code == 200:
+                    attempts = response.json()
+                    if attempts:
+                        latest_thread_id = attempts[0]['id']
+                        chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={latest_thread_id}&lang=en"
+                    else:
+                        create_api_url = request.build_absolute_uri(reverse('api-1.0.0:create_new_attempt_api') + f"?activity_id={activity_id}&user_id={user_id}")
+                        create_response = requests.post(create_api_url)
+                        
+                        if create_response.status_code == 201:
+                            new_thread = create_response.json()
+                            chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={new_thread['id']}&lang=en"
+                        else:
+                            chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
+                else:
+                    chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
+                    
+            except Exception as e:
+                chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
                 
         context = {
             'activity': activity,
             'activity_id': activity_id,
             'user_id': user_id,
-            'username': request.session.get('username'),
-            'chainlit_url': f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(request.session.get('username', 'User'))}&lang=en"
+            'username': username,
+            'chainlit_url': chainlit_url,
+            'thread_id': thread_id
         }
         return render(request, 'chainlit.html', context)
     except Activity.DoesNotExist:
@@ -221,7 +260,10 @@ def course_detail_view(request, course_id):
         messages.error(request, "You do not have permission to access this course.")
         return redirect('courses')
     
-    activities = Activity.objects.filter(course=course).order_by('-created_at')
+    if is_teacher_of_course:
+        activities = Activity.objects.filter(course=course).order_by('-created_at')
+    else:
+        activities = Activity.objects.filter(course=course, is_visible=True).order_by('-created_at')
     
     participants = CourseEnrollment.objects.filter(course=course).select_related('user')
     
@@ -259,6 +301,28 @@ def create_activity_view(request, course_id):
         return redirect('courses')
         
     if request.method == 'POST':
+        from datetime import datetime
+        
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        
+        start_date_obj = None
+        end_date_obj = None
+        
+        if start_date:
+            try:
+                start_date_obj = datetime.fromisoformat(start_date)
+            except ValueError:
+                messages.error(request, "Invalid start date format.")
+                return redirect('course_detail', course_id=course_id)
+        
+        if end_date:
+            try:
+                end_date_obj = datetime.fromisoformat(end_date)
+            except ValueError:
+                messages.error(request, "Invalid end date format.")
+                return redirect('course_detail', course_id=course_id)
+        
         activity_data = {
             "course_id": course_id,
             "title": request.POST.get('activity_title', ''),
@@ -271,7 +335,12 @@ def create_activity_view(request, course_id):
             "restrict_to_subject": request.POST.get('restrict_to_subject') == 'on',
             "allow_questions": request.POST.get('allow_questions') == 'on',
             "allow_emojis": request.POST.get('allow_emojis') == 'on',
-            "trust_document": request.POST.get('trust_document') == 'on'
+            "trust_document": request.POST.get('trust_document') == 'on',
+            "word_limit": int(request.POST.get('word_limit', 0)) or 0,
+            "start_date": start_date_obj.isoformat() if start_date_obj else None,
+            "end_date": end_date_obj.isoformat() if end_date_obj else None,
+            "is_visible": request.POST.get('is_visible') == 'on',
+            "allow_redo": request.POST.get('allow_redo') == 'on'
         }
         
         api_url = request.build_absolute_uri(reverse('api-1.0.0:create_activity_api') + f"?user_id={user_id}")
@@ -282,7 +351,7 @@ def create_activity_view(request, course_id):
 
             if response.status_code == 201:
                 messages.success(request, "Activity created successfully!")
-                return redirect('course_detail', course_id=course_id) # Redirect back to course detail
+                return redirect('course_detail', course_id=course_id)
             else:
                 messages.error(request, response_data.get('message', 'Activity creation failed.'))
         
@@ -349,22 +418,81 @@ def dashboard_view(request):
 
     courses = Course.objects.filter(owner=user).order_by('-created_at')
     selected_course_id = request.GET.get('course_id')
-    if selected_course_id:
-        selected_course = courses.filter(id=selected_course_id).first()
-    else:
-        selected_course = courses.first()
-    if not selected_course:
+    selected_activity_id = request.GET.get('activity_id')
+    
+    active_tab = request.GET.get('active_tab', 'conversation-stats')
+    if active_tab == 'student-clusters':
+        active_tab = 'student-engagement'
+    
+    authoritative_id_for_logic_and_template = None  
+    course_object_for_context = None                
+
+    if not courses.exists():
         messages.info(request, "No courses found. Create one first.")
         return redirect('create_course')
 
-    students = CourseEnrollment.objects.filter(course=selected_course).select_related('user')
-    activities_count = Activity.objects.filter(course=selected_course).count()
-    student_messages_qs = Message.objects.filter(
-        thread__activity__course=selected_course,
-        role='student'
-    ).select_related('thread__user')
-    total_messages = student_messages_qs.count()
+    if selected_course_id and selected_course_id != 'all': 
+        try:
+            course_id_as_int = int(selected_course_id)
+            _fetched_course_obj = courses.filter(id=course_id_as_int).first()
+            if _fetched_course_obj:
+                course_object_for_context = _fetched_course_obj
+                authoritative_id_for_logic_and_template = _fetched_course_obj.id 
+            else:
+                messages.warning(request, f"Course ID '{selected_course_id}' not found or not accessible for your account. Defaulting to all courses.")
+                course_object_for_context = courses.first() 
+        except ValueError:
+            messages.warning(request, f"Invalid course ID format: '{selected_course_id}'. Defaulting to all courses.")
+            course_object_for_context = courses.first() 
+    else:
+        course_object_for_context = courses.first() 
 
+    selected_course_id = authoritative_id_for_logic_and_template
+    selected_course = course_object_for_context
+
+    if selected_course_id is None: 
+        activities = Activity.objects.filter(course__in=courses).order_by('-created_at')
+        
+        students = CourseEnrollment.objects.filter(course__in=courses).select_related('user', 'course')
+        
+        student_dict = {}
+        for enrollment in students:
+            if enrollment.user.id not in student_dict:
+                student_dict[enrollment.user.id] = {
+                    'id': enrollment.user.id,
+                    'username': enrollment.user.username,
+                    'courses': [enrollment.course.title]
+                }
+            else:
+                student_dict[enrollment.user.id]['courses'].append(enrollment.course.title)
+        
+        all_students = [
+            {'id': s['id'], 
+             'username': f"{s['username']} ({', '.join(s['courses'][:2])}{' + more' if len(s['courses']) > 2 else ''})"
+            } for s in student_dict.values()
+        ]
+        
+        base_msg_query = Message.objects.filter(
+            thread__activity__course__in=courses
+        ).select_related('thread__user', 'thread__activity')
+    else:
+        activities = Activity.objects.filter(course=selected_course).order_by('-created_at')
+        
+        students = CourseEnrollment.objects.filter(course=selected_course).select_related('user')
+        all_students = [{'id': s.user.id, 'username': s.user.username} for s in students]
+        
+        base_msg_query = Message.objects.filter(
+            thread__activity__course=selected_course
+        ).select_related('thread__user', 'thread__activity')
+    
+    selected_activity = None
+    if selected_activity_id and selected_activity_id != 'all':
+        selected_activity = activities.filter(id=selected_activity_id).first()
+    
+    student_messages_qs = base_msg_query.filter(role='user')
+    
+    total_messages = student_messages_qs.count()
+    
     counts = {}
     lengths = {}
     for msg in student_messages_qs:
@@ -381,18 +509,115 @@ def dashboard_view(request):
             'avg_length': round(avg_len, 2)
         })
 
-    last_messages = student_messages_qs.order_by('-timestamp')[:10]
-
+    if total_messages > 0:
+        avg_message_length = sum(lengths.values()) / total_messages
+    else:
+        avg_message_length = 0
+    
+    activity_stats = {}
+    for activity in activities:
+        activity_msgs = Message.objects.filter(
+            thread__activity=activity,
+            role='user'
+        )
+        msg_count = activity_msgs.count()
+        
+        if msg_count > 0:
+            total_length = sum([len(msg.content) for msg in activity_msgs])
+            avg_length = total_length / msg_count
+        else:
+            avg_length = 0
+            
+        activity_stats[activity.id] = {
+            'name': activity.title or f"Activity {activity.id}",
+            'message_count': msg_count,
+            'avg_length': round(avg_length, 2)
+        }
+    
+    activity_names = [stats['name'] for activity_id, stats in activity_stats.items()]
+    activity_message_counts = [stats['message_count'] for activity_id, stats in activity_stats.items()]
+    activity_avg_lengths = [stats['avg_length'] for activity_id, stats in activity_stats.items()]
+    
+    if counts:
+        avg_count = sum(counts.values()) / len(counts)
+        avg_length = sum(lengths.values()) / len(lengths)
+    else:
+        avg_count = 0
+        avg_length = 0
+    
+    segment_many_long = []
+    segment_few_long = []
+    segment_many_short = []
+    segment_few_short = []
+    
+    for username, count in counts.items():
+        length = lengths[username]
+        point = {'x': length, 'y': count}
+        
+        if count > avg_count and length > avg_length:
+            segment_many_long.append(point)
+        elif count <= avg_count and length > avg_length:
+            segment_few_long.append(point)
+        elif count > avg_count and length <= avg_length:
+            segment_many_short.append(point)
+        else:
+            segment_few_short.append(point)
+    
+    avg_time_seconds = 0
+    student_duration_data = {}
+    
+    for thread in student_messages_qs.values('thread').distinct():
+        thread_messages = Message.objects.filter(thread_id=thread['thread']).order_by('timestamp')
+        if thread_messages.count() > 1:
+            first_msg = thread_messages.first()
+            last_msg = thread_messages.last()
+            if first_msg and last_msg:
+                duration = (last_msg.timestamp - first_msg.timestamp).total_seconds()
+                student_id = first_msg.thread.user_id
+                student_duration_data[student_id] = student_duration_data.get(student_id, 0) + duration
+    
+    if student_duration_data:
+        avg_time_seconds = sum(student_duration_data.values()) / len(student_duration_data)
+        
+    hours = int(avg_time_seconds // 3600)
+    minutes = int((avg_time_seconds % 3600) // 60)
+    avg_time_per_student = f"{hours}h {minutes}m"
+    
+    raw_messages = base_msg_query.order_by('-timestamp')[:100]
+    
     context = {
         'courses': courses,
         'selected_course': selected_course,
+        'selected_course_id': selected_course_id,
+        'selected_activity': selected_activity,
+        'activities': activities,
         'students_count': students.count(),
-        'activities_count': activities_count,
+        'activities_count': activities.count(),
         'total_messages': total_messages,
+        'avg_message_length': round(avg_message_length, 2),
+        'avg_time_per_student': avg_time_per_student,
         'stats_per_student': stats_per_student,
-        'last_messages': last_messages,
-        'enrolled_courses': courses  
+        'all_students': all_students,
+        'raw_messages': raw_messages,
+        'enrolled_courses': courses,
+        'activity_names': activity_names,
+        'activity_message_counts': activity_message_counts,
+        'activity_avg_lengths': activity_avg_lengths,
+        'segment_many_long': segment_many_long,
+        'segment_few_long': segment_few_long,
+        'segment_many_short': segment_many_short,
+        'segment_few_short': segment_few_short,
+        'active_tab': active_tab
     }
+    
+    context['activity_names_json'] = json.dumps(activity_names)
+    context['activity_message_counts_json'] = json.dumps(activity_message_counts)
+    context['activity_avg_lengths_json'] = json.dumps(activity_avg_lengths)
+    context['segment_many_long_json'] = json.dumps(segment_many_long)
+    context['segment_few_long_json'] = json.dumps(segment_few_long)
+    context['segment_many_short_json'] = json.dumps(segment_many_short)
+    context['segment_few_short_json'] = json.dumps(segment_few_short)
+    
     return render(request, 'dashboard.html', context)
     
 def edit_course_view(request, course_id):
@@ -465,7 +690,8 @@ def activities_view(request):
         }
     else:
         enrolled_courses = Course.objects.filter(enrollments__user=user)
-        activities = Activity.objects.filter(course__in=enrolled_courses).order_by('-created_at')
+        # Students only see visible activities
+        activities = Activity.objects.filter(course__in=enrolled_courses, is_visible=True).order_by('-created_at')
         context = {
             'activities': activities,
             'is_teacher': False,

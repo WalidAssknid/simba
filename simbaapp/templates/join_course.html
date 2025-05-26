@@ -111,14 +111,12 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // When the page loads, check if we should show the popup automatically
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('popup') === 'true') {
             document.getElementById('joinDialog').style.display = 'block';
             document.getElementById('joinOverlay').style.display = 'block';
         }
         
-        // Close button functionality
         const closeBtn = document.getElementById('closeBtn');
         const overlay = document.getElementById('joinOverlay');
         const dialog = document.getElementById('joinDialog');
@@ -130,7 +128,6 @@
             });
         }
         
-        // Close when clicking on overlay
         if (overlay) {
             overlay.addEventListener('click', function() {
                 dialog.style.display = 'none';

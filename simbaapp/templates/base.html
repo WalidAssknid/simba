@@ -12,11 +12,15 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body class="{% if request.resolver_match.url_name == 'login' or request.resolver_match.url_name == 'register' %}auth-page{% endif %}">
+    {% if request.resolver_match.url_name != 'home' %}
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
     <!-- Sidebar -->
-    <nav class="sidebar">
+    <nav class="sidebar" id="sidebar">
         <div class="sidebar-brand">
             <span>SIMBA</span>
-            <div class="sidebar-tagline">make the logo</div>
+            <!-- <div class="sidebar-tagline"></div> maybe a logo in the future -->
         </div>
         <div class="sidebar-nav">
             {% if request.session.user_id %}
@@ -56,6 +60,13 @@
     <!-- Header -->
     <header class="header">
         <div class="container">
+            <!-- Mobile Menu Toggle -->
+            {% if request.session.user_id %}
+            <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            {% endif %}
+            
             <div class="header-brand">
                 <span>SIMBA</span>
             </div>
@@ -88,9 +99,10 @@
             </div>
         </div>
     </header>
+    {% endif %}
     
-    <main class="container">
-        {% if messages and request.resolver_match.url_name != 'login' and request.resolver_match.url_name != 'register' %}
+    <main class="{% if request.resolver_match.url_name != 'home' %}container{% endif %}">
+        {% if messages and not request.resolver_match.url_name == 'login' and not request.resolver_match.url_name == 'register' and not request.resolver_match.url_name == 'home' %}
             {% for message in messages %}
                 <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-warning{% endif %}">
                     {{ message }}
@@ -123,12 +135,11 @@
             const userMenu = document.getElementById('userMenu');
             if (userMenu) {
                 userMenu.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent event bubbling
+                    e.stopPropagation();
                     const content = userMenu.querySelector('.user-menu-content');
                     content.style.display = content.style.display === 'block' ? 'none' : 'block';
                 });
                 
-                // Close menu when clicking outside
                 document.addEventListener('click', (e) => {
                     if (userMenu && !userMenu.contains(e.target)) {
                         const content = userMenu.querySelector('.user-menu-content');
@@ -137,12 +148,38 @@
                 });
             }
 
-            // Toggle for mobile menu
-            const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
-            if (mobileMenuToggle) {
-                mobileMenuToggle.addEventListener('click', () => {
-                    const sidebar = document.querySelector('.sidebar');
-                    sidebar.classList.toggle('active');
+            // Mobile menu functionality
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            
+            if (mobileMenuToggle && sidebar && sidebarOverlay) {
+                mobileMenuToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    sidebar.classList.toggle('mobile-active');
+                    sidebarOverlay.classList.toggle('active');
+                });
+                
+                sidebarOverlay.addEventListener('click', () => {
+                    sidebar.classList.remove('mobile-active');
+                    sidebarOverlay.classList.remove('active');
+                });
+                
+                const sidebarLinks = sidebar.querySelectorAll('.sidebar-item');
+                sidebarLinks.forEach(link => {
+                    link.addEventListener('click', () => {
+                        if (window.innerWidth <= 768) {
+                            sidebar.classList.remove('mobile-active');
+                            sidebarOverlay.classList.remove('active');
+                        }
+                    });
+                });
+                
+                window.addEventListener('resize', () => {
+                    if (window.innerWidth > 768) {
+                        sidebar.classList.remove('mobile-active');
+                        sidebarOverlay.classList.remove('active');
+                    }
                 });
             }
         });

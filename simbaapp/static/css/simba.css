@@ -2393,3 +2393,86 @@ body.auth-page .header {
   box-sizing: border-box;
 }
 
+/* Home page styles */
+.home-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100%;
+  background: linear-gradient(to bottom, #ffffff, #ff7043);
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.home-logo {
+  font-size: 5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 2rem;
+  text-align: center;
+  letter-spacing: -0.06em;
+}
+
+.home-subtitle {
+  font-size: 1.5rem;
+  color: var(--text-color);
+  margin-bottom: 3rem;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.home-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn-home-login {
+  font-size: 1.2rem;
+  padding: 12px 36px;
+  background: var(--primary-dark);
+  color: white;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.btn-home-login:hover {
+  background: var(--primary-color);
+  transform: translateY(-3px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Mobile styles for home page */
+@media (max-width: 768px) {
+  .home-logo {
+    font-size: 3.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .home-subtitle {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+  }
+  
+  .btn-home-login {
+    font-size: 1rem;
+    padding: 10px 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-logo {
+    font-size: 2.8rem;
+  }
+  
+  .home-subtitle {
+    font-size: 1rem;
+  }
+}
+

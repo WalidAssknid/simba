@@ -12,6 +12,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body class="{% if request.resolver_match.url_name == 'login' or request.resolver_match.url_name == 'register' %}auth-page{% endif %}">
+    {% if request.resolver_match.url_name != 'home' %}
     <!-- Mobile Sidebar Overlay -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     
@@ -98,9 +99,10 @@
             </div>
         </div>
     </header>
+    {% endif %}
     
-    <main class="container">
-        {% if messages and not request.resolver_match.url_name == 'login' and not request.resolver_match.url_name == 'register' %}
+    <main class="{% if request.resolver_match.url_name != 'home' %}container{% endif %}">
+        {% if messages and not request.resolver_match.url_name == 'login' and not request.resolver_match.url_name == 'register' and not request.resolver_match.url_name == 'home' %}
             {% for message in messages %}
                 <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-warning{% endif %}">
                     {{ message }}

@@ -9,6 +9,12 @@ from .models import User, Course, Activity, CourseEnrollment, Message
 import json
 import logging
 
+def home_view(request):
+    # If user is already logged in, redirect to courses page
+    if request.session.get('user_id'):
+        return redirect('courses')
+    return render(request, 'home.html')
+
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')

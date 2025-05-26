@@ -130,6 +130,23 @@
     margin-bottom: 30px;
     max-height: 500px;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .student-chat h3 {
+    position: sticky;
+    top: 0;
+    background-color: white;
+    margin-top: 0;
+    padding: 10px 0;
+    z-index: 10;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .student-chat #chat-messages {
+    overflow-y: auto;
   }
   
   .user-message, .model-message {
@@ -146,6 +163,23 @@
   
   .model-message {
     background-color: #aed6f1;
+  }
+  
+  .message-header {
+    font-size: 0.8rem;
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .message-time {
+    color: #666;
+    margin-right: 10px;
+  }
+  
+  .message-activity {
+    font-weight: bold;
+    color: #333;
   }
   
   .summary-container {
@@ -465,7 +499,12 @@
     
     .student-chat {
       padding: 16px;
-      max-height: 300px;
+      max-height: 400px;
+    }
+    
+    .student-chat h3 {
+      padding: 8px 0;
+      font-size: 1.1rem;
     }
     
     .user-message,
@@ -585,7 +624,12 @@
     
     .student-chat {
       padding: 12px;
-      max-height: 250px;
+      max-height: 350px;
+    }
+    
+    .student-chat h3 {
+      padding: 6px 0;
+      font-size: 1rem;
     }
     
     .user-message,
@@ -829,6 +873,10 @@
         <h3>Message Length</h3>
         <p id="student-total-chars">-</p>
       </div>
+      <div class="metric-card">
+        <h3>Retries</h3>
+        <p id="student-retries-count">-</p>
+      </div>
     </div>
     
     <div class="two-columns">
@@ -854,7 +902,10 @@
           <p><i>Select a student above to view their data, then click Generate Analysis for an AI-powered assessment of their conversation patterns.</i></p>
           <p><small>This feature uses OpenAI's API to analyze the student's communication style, engagement level, and identify potential misconceptions.</small></p>
         </div>
-        <button id="generate-student-summary" class="btn-generate">Generate Analysis</button>
+        <div class="button-group" style="display: flex; gap: 10px; margin-top: 15px;">
+          <button id="generate-student-summary" class="btn-generate">Generate Analysis</button>
+          <button id="download-student-conversation" class="btn-generate" style="background-color: #28a745;">Download Conversation</button>
+        </div>
         <div id="student-summary-spinner" class="spinner"></div>
       </div>
     </div>
@@ -997,7 +1048,6 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  // Template data for charts
   const activityNames = JSON.parse('{{ activity_names_json|escapejs }}');
   const activityMessageCounts = JSON.parse('{{ activity_message_counts_json|escapejs }}');
   const activityAvgLengths = JSON.parse('{{ activity_avg_lengths_json|escapejs }}');
@@ -1006,7 +1056,6 @@
   const segmentManyShort = JSON.parse('{{ segment_many_short_json|escapejs }}');
   const segmentFewShort = JSON.parse('{{ segment_few_short_json|escapejs }}');
   
-  // Responsive chart handler
   function handleChartResize() {
     if (window.activityChart) {
       window.activityChart.resize();
@@ -1025,38 +1074,28 @@
     }
   }
   
-  // Add resize listener
   window.addEventListener('resize', handleChartResize);
   window.addEventListener('orientationchange', handleChartResize);
   
-  // Tab switching functionality
   document.addEventListener('DOMContentLoaded', () => {
-    // Initialize charts
     initializeCharts();
     
-    // Get current active tab
     const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
     
-    // Get URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const selectedStudentId = urlParams.get('student_id');
     
-    // Load tab-specific data
     if (activeTab === 'raw-data') {
       updateConversationStats();
     } else if (activeTab === 'student-engagement') {
-      // Load word cloud data for engagement tab
-      // Make sure the word cloud is loaded after a small delay to ensure DOM is ready
       setTimeout(() => {
         loadWordCloud();
       }, 100);
     } else if (activeTab === 'student-stats' && selectedStudentId) {
-      // If there's a selected student in the URL, restore that selection
       document.getElementById('student-filter').value = selectedStudentId;
       loadStudentData();
     }
     
-    // Add click event listeners to tabs
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
         switchToTab(tab.dataset.tab);
@@ -1064,31 +1103,24 @@
     });
   });
   
-  // Function to switch to a specific tab
   function switchToTab(tabId) {
-    // Remove active class from all tabs and content
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     
-    // Add active class to selected tab and content
     const tabElement = document.querySelector(`.tab[data-tab="${tabId}"]`);
     if (tabElement) {
       tabElement.classList.add('active');
       document.getElementById(tabId).classList.add('active');
       
-      // Load tab-specific data if needed
       if (tabId === 'raw-data') {
         updateConversationStats();
       } else if (tabId === 'student-engagement') {
-        // Always load word cloud when switching to this tab
         loadWordCloud();
       }
     }
   }
   
-  // Initialize charts
   function initializeCharts() {
-    // Activity Stats Chart
     const activityCtx = document.getElementById('activity-stats-chart').getContext('2d');
     const activityChart = new Chart(activityCtx, {
       type: 'bar',
@@ -1125,7 +1157,6 @@
       }
     });
     
-    // Segmentation Chart
     const segmentationCtx = document.getElementById('segmentation-chart').getContext('2d');
     const segmentationChart = new Chart(segmentationCtx, {
       type: 'scatter',
@@ -1172,42 +1203,32 @@
       }
     });
     
-    // Store chart references for responsive updates
     window.activityChart = activityChart;
     window.segmentationChart = segmentationChart;
   }
   
-  // Function to update dashboard based on filters
   function updateDashboard() {
     const courseId = document.getElementById('course-filter').value;
     const activityId = document.getElementById('activity-filter').value;
     
-    // Get the currently active tab
     const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
     
-    // Get current URL parameters
     const url = new URL(window.location);
     
-    // Update course parameter
     if (courseId === 'all') {
-      // For "All Courses", remove the course_id parameter
       url.searchParams.delete('course_id');
     } else {
-      // For specific courses, set the course_id parameter
       url.searchParams.set('course_id', courseId);
     }
     
-    // Update activity parameter
     if (activityId === 'all') {
       url.searchParams.delete('activity_id');
     } else {
       url.searchParams.set('activity_id', activityId);
     }
     
-    // Always set the active tab
     url.searchParams.set('active_tab', activeTab);
     
-    // Preserve student_id if in student-stats tab
     if (activeTab === 'student-stats') {
       const studentId = document.getElementById('student-filter').value;
       if (studentId) {
@@ -1215,64 +1236,77 @@
       }
     }
     
-    // Clear wordCloudData to force reload when filters change
     wordCloudData = null;
     
-    // If we're on the "Students Engagement" tab, load the word cloud data directly
-    // instead of refreshing the page to avoid the flickering and lost references
     if (activeTab === 'student-engagement') {
       const spinner = document.getElementById('word-cloud-spinner');
       spinner.style.display = 'block';
       
-      // Update URL history without refreshing
       window.history.pushState({}, '', url.toString());
       
-      // Load word cloud data directly
       loadWordCloud();
       
-      return false; // Prevent default form submission
+      return false;
     }
     
-    // Redirect to the updated URL for other tabs
     window.location.href = url.toString();
   }
   
-  // Load student data for Student Stats tab
   function loadStudentData() {
     const studentId = document.getElementById('student-filter').value;
     if (!studentId) return;
     
     document.getElementById('student-metrics').style.display = 'block';
     
-    // Update URL with student ID without refreshing the page
     const url = new URL(window.location);
     url.searchParams.set('student_id', studentId);
     window.history.replaceState({}, '', url);
     
-    // Fetch student data via API
     fetch(`/api/dashboard/student/${studentId}/?course_id=${document.getElementById('course-filter').value}`)
       .then(response => response.json())
       .then(data => {
-        // Update metrics
         document.getElementById('student-activities-count').textContent = data.activities_count;
         document.getElementById('student-messages-count').textContent = data.messages_count;
         document.getElementById('student-total-chars').textContent = `${(data.total_chars/1000).toFixed(1)}K`;
+        document.getElementById('student-retries-count').textContent = data.retries_count;
         
-        // Update conversation history
         const chatContainer = document.getElementById('chat-messages');
         chatContainer.innerHTML = '';
         
         data.messages.forEach(msg => {
           const messageDiv = document.createElement('div');
           messageDiv.className = msg.role === 'user' ? 'user-message' : 'model-message';
-          messageDiv.textContent = msg.content;
+          
+          const messageHeader = document.createElement('div');
+          messageHeader.className = 'message-header';
+          
+          if (msg.timestamp) {
+            const timeDisplay = document.createElement('span');
+            timeDisplay.className = 'message-time';
+            const messageDate = new Date(msg.timestamp);
+            timeDisplay.textContent = messageDate.toLocaleString();
+            messageHeader.appendChild(timeDisplay);
+          }
+          
+          if (msg.activity_title) {
+            const activityDisplay = document.createElement('span');
+            activityDisplay.className = 'message-activity';
+            activityDisplay.textContent = msg.activity_title;
+            messageHeader.appendChild(activityDisplay);
+          }
+          
+          const messageContent = document.createElement('div');
+          messageContent.className = 'message-content';
+          messageContent.textContent = msg.content;
+          
+          messageDiv.appendChild(messageHeader);
+          messageDiv.appendChild(messageContent);
+          
           chatContainer.appendChild(messageDiv);
         });
         
-        // Update distribution chart
         updateLengthDistributionChart(data.length_distribution, data.student_length);
         
-        // Update activity engagement chart
         updateActivityEngagementChart(data.activity_engagement);
       })
       .catch(error => {
@@ -1280,11 +1314,9 @@
       });
   }
   
-  // Update length distribution chart
   function updateLengthDistributionChart(distribution, studentLength) {
     const ctx = document.getElementById('length-distribution-chart').getContext('2d');
     
-    // Clear previous chart if exists
     if (window.lengthChart) window.lengthChart.destroy();
     
     window.lengthChart = new Chart(ctx, {
@@ -1343,11 +1375,9 @@
     });
   }
   
-  // Update activity engagement chart
   function updateActivityEngagementChart(engagement) {
     const ctx = document.getElementById('activity-engagement-chart').getContext('2d');
     
-    // Clear previous chart if exists
     if (window.engagementChart) window.engagementChart.destroy();
     
     window.engagementChart = new Chart(ctx, {
@@ -1387,7 +1417,6 @@
     });
   }
   
-  // Generate AI summary
   document.getElementById('generate-summary').addEventListener('click', function() {
     const courseId = document.getElementById('course-filter').value;
     const activityId = document.getElementById('activity-filter').value;
@@ -1416,7 +1445,6 @@
       });
   });
   
-  // Generate student analysis
   document.getElementById('generate-student-summary').addEventListener('click', function() {
     const studentId = document.getElementById('student-filter').value;
     const activityId = document.getElementById('activity-filter').value;
@@ -1445,7 +1473,67 @@
       });
   });
   
-  // Update conversation stats table
+  document.getElementById('download-student-conversation').addEventListener('click', function() {
+    const studentId = document.getElementById('student-filter').value;
+    const activityId = document.getElementById('activity-filter').value;
+    const courseId = document.getElementById('course-filter').value;
+    
+    if (!studentId) {
+      const summaryContent = document.getElementById('student-summary-content');
+      summaryContent.innerHTML = '<p class="error" style="color:red;font-weight:bold">Please select a student first.</p>';
+      return;
+    }
+    
+    const spinner = document.getElementById('student-summary-spinner');
+    spinner.style.display = 'block';
+    
+    const studentSelect = document.getElementById('student-filter');
+    const studentName = studentSelect.options[studentSelect.selectedIndex].text.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    
+    fetch(`/api/dashboard/student/${studentId}/?course_id=${courseId}`)
+      .then(response => response.json())
+      .then(data => {
+        spinner.style.display = 'none';
+        
+        if (!data.messages || data.messages.length === 0) {
+          alert('No conversation data available for this student.');
+          return;
+        }
+        
+        // Create CSV content
+        const headers = ['Role', 'Content', 'Timestamp', 'Activity', 'Thread ID', 'Message Number'];
+        const rows = data.messages.map(msg => [
+          `"${msg.role}"`,
+          `"${msg.content.replace(/"/g, '""')}"`,
+          `"${msg.timestamp || new Date().toISOString()}"`,
+          `"${msg.activity_title || 'Unknown Activity'}"`,
+          `"${msg.thread_id || ''}"`,
+          `"${msg.message_number || ''}"`,
+        ]);
+        
+        const csvContent = [
+          headers.join(','),
+          ...rows.map(row => row.join(','))
+        ].join('\n');
+        
+        // Create and download file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `student_conversation_${studentName}_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      })
+      .catch(error => {
+        spinner.style.display = 'none';
+        console.error('Error fetching student data:', error);
+        alert('Failed to download conversation data. Please try again.');
+      });
+  });
+  
   function updateConversationStats() {
     const courseId = document.getElementById('course-filter').value;
     
@@ -1477,7 +1565,6 @@
       });
   }
   
-  // Load conversation stats on raw data tab activation
   document.querySelector('[data-tab="raw-data"]').addEventListener('click', updateConversationStats);
   
   // Load student clusters
@@ -1513,10 +1600,8 @@
           return;
         }
         
-        // Visualize clusters
         visualizeClusters(data.clusters);
         
-        // Update scatter plot
         updateScatterPlot();
       })
       .catch(error => {
@@ -1535,7 +1620,6 @@
       return;
     }
     
-    // Create cluster bubbles
     const totalStudents = clusters.reduce((sum, c) => sum + c.size, 0);
     
     if (totalStudents === 0) {
@@ -1545,9 +1629,7 @@
     
     let html = '<div class="cluster-bubbles">';
     
-    // Define tooltips for clusters
     const getTooltip = (clusterName) => {
-      // Extract base name by removing anything in parentheses
       const baseName = clusterName.split(' (')[0].trim();
       
       if (baseName.includes('Diverse Vocabulary')) {
@@ -1569,12 +1651,9 @@
       }
     };
     
-    // Calculate bubble size based on number of clusters
-    // For horizontal layout, ensure they're not too big
     const maxBubbleSize = Math.min(40, 100 / Math.ceil(clusters.length / 2));
     
     clusters.forEach((cluster, index) => {
-      // Base size on relative student count with constraints for min/max size
       const relativeSize = (cluster.size / totalStudents);
       const sizePercent = Math.max(25, Math.min(maxBubbleSize, 25 + (relativeSize * 15)));
       
@@ -1595,7 +1674,6 @@
     html += '</div>';
     container.innerHTML = html;
     
-    // Show details for the first cluster
     if (clusters.length > 0) {
       showClusterDetails(clusters[0].id);
     }
@@ -1617,11 +1695,8 @@
       return;
     }
     
-    // Generate cluster description based on the name
     const getClusterDescription = (clusterName) => {
-      // Extract base name by removing anything in parentheses
       const baseName = clusterName.split(' (')[0].trim();
-      // Extract distinction if present
       const distinction = clusterName.includes('(') ? 
         clusterName.substring(clusterName.indexOf('(') + 1, clusterName.indexOf(')')).trim() : '';
       
@@ -1652,7 +1727,6 @@
         baseDescription = `A group of students with similar conversation patterns.`;
       }
       
-      // Add distinction information if present
       if (distinction) {
         if (distinction.includes('Higher Length')) {
           baseDescription += ` Within this category, they tend to write longer messages than other similar students.`;
@@ -1686,11 +1760,9 @@
   function updateScatterPlot() {
     if (!clusterData || !clusterData.features || clusterData.features.length === 0) {
       const ctx = document.getElementById('scatter-chart').getContext('2d');
-      // Destroy previous chart if exists
       if (window.scatterChart) {
         window.scatterChart.destroy();
       }
-      // Draw empty chart with message
       window.scatterChart = new Chart(ctx, {
         type: 'scatter',
         data: {
@@ -1713,23 +1785,19 @@
     const xFeature = document.getElementById('feature-x').value;
     const yFeature = document.getElementById('feature-y').value;
     
-    // Ensure the features exist in the data
     if (!clusterData.features[0].hasOwnProperty(xFeature) || 
         !clusterData.features[0].hasOwnProperty(yFeature)) {
       console.error(`Features ${xFeature} or ${yFeature} not found in data`);
       return;
     }
     
-    // Prepare datasets, one for each cluster
     const datasets = [];
     const clusterIds = [...new Set(clusterData.features.map(f => f.cluster))];
     
-    // Group data by cluster
     clusterIds.forEach((clusterId, index) => {
       const clusterFeatures = clusterData.features.filter(f => f.cluster === clusterId);
       const clusterName = clusterData.clusters && clusterData.clusters.find(c => c.id === clusterId)?.name || `Group ${clusterId + 1}`;
       
-      // Check for valid data points (no NaN or null values)
       const validDataPoints = clusterFeatures
         .filter(f => !isNaN(f[xFeature]) && !isNaN(f[yFeature]) && 
                     f[xFeature] !== null && f[yFeature] !== null)
@@ -1751,10 +1819,8 @@
       }
     });
     
-    // Create or update scatter plot
     const ctx = document.getElementById('scatter-chart').getContext('2d');
     
-    // Destroy previous chart if exists
     if (window.scatterChart) {
       window.scatterChart.destroy();
     }
@@ -1823,57 +1889,126 @@
     }
   }
   
-  // Load conversation stats on raw data tab activation
   document.querySelector('[data-tab="raw-data"]').addEventListener('click', updateConversationStats);
   
-  // Load word cloud when student engagement tab is activated
   document.querySelector('[data-tab="student-engagement"]').addEventListener('click', function() {
     // Will be handled by switchToTab function
   });
   
   // Export Raw Data to CSV
   document.getElementById('export-csv').addEventListener('click', function() {
-    const tableHeaders = Array.from(document.querySelectorAll('#raw-data .engagement-table thead th'))
-      .map(th => th.textContent);
+    const courseId = document.getElementById('course-filter').value;
+    const spinner = document.createElement('div');
+    spinner.className = 'spinner';
+    spinner.style.display = 'block';
+    document.querySelector('#raw-data .chart-container').appendChild(spinner);
+    
+    const table = document.querySelector('#raw-data .engagement-table');
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    
+    if (rows.length === 0 || rows[0].querySelector('td[colspan]')) {
+      alert('No data available to export');
+      spinner.remove();
+      return;
+    }
+    
+    fetch(`/api/dashboard/raw_messages/?course_id=${courseId}`)
+      .then(response => response.json())
+      .then(data => {
+        if (!data.messages || data.messages.length === 0) {
+          exportTableData();
+          return;
+        }
+        
+        const headers = ['Role', 'Content', 'Timestamp', 'Activity', 'Thread ID', 'Message Number', 'Username'];
+        const rows = data.messages.map(msg => [
+          `"${msg.role || ''}"`,
+          `"${(msg.content || '').replace(/"/g, '""')}"`,
+          `"${msg.timestamp || new Date().toISOString()}"`,
+          `"${msg.activity_title || 'Unknown Activity'}"`,
+          `"${msg.thread_id || ''}"`,
+          `"${msg.message_number || ''}"`,
+          `"${msg.username || ''}"`,
+        ]);
+        
+        const csvContent = [
+          headers.join(','),
+          ...rows.map(row => row.join(','))
+        ].join('\n');
+        
+        downloadCSV(csvContent);
+        spinner.remove();
+      })
+      .catch(error => {
+        console.error('Error fetching raw messages:', error);
+        exportTableData();
+      });
       
-    const tableRows = Array.from(document.querySelectorAll('#raw-data .engagement-table tbody tr'));
+    function exportTableData() {
+      try {
+        const headers = ['Role', 'Content', 'Timestamp', 'Activity', 'Thread ID', 'Message Number', 'Username'];
+        
+        const processedRows = rows.map(row => {
+          const cells = Array.from(row.querySelectorAll('td'));
+          
+          return [
+            `"${cells[2].textContent.replace(/"/g, '""')}"`,
+            `"${cells[4].textContent.replace(/"/g, '""')}"`,
+            `"${cells[3].textContent.replace(/"/g, '""')}"`,
+            `"${cells[1].textContent.replace(/"/g, '""')}"`,
+            `""`,
+            `""`,
+            `"${cells[0].textContent.replace(/"/g, '""')}"`,
+          ];
+        });
+        
+        const csvContent = [
+          headers.join(','),
+          ...processedRows.map(row => row.join(','))
+        ].join('\n');
+        
+        downloadCSV(csvContent);
+        spinner.remove();
+      } catch (error) {
+        console.error('Error exporting data:', error);
+        alert('An error occurred while exporting data. Please try again.');
+        spinner.remove();
+      }
+    }
     
-    const csvContent = [
-      tableHeaders.join(','),
-      ...tableRows.map(row => 
-        Array.from(row.querySelectorAll('td'))
-          .map(cell => `"${cell.textContent.replace(/"/g, '""')}"`)
-          .join(',')
-      )
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `simba_dashboard_export_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    function downloadCSV(csvContent) {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `simba_conversations_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   });
   
-  // Word cloud variables
+  async function getUserIdByUsername(username) {
+    try {
+      return null;
+    } catch (error) {
+      console.error(`Error fetching user ID for ${username}:`, error);
+      return null;
+    }
+  }
+  
   let wordCloudData = null;
   
-  // Define a set of vibrant colors globally to be used across different functions
   const vibrantColors = [
     '#FF5F7E', '#36B5FF', '#5D5FEF', '#00CFB4', '#FF9F45',
     '#6979F8', '#FF7D51', '#00C2A8', '#FF65A3', '#AF52DE',
     '#47E6B1', '#FFC55C', '#7474BF', '#19D3F3', '#FD5B8F'
   ];
   
-  // Load and display word cloud
   function loadWordCloud() {
-    // Get course ID from filter or URL parameter
     let courseId = document.getElementById('course-filter').value;
     if (courseId === "" || courseId === undefined) {
-      // Try to get from URL if not in select
       const urlParams = new URLSearchParams(window.location.search);
       courseId = urlParams.get('course_id') || 'all';
     }
@@ -1908,14 +2043,11 @@
           return;
         }
         
-        // Visualize word cloud
         visualizeWordCloud(data.words);
         
-        // Update scatter plot if data is available
         if (clusterData) {
           updateScatterPlot();
-        } else {
-          // Load cluster data for scatter plot if not already loaded
+        } else {  
           loadFeatureData();
         }
       })
@@ -1926,12 +2058,9 @@
       });
   }
   
-  // Load feature data for scatter plot
   function loadFeatureData() {
-    // Get course ID from filter or URL parameter
     let courseId = document.getElementById('course-filter').value;
     if (courseId === "" || courseId === undefined) {
-      // Try to get from URL if not in select
       const urlParams = new URLSearchParams(window.location.search);
       courseId = urlParams.get('course_id') || 'all';
     }
@@ -1947,7 +2076,6 @@
       });
   }
   
-  // Visualize word cloud
   function visualizeWordCloud(words) {
     const container = document.getElementById('word-cloud');
     container.innerHTML = '';
@@ -1957,39 +2085,30 @@
       return;
     }
     
-    // Get min and max values for normalization
     const values = words.map(w => w.value);
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
     
-    // Ensure there's a reasonable range for font sizing
     const normalizedRange = maxValue - minValue;
     const effectiveMinValue = normalizedRange > 5 ? minValue : Math.max(1, minValue - 2);
     const effectiveMaxValue = normalizedRange > 5 ? maxValue : minValue + 5;
     
-    // Set word cloud dimensions
     const containerWidth = container.clientWidth || 800;
     const containerHeight = container.clientHeight || 400;
     
-    // Sort words by frequency (most frequent first)
     const sortedWords = [...words].sort((a, b) => b.value - a.value);
     
-    // Calculate font sizes
     const minFontSize = 12;
     const maxFontSize = 36;
     const placedWords = [];
     
     sortedWords.forEach((word, index) => {
-      // Calculate font size based on frequency
       const normalizedValue = (word.value - effectiveMinValue) / (effectiveMaxValue - effectiveMinValue);
       const fontSize = minFontSize + (normalizedValue * (maxFontSize - minFontSize));
       
-      // Select color - use consistent colors for words with similar frequencies
-      // This creates a better visual mapping between size and color
       const colorIndex = Math.floor(normalizedValue * (vibrantColors.length - 1));
       const color = vibrantColors[colorIndex];
-      
-      // Create word element
+
       const wordElement = document.createElement('div');
       wordElement.className = 'word';
       wordElement.textContent = word.text;
@@ -2000,19 +2119,16 @@
       wordElement.style.userSelect = 'none';
       wordElement.style.transition = 'all 0.3s ease';
       
-      // Add slight rotation for visual interest, but only for some words
       if (Math.random() > 0.7) {
-        const rotation = Math.random() * 20 - 10; // -10 to +10 degrees
+        const rotation = Math.random() * 20 - 10;
         wordElement.style.transform = `rotate(${rotation}deg)`;
       }
       
-      // Add to container temporarily to measure dimensions
       container.appendChild(wordElement);
       const rect = wordElement.getBoundingClientRect();
       const wordWidth = rect.width;
       const wordHeight = rect.height;
       
-      // Find a position that doesn't overlap with existing words
       let position = findNonOverlappingPosition(
         wordWidth, 
         wordHeight, 
@@ -2022,11 +2138,9 @@
         index
       );
       
-      // Set final position
       wordElement.style.left = `${position.x}px`;
       wordElement.style.top = `${position.y}px`;
       
-      // Store position for collision detection
       placedWords.push({
         x: position.x,
         y: position.y,
@@ -2035,49 +2149,38 @@
         element: wordElement
       });
       
-      // Add click handler
       wordElement.addEventListener('click', () => showWordDetails(word));
       
-      // Add hover effects
       wordElement.addEventListener('mouseenter', () => {
-        // Save original transform if it exists
         const originalTransform = wordElement.style.transform;
-        // Store it as a data attribute for later
         wordElement.dataset.originalTransform = originalTransform;
-        // Apply new hover transform, preserving rotation
         wordElement.style.transform = 'scale(1.15)';
         wordElement.style.zIndex = '10';
       });
       
       wordElement.addEventListener('mouseleave', () => {
-        // Restore original transform
         wordElement.style.transform = wordElement.dataset.originalTransform || '';
         wordElement.style.zIndex = '1';
       });
     });
     
-    // Show details for the most common word
     if (words.length > 0) {
       showWordDetails(sortedWords[0]);
     }
   }
   
-  // Function to find a position that doesn't overlap with existing words
   function findNonOverlappingPosition(wordWidth, wordHeight, containerWidth, containerHeight, placedWords, wordIndex) {
-    const padding = 8; // Minimum space between words
+    const padding = 8;
     const maxAttempts = 100;
     
-    // For the first few words, try to place them in the center area
     if (wordIndex < 3) {
       const centerX = (containerWidth - wordWidth) / 2;
       const centerY = (containerHeight - wordHeight) / 2;
       
-      // Try center first
       if (!checkCollision(centerX, centerY, wordWidth, wordHeight, placedWords, padding)) {
         return { x: centerX, y: centerY };
       }
       
-      // Try positions around center in a spiral pattern
       for (let radius = 50; radius < Math.min(containerWidth, containerHeight) / 2; radius += 30) {
         for (let angle = 0; angle < 360; angle += 45) {
           const x = centerX + Math.cos(angle * Math.PI / 180) * radius;
@@ -2092,15 +2195,12 @@
       }
     }
     
-    // For other words, try a grid-based approach
     const gridSize = 20;
     const attempts = [];
     
-    // Generate potential positions
     for (let x = 0; x <= containerWidth - wordWidth; x += gridSize) {
       for (let y = 0; y <= containerHeight - wordHeight; y += gridSize) {
         if (!checkCollision(x, y, wordWidth, wordHeight, placedWords, padding)) {
-          // Calculate distance from center (prefer center positions)
           const centerX = containerWidth / 2;
           const centerY = containerHeight / 2;
           const distance = Math.sqrt(Math.pow(x + wordWidth/2 - centerX, 2) + Math.pow(y + wordHeight/2 - centerY, 2));
@@ -2110,14 +2210,12 @@
       }
     }
     
-    // Sort by distance from center and return the closest available position
     attempts.sort((a, b) => a.distance - b.distance);
     
     if (attempts.length > 0) {
       return { x: attempts[0].x, y: attempts[0].y };
     }
     
-    // Fallback: random position (shouldn't happen often)
     let attempts_count = 0;
     while (attempts_count < maxAttempts) {
       const x = Math.random() * (containerWidth - wordWidth);
@@ -2129,27 +2227,24 @@
       attempts_count++;
     }
     
-    // Last resort: place it anywhere
     return {
       x: Math.min(wordIndex * 10, containerWidth - wordWidth),
       y: Math.min(wordIndex * 5, containerHeight - wordHeight)
     };
   }
   
-  // Function to check if a position would cause collision with existing words
   function checkCollision(x, y, width, height, placedWords, padding) {
     for (let placed of placedWords) {
       if (x < placed.x + placed.width + padding &&
           x + width + padding > placed.x &&
           y < placed.y + placed.height + padding &&
           y + height + padding > placed.y) {
-        return true; // Collision detected
+        return true;
       }
     }
-    return false; // No collision
+    return false;
   }
   
-  // Show details for selected word
   function showWordDetails(word) {
     const container = document.getElementById('word-details');
     

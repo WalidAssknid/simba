@@ -24,7 +24,14 @@ from .schemas import (
     ThreadGetOrCreateSchema,
     MessageCreateSchema,
     ThreadSchema,
-    ActivityDetailSchema
+    ActivityDetailSchema,
+    StudentDataSchema,
+    ConversationStatsSchema,
+    SummaryResponseSchema,
+    StudentAnalysisSchema,
+    ClusterResponseSchema,
+    WordFrequencySchema,
+    RawMessagesSchema
 )
 import eventTracking as et
 import time
@@ -219,7 +226,11 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: int):
             allow_questions=payload.allow_questions,
             allow_emojis=payload.allow_emojis,
             trust_document=payload.trust_document,
-            word_limit=payload.word_limit
+            word_limit=payload.word_limit,
+            start_date=payload.start_date,
+            end_date=payload.end_date,
+            is_visible=payload.is_visible,
+            allow_redo=payload.allow_redo
         )
         et.createdActivity(user_id,activity.id,{"course":payload.course_id,
             "user":user_id,
@@ -268,6 +279,10 @@ def update_activity_api(request, activity_id: int, payload: ActivityUpdateSchema
         activity.allow_emojis = payload.allow_emojis
         activity.trust_document = payload.trust_document
         activity.word_limit = payload.word_limit
+        activity.start_date = payload.start_date
+        activity.end_date = payload.end_date
+        activity.is_visible = payload.is_visible
+        activity.allow_redo = payload.allow_redo
         
         activity.save()
         et.modifiedActivity(user_id,activity_id,{"course":activity.course,
@@ -336,9 +351,20 @@ def get_or_create_thread_api(request, payload: ThreadGetOrCreateSchema):
     try:
         activity = Activity.objects.get(id=payload.activity_id)
         
+        latest_thread = Thread.objects.filter(
+            activity=activity,
+            user_id=payload.user_id
+        ).order_by('-attempt_number').first()
+        
+        attempt_number = payload.attempt_number or 1
+        
+        if payload.attempt_number is None and latest_thread:
+            attempt_number = latest_thread.attempt_number
+        
         thread, created = Thread.objects.get_or_create(
             activity=activity,
-            user_id=payload.user_id, 
+            user_id=payload.user_id,
+            attempt_number=attempt_number
         )
         
         status_code = HTTPStatus.CREATED if created else HTTPStatus.OK
@@ -351,6 +377,52 @@ def get_or_create_thread_api(request, payload: ThreadGetOrCreateSchema):
         return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
     except Exception as e:
         return HTTPStatus.BAD_REQUEST, {"message": f"Thread operation failed: {str(e)}"}
+
+@thread_router.post("/new-attempt", response={201: ThreadSchema, 400: ErrorSchema, 404: ErrorSchema})
+def create_new_attempt_api(request, activity_id: int, user_id: int):
+    """Create a new attempt for an activity."""
+    try:
+        activity = Activity.objects.get(id=activity_id)
+        
+        if not activity.allow_redo:
+            return HTTPStatus.BAD_REQUEST, {"message": "This activity does not allow redo attempts."}
+        
+        latest_thread = Thread.objects.filter(
+            activity=activity,
+            user_id=user_id
+        ).order_by('-attempt_number').first()
+        
+        new_attempt_number = (latest_thread.attempt_number + 1) if latest_thread else 1
+        
+        thread = Thread.objects.create(
+            activity=activity,
+            user_id=user_id,
+            attempt_number=new_attempt_number
+        )
+        
+        return HTTPStatus.CREATED, thread
+        
+    except Activity.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
+    except Exception as e:
+        return HTTPStatus.BAD_REQUEST, {"message": f"Failed to create new attempt: {str(e)}"}
+
+@thread_router.get("/user-attempts/{activity_id}/{user_id}", response={200: List[ThreadSchema], 404: ErrorSchema})
+def get_user_attempts_api(request, activity_id: int, user_id: int):
+    """Get all attempts for a user on a specific activity."""
+    try:
+        activity = Activity.objects.get(id=activity_id)
+        threads = Thread.objects.filter(
+            activity=activity,
+            user_id=user_id
+        ).order_by('-attempt_number')
+        
+        return HTTPStatus.OK, list(threads)
+        
+    except Activity.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to get user attempts: {str(e)}"}
 
 @thread_router.get("/{thread_id}/messages", response={200: List[MessageSchema], 404: ErrorSchema})
 def get_messages_api(request, thread_id: int):
@@ -426,6 +498,27 @@ def remove_student_from_course(request, enrollment_id: int, current_user_id: int
     except Exception as e:
         return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to remove student: {str(e)}"}
 
+@api.put("/activities/{activity_id}/visibility", response={200: ActivityOutSchema, 400: ErrorSchema, 403: ErrorSchema, 404: ErrorSchema})
+def toggle_activity_visibility_api(request, activity_id: int, user_id: int, is_visible: bool):
+    """Toggle activity visibility for students."""
+    try:
+        user = User.objects.get(id=user_id)
+        activity = Activity.objects.select_related('course').get(id=activity_id)
+        
+        if activity.course.owner_id != user.id or user.role != 'teacher':
+            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can change activity visibility."}
+        
+        activity.is_visible = is_visible
+        activity.save(update_fields=['is_visible'])
+        
+        return HTTPStatus.OK, activity
+    except User.DoesNotExist:
+        return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
+    except Activity.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
+    except Exception as e:
+        return HTTPStatus.BAD_REQUEST, {"message": f"Failed to update activity visibility: {str(e)}"}
+
 # Add the thread router to the main API
 api.add_router("/threads", thread_router, tags=["Threads"])
 
@@ -480,31 +573,6 @@ def get_course_participants_api(request, course_id: int):
 # --- Dashboard API Endpoints ---
 dashboard_router = Router()
 
-class StudentDataSchema(Schema):
-    activities_count: int
-    messages_count: int
-    total_chars: int
-    messages: list
-    length_distribution: dict
-    student_length: int
-    activity_engagement: dict
-
-class ConversationStatsSchema(Schema):
-    stats: list
-
-class SummaryResponseSchema(Schema):
-    summary: str
-
-class StudentAnalysisSchema(Schema):
-    analysis: str
-
-class ClusterResponseSchema(Schema):
-    clusters: list
-    features: list
-
-class WordFrequencySchema(Schema):
-    words: list
-    students: list
 
 @dashboard_router.get("/student/{student_id}/", response=StudentDataSchema)
 def get_student_data(request, student_id: int, course_id: str = "all"):
@@ -536,14 +604,47 @@ def get_student_data(request, student_id: int, course_id: str = "all"):
             activity_name = msg.thread.activity.title or f"Activity {msg.thread.activity.id}"
             activity_counts[activity_name] = activity_counts.get(activity_name, 0) + 1
         
-        recent_thread = Thread.objects.filter(user=student).order_by('-updated_at').first()
+        threads = Thread.objects.filter(user=student).order_by('-updated_at')
         conversation = []
         
-        if recent_thread:
-            conversation = Message.objects.filter(thread=recent_thread).order_by('message_number')
+        activity_attempts = {}
+        for thread in threads:
+            activity_id = thread.activity_id
+            if activity_id not in activity_attempts:
+                activity_attempts[activity_id] = []
+            activity_attempts[activity_id].append(thread.attempt_number)
+        
+        retries_count = 0
+        for activity_id, attempts in activity_attempts.items():
+            retries_count += max(len(attempts) - 1, 0)
+        
+        if threads.count() <= 5:
+            for thread in threads:
+                thread_messages = Message.objects.filter(thread=thread).order_by('message_number')
+                conversation.extend([
+                    {
+                        "role": msg.role, 
+                        "content": msg.content, 
+                        "timestamp": msg.timestamp.isoformat(),
+                        "thread_id": thread.id,
+                        "activity_title": thread.activity.title or f"Activity {thread.activity.id}",
+                        "message_number": msg.message_number
+                    } 
+                    for msg in thread_messages
+                ])
+        else:
+            recent_thread = threads.first()
+            thread_messages = Message.objects.filter(thread=recent_thread).order_by('message_number')
             conversation = [
-                {"role": msg.role, "content": msg.content} 
-                for msg in conversation
+                {
+                    "role": msg.role, 
+                    "content": msg.content, 
+                    "timestamp": msg.timestamp.isoformat(),
+                    "thread_id": recent_thread.id,
+                    "activity_title": recent_thread.activity.title or f"Activity {recent_thread.activity.id}",
+                    "message_number": msg.message_number
+                } 
+                for msg in thread_messages
             ]
         
         all_user_messages = Message.objects.filter(role='user')
@@ -571,7 +672,8 @@ def get_student_data(request, student_id: int, course_id: str = "all"):
             "activity_engagement": {
                 "labels": list(activity_counts.keys()),
                 "values": list(activity_counts.values())
-            }
+            },
+            "retries_count": retries_count
         }
     except User.DoesNotExist:
         return {"error": "Student not found"}
@@ -760,7 +862,7 @@ For each point, give precise examples cited verbatim from the student's messages
         
         try:
             response = openai_client.chat.completions.create(
-                model="gpt-4o-mini",  # You can adjust the model as needed
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a teacher assistant analyzing student conversations."},
                     {"role": "user", "content": prompt}
@@ -919,5 +1021,35 @@ def get_word_frequencies(request, course_id: str = "all", min_word_length: int =
             "students": [],
             "error": str(e)
         }
+
+@dashboard_router.get("/raw_messages/", response=RawMessagesSchema)
+def get_raw_messages(request, course_id: str = "all"):
+    """Get raw message data for export, with complete message content instead of truncated content."""
+    try:
+        if course_id != "all":
+            course = Course.objects.get(id=course_id)
+            messages_query = Message.objects.filter(
+                thread__activity__course=course
+            ).select_related('thread__user', 'thread__activity').order_by('-timestamp')
+        else:
+            messages_query = Message.objects.all().select_related('thread__user', 'thread__activity').order_by('-timestamp')
+        
+        messages = []
+        for msg in messages_query:
+            messages.append({
+                'role': msg.role,
+                'content': msg.content,
+                'timestamp': msg.timestamp.isoformat(),
+                'username': msg.thread.user.username,
+                'activity_title': msg.thread.activity.title,
+                'thread_id': msg.thread.id,
+                'message_number': msg.message_number
+            })
+        
+        return {"messages": messages}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"messages": [], "error": str(e)}
 
 api.add_router("/dashboard", dashboard_router, tags=["Dashboard"])

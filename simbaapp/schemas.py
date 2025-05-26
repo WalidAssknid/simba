@@ -55,6 +55,10 @@ class ActivityCreateSchema(Schema):
     allow_emojis: bool = True
     trust_document: bool = True
     word_limit: int = 0
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    is_visible: bool = True
+    allow_redo: bool = True
 
 class ActivityUpdateSchema(Schema):
     title: Optional[str] = None
@@ -69,10 +73,15 @@ class ActivityUpdateSchema(Schema):
     allow_emojis: bool = True
     trust_document: bool = True
     word_limit: int = 0
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    is_visible: bool = True
+    allow_redo: bool = True
 
 class ThreadGetOrCreateSchema(Schema):
     activity_id: int
     user_id: int
+    attempt_number: Optional[int] = 1
 
 class MessageCreateSchema(Schema):
     thread_id: int
@@ -80,7 +89,7 @@ class MessageCreateSchema(Schema):
     role: str
     user_id: int
     username: Optional[str] = None 
-    model: Optional[str] = None 
+    model: Optional[str] = None
 
 # --- Output Schemas ---
 
@@ -117,6 +126,10 @@ class ActivityDetailSchema(ModelSchema):
     allow_emojis: bool
     trust_document: bool
     word_limit: int
+    start_date: Optional[datetime]
+    end_date: Optional[datetime]
+    is_visible: bool
+    allow_redo: bool
 
     class Meta:
         model = Activity
@@ -133,13 +146,17 @@ class ActivityDetailSchema(ModelSchema):
             "allow_questions",
             "allow_emojis",
             "trust_document",
-            "word_limit"
+            "word_limit",
+            "start_date",
+            "end_date",
+            "is_visible",
+            "allow_redo"
         ]
 
 class ThreadSchema(ModelSchema):
     class Meta:
         model = Thread
-        fields = ["id", "activity", "user", "created_at", "updated_at"]
+        fields = ["id", "activity", "user", "created_at", "updated_at", "attempt_number"]
 
 class MessageSchema(ModelSchema):
     class Meta:
@@ -171,3 +188,33 @@ class AnalyticsSchema(ModelSchema):
         model = Analytics
         model_fields = "__all__"
 
+
+class StudentDataSchema(Schema):
+    activities_count: int
+    messages_count: int
+    total_chars: int
+    messages: list
+    length_distribution: dict
+    student_length: int
+    activity_engagement: dict
+    retries_count: int
+
+class ConversationStatsSchema(Schema):
+    stats: list
+
+class SummaryResponseSchema(Schema):
+    summary: str
+
+class StudentAnalysisSchema(Schema):
+    analysis: str
+
+class ClusterResponseSchema(Schema):
+    clusters: list
+    features: list
+
+class WordFrequencySchema(Schema):
+    words: list
+    students: list
+
+class RawMessagesSchema(Schema):
+    messages: list

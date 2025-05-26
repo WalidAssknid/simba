@@ -25,12 +25,32 @@
         console.log("Activity ID parameter:", "{{ activity_id }}");
         console.log("User ID parameter:", "{{ user_id }}");
         console.log("Username parameter:", "{{ username }}");
+        console.log("Chainlit URL parameter:", "{{ chainlit_url }}");
+        console.log("Thread ID parameter:", "{{ thread_id }}");
+        
+        // Create global parameters that can be accessed by Chainlit
+        window.SIMBA_PARAMS = {
+            activity_id: "{{ activity_id }}",
+            user_id: "{{ user_id }}",
+            username: "{{ username }}",
+            thread_id: "{{ thread_id }}"
+        };
+        
+        // Also set URL params in localStorage as a backup
+        try {
+            localStorage.setItem('simba_activity_id', "{{ activity_id }}");
+            localStorage.setItem('simba_user_id', "{{ user_id }}");
+            localStorage.setItem('simba_username', "{{ username }}");
+            localStorage.setItem('simba_thread_id', "{{ thread_id }}");
+        } catch (e) {
+            console.warn("Could not save parameters to localStorage:", e);
+        }
     </script>
     
     <div class="chat-frame-container">
         <iframe 
             id="chainlitFrame"
-            src="http://localhost:8500/?activity_id={{ activity_id }}&user_id={{ user_id }}&username={{ username|urlencode }}&lang=en" 
+            src="{{ chainlit_url }}" 
             width="100%" 
             height="100%"
             frameborder="0"

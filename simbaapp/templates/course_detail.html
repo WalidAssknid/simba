@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="course-details">
+<div class="course-details" data-is-teacher="{{ is_teacher|lower }}">
     <div class="back-link">
         <a href="{% url 'courses' %}">
             <i class="fas fa-arrow-left"></i> Back to Courses
@@ -98,14 +98,24 @@
             {% endif %}
             
                 {% for activity in activities %}
-                <div class="activity-item" data-activity-id="{{ activity.id }}">
+                <div class="activity-item" data-activity-id="{{ activity.id }}" data-allow-redo="{{ activity.allow_redo|yesno:'true,false' }}">
                     <div class="activity-options">
+                        {% if is_teacher %}
                         <button class="activity-menu-toggle">
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
+                        {% endif %}
                         <div class="activity-menu">
+                            {% if is_teacher %}
                             <a href="#" class="activity-menu-item" data-action="edit" data-activity-id="{{ activity.id }}">
                                 <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <a href="#" class="activity-menu-item" data-action="chat" data-activity-id="{{ activity.id }}">
+                                <i class="fas fa-comment"></i> Chat with Activity
+                            </a>
+                            <a href="#" class="activity-menu-item" data-action="visibility" data-activity-id="{{ activity.id }}" data-is-visible="{{ activity.is_visible|yesno:'true,false' }}">
+                                <i class="fas fa-eye{% if not activity.is_visible %}-slash{% endif %}"></i> 
+                                {% if activity.is_visible %}Hide from Students{% else %}Show to Students{% endif %}
                             </a>
                             <a href="#" class="activity-menu-item" data-action="link" data-activity-id="{{ activity.id }}">
                                 <i class="fas fa-link"></i> Get Activity Link
@@ -113,13 +123,14 @@
                             <a href="#" class="activity-menu-item delete-activity" data-action="delete" data-activity-id="{{ activity.id }}">
                                 <i class="fas fa-trash"></i> Delete
                             </a>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="activity-content">
                         <h3 class="activity-title">{{ activity.title }}</h3>
                         <p class="activity-course">{{ course.title }}</p>
-                        </div>
                     </div>
+                </div>
                 {% empty %}
                     <div class="empty-state">
                     <h3>No activities found</h3>
@@ -138,12 +149,36 @@
         <!-- Chainlit Container -->
         <div id="chainlit-container" class="chainlit-container">
             <div class="chainlit-header">
-                <div class="back-link">
-                    <a href="#" id="back-to-activities">
-                        <i class="fas fa-arrow-left"></i> Back to Activities
-                    </a>
+                <div class="header-left">
+                    <div class="back-link">
+                        <a href="#" id="back-to-activities">
+                            <i class="fas fa-arrow-left"></i> <span class="back-text">Back to Activities</span>
+                        </a>
+                    </div>
                 </div>
-                <h3 id="activity-title-header"></h3>
+                <div class="header-center">
+                    <h3 id="activity-title-header"></h3>
+                </div>
+                <div class="header-right">
+                    {% if not is_teacher %}
+                    <div class="redo-controls" style="display: none;">
+                        <button class="btn btn-secondary redo-activity-btn" id="chainlit-redo-btn">
+                            <i class="fas fa-redo"></i> <span class="redo-text">Re-do Activity</span>
+                        </button>
+                        <div class="attempt-dropdown" id="chainlit-attempt-dropdown" style="display: none;">
+                            <select class="form-control attempt-selector" id="chainlit-attempt-selector">
+                                <option value="new">Start New Attempt</option>
+                            </select>
+                            <button class="btn btn-primary start-attempt-btn" id="chainlit-start-btn">
+                                Start
+                            </button>
+                            <button class="btn btn-secondary cancel-attempt-btn" id="chainlit-cancel-btn">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
             <div class="chainlit-frame-container">
                 <iframe id="chainlit-frame" frameborder="0"></iframe>
@@ -183,6 +218,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const chainlitFrame = document.getElementById('chainlit-frame');
     const backToActivitiesBtn = document.getElementById('back-to-activities');
     
+    // Function to force complete iframe reload (clears Chainlit session)
+    function forceChainlitReload(url) {
+        // Add timestamp to force cache busting
+        const timestamp = new Date().getTime();
+        const separator = url.includes('?') ? '&' : '?';
+        const urlWithTimestamp = `${url}${separator}_t=${timestamp}`;
+        
+        console.log('Force reloading Chainlit with URL:', urlWithTimestamp);
+        
+        // First clear the iframe
+        chainlitFrame.src = 'about:blank';
+        
+        // Wait a moment then load the new URL
+        setTimeout(() => {
+            chainlitFrame.src = urlWithTimestamp;
+        }, 200); // Increased timeout to 200ms for better clearing
+    }
+    
+    // Check for expand_activity URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const expandActivityId = urlParams.get('expand_activity');
+    
     // Activity items click handler
     document.querySelectorAll('.activity-item').forEach(item => {
         console.log('Adding click listener to activity:', item.dataset.activityId); // Debug log
@@ -193,82 +250,246 @@ document.addEventListener('DOMContentLoaded', function() {
                 const activityTitle = this.querySelector('.activity-title').textContent;
                 const userId = '{{ request.session.user_id }}';
                 const username = '{{ request.session.username }}';
+                const isTeacher = document.querySelector('.course-details').getAttribute('data-is-teacher') === 'true';
                 
                 console.log('Activity clicked:', activityId, activityTitle); // Debug log
                 
                 // Add pulse animation
                 this.classList.add('pulse');
                 
-                // Set activity title in chainlit view
-                activityTitleHeader.textContent = activityTitle;
-                
-                // Set iframe source
-                const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
-                chainlitFrame.src = chainlitUrl;
-                
-                // Hide activities container and show chainlit container
-                activitiesContainer.classList.add('hidden');
-                chainlitContainer.classList.add('active');
-                
-                // Add chainlit-active class to body for better layout control
-                document.body.classList.add('chainlit-active');
+                if (isTeacher) {
+                    // Teachers are redirected to dashboard when clicking directly on activity
+                    window.location.href = `/dashboard/?activity_id=${activityId}&active_tab=conversation-stats`;
+                } else {
+                    // Students use the chainlit interface
+                    // Set activity title in chainlit view
+                    activityTitleHeader.textContent = activityTitle;
+                    
+                    // Store current activity data for redo functionality
+                    window.currentActivity = {
+                        id: activityId,
+                        title: activityTitle,
+                        allowRedo: this.dataset.allowRedo === 'true'
+                    };
+                    
+                    // Show redo controls if activity allows redo
+                    const redoControls = document.querySelector('.redo-controls');
+                    if (redoControls && window.currentActivity.allowRedo) {
+                        redoControls.style.display = 'flex';
+                    }
+                    
+                    // Get the latest thread for this user and activity, then set iframe source
+                    fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
+                        .then(response => response.json())
+                        .then(attempts => {
+                            if (attempts && attempts.length > 0) {
+                                // Use the most recent attempt (first in the list since it's ordered by -attempt_number)
+                                const latestThread = attempts[0];
+                                const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${latestThread.id}`;
+                                console.log('Loading existing attempt:', latestThread.id);
+                                forceChainlitReload(chainlitUrl);
+                            } else {
+                                // No previous attempts, create new one first
+                                console.log('No previous attempts, creating first attempt');
+                                fetch(`/api/threads/new-attempt?activity_id=${activityId}&user_id=${userId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                })
+                                .then(response => response.json())
+                                .then(newThread => {
+                                    const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${newThread.id}`;
+                                    console.log('Loading new first attempt:', newThread.id);
+                                    forceChainlitReload(chainlitUrl);
+                                })
+                                .catch(error => {
+                                    console.error('Error creating first attempt:', error);
+                                    // Fallback to default URL without thread_id
+                                    const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
+                                    forceChainlitReload(chainlitUrl);
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error loading attempts:', error);
+                            const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
+                            forceChainlitReload(chainlitUrl);
+                        });
+                    
+                    activitiesContainer.classList.add('hidden');
+                    chainlitContainer.classList.add('active');
+                    
+                    document.body.classList.add('chainlit-active');
+                }
             }
         });
     });
+    
+    if (expandActivityId) {
+        const targetActivity = document.querySelector(`.activity-item[data-activity-id="${expandActivityId}"]`);
+        if (targetActivity) {   
+            targetActivity.click();
+            
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+        }
+    }
     
     // Back to activities button
     backToActivitiesBtn.addEventListener('click', function(e) {
         e.preventDefault();
         
-        // Hide chainlit container
         chainlitContainer.classList.remove('active');
         
-        // Show activities container
         activitiesContainer.classList.remove('hidden');
         
-        // Remove chainlit-active class from body
         document.body.classList.remove('chainlit-active');
         
-        // Clear iframe after transition (to prevent unnecessary resource usage)
+        const redoControls = document.querySelector('.redo-controls');
+        if (redoControls) {
+            redoControls.style.display = 'none';
+        }
+
+        if (window.innerWidth >= 769) {
+            console.log('Chainlit container style after deactivation (desktop):',
+                'display =', window.getComputedStyle(chainlitContainer).display,
+                'pointer-events =', window.getComputedStyle(chainlitContainer).pointerEvents);
+        }
+        
         setTimeout(() => {
             chainlitFrame.src = '';
         }, 300);
     });
     
-    // Activity menu toggles
+    const chainlitRedoBtn = document.getElementById('chainlit-redo-btn');
+    const chainlitAttemptDropdown = document.getElementById('chainlit-attempt-dropdown');
+    const chainlitAttemptSelector = document.getElementById('chainlit-attempt-selector');
+    const chainlitStartBtn = document.getElementById('chainlit-start-btn');
+    const chainlitCancelBtn = document.getElementById('chainlit-cancel-btn');
+    
+    if (chainlitRedoBtn) {
+        chainlitRedoBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (!window.currentActivity) return;
+            
+            const activityId = window.currentActivity.id;
+            const userId = '{{ request.session.user_id }}';
+            
+            fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
+                .then(response => response.json())
+                .then(attempts => {
+                    chainlitAttemptSelector.innerHTML = '<option value="new">Start New Attempt</option>';
+                    
+                    attempts.forEach(attempt => {
+                        const option = document.createElement('option');
+                        option.value = attempt.id;
+                        option.textContent = `Attempt ${attempt.attempt_number} (${new Date(attempt.created_at).toLocaleDateString()})`;
+                        chainlitAttemptSelector.appendChild(option);
+                    });
+                    
+                    chainlitRedoBtn.style.display = 'none';
+                    chainlitAttemptDropdown.style.display = 'flex';
+                })
+                .catch(error => {
+                    console.error('Error loading attempts:', error);
+                    alert('Failed to load previous attempts');
+                });
+        });
+    }
+    
+    if (chainlitStartBtn) {
+        chainlitStartBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (!window.currentActivity) return;
+            
+            const activityId = window.currentActivity.id;
+            const userId = '{{ request.session.user_id }}';
+            const username = '{{ request.session.username }}';
+            const selectedValue = chainlitAttemptSelector.value;
+            
+            if (selectedValue === 'new') {
+                console.log('Creating new attempt for activity:', activityId);
+                fetch(`/api/threads/new-attempt?activity_id=${activityId}&user_id=${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.message || 'Failed to create new attempt');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(newThread => {
+                    console.log('New thread created:', newThread);
+                    const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${newThread.id}`;
+                    console.log('Loading new attempt with URL:', chainlitUrl);
+                    forceChainlitReload(chainlitUrl);
+                    
+                    chainlitAttemptDropdown.style.display = 'none';
+                    chainlitRedoBtn.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error creating new attempt:', error);
+                    alert(`Failed to create new attempt: ${error.message}`);
+                });
+            } else {
+                console.log('Loading existing attempt with thread_id:', selectedValue);
+                const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${selectedValue}`;
+                console.log('Loading existing attempt with URL:', chainlitUrl);
+                forceChainlitReload(chainlitUrl);
+                
+                chainlitAttemptDropdown.style.display = 'none';
+                chainlitRedoBtn.style.display = 'block';
+            }
+        });
+    }
+    
+    if (chainlitCancelBtn) {
+        chainlitCancelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            chainlitAttemptDropdown.style.display = 'none';
+            chainlitRedoBtn.style.display = 'block';
+        });
+    }
+    
     const activityMenuToggles = document.querySelectorAll('.activity-menu-toggle');
     activityMenuToggles.forEach(toggle => {
         toggle.addEventListener('click', function(e) {
             e.preventDefault();
-            e.stopPropagation(); // Stop propagation to prevent triggering the activity item click
+            e.stopPropagation();
             const menu = this.nextElementSibling;
             
-            // If this menu is already active, just close it and do nothing else
             if (menu.classList.contains('active')) {
                 menu.classList.remove('active');
-                menu.classList.remove('position-left'); // Ensure position-left is also removed
+                menu.classList.remove('position-left');
                 menu.style.left = '';
                 menu.style.right = '';
                 menu.style.top = '';
                 return;
             }
 
-            closeAllMenus(); // Close all other menus first
+            closeAllMenus();
             menu.classList.add('active');
             
-            // Check if we're on mobile
             const isMobile = window.innerWidth <= 768;
             
             if (isMobile) {
-                // On mobile, always position to the right of the toggle button
                 menu.classList.remove('position-left');
                 
                 const toggleRect = this.getBoundingClientRect();
                 const menuWidth = 140; 
                 
                 menu.style.position = 'fixed';
-                menu.style.left = (toggleRect.right + 5) + 'px';
-                menu.style.top = (toggleRect.top + 8) + 'px';
+                menu.style.left = (toggleRect.right + 2) + 'px';
+                menu.style.top = (toggleRect.top + 2) + 'px';
                 menu.style.right = 'auto';
             } else {
                 menu.style.position = '';
@@ -276,23 +497,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 menu.style.right = '';
                 menu.style.top = '';
                 
-                menu.classList.remove('position-left'); // Reset to default (right)
+                menu.classList.remove('position-left');
                 
-                // Wait for next frame to get accurate positioning
                 requestAnimationFrame(() => {
                     const rect = menu.getBoundingClientRect();
                     const viewportWidth = window.innerWidth;
                     
-                    // If menu would overflow to the right, position it to the left
-                    if (rect.right > viewportWidth - 10) { // 10px margin from edge
+                    if (rect.right > viewportWidth - 10) {
                         menu.classList.add('position-left');
                     }
                     
-                    // Double check if it's still overflowing after positioning left
                     requestAnimationFrame(() => {
                         const newRect = menu.getBoundingClientRect();
-                        if (newRect.left < 10) { // If it overflows to the left now
-                            menu.classList.remove('position-left'); // Go back to right positioning
+                        if (newRect.left < 10) {
+                            menu.classList.remove('position-left');
                         }
                     });
                 });
@@ -300,7 +518,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Close menus when clicking outside
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.activity-options')) {
             closeAllMenus();
@@ -310,24 +527,20 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeAllMenus() {
         document.querySelectorAll('.activity-menu').forEach(menu => {
             menu.classList.remove('active');
-            menu.classList.remove('position-left'); // Also remove position-left class
-            // menu.style.left = '0'; // Removed inline style manipulation
-            // menu.style.right = 'auto'; // Removed inline style manipulation
+            menu.classList.remove('position-left');
         });
     }
     
-    // Remove pulse animation after it completes
     document.querySelectorAll('.activity-item').forEach(item => {
         item.addEventListener('animationend', function() {
             this.classList.remove('pulse');
         });
     });
     
-    // Activity menu actions
     document.querySelectorAll('.activity-menu-item').forEach(item => {
         item.addEventListener('click', function(e) {
             e.preventDefault();
-            e.stopPropagation(); // Stop propagation to prevent triggering the activity item click
+            e.stopPropagation();
             const action = this.dataset.action;
             const activityId = this.dataset.activityId;
             
@@ -342,14 +555,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         return response.json();
                     })
                     .then(activity => {
-                        // Log para depuração
                         console.log('Activity data received:', activity);
                         
                         const createModal = document.getElementById('activityModal');
                         const editModal = createModal.cloneNode(true);
                         editModal.id = 'editActivityModal';
                         
-                        // Update modal title and form attributes
                         editModal.querySelector('.modal-title').textContent = 'Edit Activity';
                         const form = editModal.querySelector('form');
                         form.action = '#';
@@ -363,16 +574,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         customPromptGroup.style.display = activity.expert_mode ? 'block' : 'none';
                         form.querySelector('#custom-prompt').value = activity.custom_prompt || '';
                         
-                        // Load existing questions
                         const questionsList = form.querySelector('#questions-list');
                         questionsList.innerHTML = '';
                         const questionsHidden = form.querySelector('#questions-hidden');
                         
                         if (activity.questions && activity.questions.length > 0) {
-                            // Create JS array from activity.questions
                             let questions = activity.questions;
                             
-                            // Display each question
                             questions.forEach(question => {
                                 const questionItem = document.createElement('div');
                                 questionItem.className = 'question-item';
@@ -391,11 +599,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 questionsList.appendChild(questionItem);
                             });
                             
-                            // Update hidden field with JSON
                             questionsHidden.value = JSON.stringify(questions);
                         }
                         
-                        // Set advanced options
                         form.querySelector('#agent-attitude').value = activity.agent_attitude;
                         form.querySelector('#subjects').value = activity.subjects || '';
                         form.querySelector('#restrict-to-subject').checked = activity.restrict_to_subject;
@@ -404,14 +610,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         form.querySelector('#trust-document').checked = activity.trust_document;
                         form.querySelector('#word-limit').value = activity.word_limit || 0;
                         
-                        // Update submit button text
                         form.querySelector('.form-actions button').textContent = 'Update Activity';
                         
-                        // Add event listener for form submission
                         form.addEventListener('submit', function(e) {
                             e.preventDefault();
                             
-                            // Gather updated activity data
+                           
                             const formData = {
                                 title: form.querySelector('#activity-title').value,
                                 description: form.querySelector('#activity-description').value,
@@ -427,7 +631,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 word_limit: parseInt(form.querySelector('#word-limit').value) || 0
                             };
                             
-                            // Send PUT request to update activity
                             console.log('Sending data:', formData);
                             fetch(`/api/activities/${activityId}?user_id=${userId}`, {
                                 method: 'PUT',
@@ -445,16 +648,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                 return response.json();
                             })
                             .then(updatedActivity => {
-                                // Update activity title in the list
                                 const activityItem = document.querySelector(`.activity-item[data-activity-id="${activityId}"]`);
                                 if (activityItem) {
                                     activityItem.querySelector('.activity-title').textContent = updatedActivity.title;
                                 }
                                 
-                                // Close modal
                                 document.body.removeChild(editModal);
                                 
-                                // Show success message
                                 alert('Activity updated successfully!');
                             })
                             .catch(error => {
@@ -463,32 +663,82 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                         });
                         
-                        // Set up close button behavior
                         const closeBtn = editModal.querySelector('.close');
                         closeBtn.addEventListener('click', function() {
                             document.body.removeChild(editModal);
                         });
                         
-                        // Setup other event listeners (questions, expert mode toggle, etc.)
                         setupEditModalEventListeners(editModal);
                         
-                        // Add modal to body
                         document.body.appendChild(editModal);
                         
-                        // Display the modal
                         editModal.style.display = 'block';
                     })
                     .catch(error => {
                         console.error('Error:', error);
                         alert('Failed to load activity details for editing.');
                     });
+            } else if (action === 'chat') {
+                const userId = '{{ request.session.user_id }}';
+                const username = '{{ request.session.username }}';
+                
+                const activityItem = document.querySelector(`.activity-item[data-activity-id="${activityId}"]`);
+                const activityTitle = activityItem ? activityItem.querySelector('.activity-title').textContent : 'Activity';
+                
+                activityTitleHeader.textContent = activityTitle;
+                
+                window.currentActivity = {
+                    id: activityId,
+                    title: activityTitle,
+                    allowRedo: false
+                };
+                
+                fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
+                    .then(response => response.json())
+                    .then(attempts => {
+                        if (attempts && attempts.length > 0) {
+                            const latestThread = attempts[0];
+                            const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${latestThread.id}`;
+                            console.log('Loading existing attempt:', latestThread.id);
+                            forceChainlitReload(chainlitUrl);
+                        } else {
+                            console.log('No previous attempts, creating first attempt');
+                            fetch(`/api/threads/new-attempt?activity_id=${activityId}&user_id=${userId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                            })
+                            .then(response => response.json())
+                            .then(newThread => {
+                                const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${newThread.id}`;
+                                console.log('Loading new first attempt:', newThread.id);
+                                forceChainlitReload(chainlitUrl);
+                            })
+                            .catch(error => {
+                                console.error('Error creating first attempt:', error);
+                                const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
+                                forceChainlitReload(chainlitUrl);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading attempts:', error);
+                        const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
+                        forceChainlitReload(chainlitUrl);
+                    });
+                
+                activitiesContainer.classList.add('hidden');
+                chainlitContainer.classList.add('active');
+                
+                document.body.classList.add('chainlit-active');
+                
+                closeAllMenus();
             } else if (action === 'link') {
-                // Show activity link modal
                 document.getElementById('activityLinkDisplay').textContent = 
                     `${window.location.origin}/chainlit/?activity_id=${activityId}`;
                 document.getElementById('activityLinkModal').style.display = 'block';
             } else if (action === 'delete') {
-                // Handle delete
                 if (confirm('Are you sure you want to delete this activity?')) {
                     const userId = '{{ request.session.user_id }}';
                     
@@ -499,16 +749,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                     })
                     .then(response => {
-                        if (response.status === 204) { // Success, no content
-                            // Remove the activity item from the DOM
+                        if (response.status === 204) {
                             const activityItem = document.querySelector(`.activity-item[data-activity-id="${activityId}"]`);
                             if (activityItem) {
                                 activityItem.remove();
                                 
-                                // Check if there are no more activities
                                 const activitiesList = document.querySelector('.activities-list');
                                 if (activitiesList.querySelectorAll('.activity-item').length === 0) {
-                                    // Add empty state message
                                     const emptyState = document.createElement('div');
                                     emptyState.className = 'empty-state';
                                     emptyState.innerHTML = `
@@ -535,11 +782,52 @@ document.addEventListener('DOMContentLoaded', function() {
                         alert('An unexpected error occurred while trying to delete the activity.');
                     });
                 }
+            } else if (action === 'visibility') {
+                const isVisible = this.dataset.isVisible === 'true';
+                const userId = '{{ request.session.user_id }}';
+                
+                fetch(`/api/activities/${activityId}/visibility?user_id=${userId}&is_visible=${!isVisible}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.message || 'Failed to update activity visibility');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(updatedActivity => {
+                    const menuItem = document.querySelector(`.activity-menu-item[data-action="visibility"][data-activity-id="${activityId}"]`);
+                    if (menuItem) {
+                        const newIsVisible = !isVisible;
+                        menuItem.dataset.isVisible = newIsVisible.toString();
+                        
+                        const icon = menuItem.querySelector('i');
+                        const text = menuItem.childNodes[menuItem.childNodes.length - 1];
+                        
+                        if (newIsVisible) {
+                            icon.className = 'fas fa-eye';
+                            text.textContent = ' Hide from Students';
+                        } else {
+                            icon.className = 'fas fa-eye-slash';
+                            text.textContent = ' Show to Students';
+                        }
+                    }
+                    
+                    alert(`Activity ${!isVisible ? 'shown to' : 'hidden from'} students successfully!`);
+                })
+                .catch(error => {
+                    console.error('Error updating activity visibility:', error);
+                    alert(`Failed to update activity visibility: ${error.message}`);
+                });
             }
         });
     });
     
-    // Function to set up event listeners for the edit modal
     function setupEditModalEventListeners(modal) {
         const expertMode = modal.querySelector('#activity-expert-mode');
         const customPromptGroup = modal.querySelector('#custom-prompt-group');
@@ -547,9 +835,32 @@ document.addEventListener('DOMContentLoaded', function() {
         const newQuestion = modal.querySelector('#new-question');
         const addQuestionBtn = modal.querySelector('#add-question');
         const questionsHidden = modal.querySelector('#questions-hidden');
+        
+        if (expertMode && !expertMode.closest('.checkbox-wrapper')) {
+            const expertModeGroup = expertMode.closest('.form-group');
+            if (expertModeGroup) {
+                const label = expertModeGroup.querySelector('label[for="activity-expert-mode"]');
+                const small = expertModeGroup.querySelector('small.form-text');
+                
+                expertModeGroup.className = 'form-group checkbox-group';
+                
+                const checkboxWrapper = document.createElement('div');
+                checkboxWrapper.className = 'checkbox-wrapper';
+                
+                expertMode.parentNode.removeChild(expertMode);
+                checkboxWrapper.appendChild(expertMode);
+                
+                if (label) {
+                    label.parentNode.removeChild(label);
+                    checkboxWrapper.appendChild(label);
+                }
+                
+                expertModeGroup.insertBefore(checkboxWrapper, expertModeGroup.firstChild);
+            }
+        }
+        
         let questions = [];
         
-        // If there are existing questions in the hidden field, parse them
         if (questionsHidden.value) {
             try {
                 questions = JSON.parse(questionsHidden.value);
@@ -559,12 +870,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Expert mode toggle
         expertMode.addEventListener('change', function() {
             customPromptGroup.style.display = this.checked ? 'block' : 'none';
         });
         
-        // Add question
         addQuestionBtn.addEventListener('click', function() {
             const questionText = newQuestion.value.trim();
             if (questionText) {
@@ -574,7 +883,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Enter key for adding questions
         newQuestion.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -582,21 +890,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Add a question to the list
         function addQuestion(text) {
             questions.push(text);
             updateQuestionsList();
             updateHiddenField();
         }
         
-        // Remove a question from the list
         function removeQuestion(index) {
             questions.splice(index, 1);
             updateQuestionsList();
             updateHiddenField();
         }
         
-        // Update the questions list display
         function updateQuestionsList() {
             questionsList.innerHTML = '';
             questions.forEach((question, index) => {
@@ -621,19 +926,16 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        // Update the hidden field with JSON
         function updateHiddenField() {
             questionsHidden.value = JSON.stringify(questions);
         }
         
-        // Set up removal of existing questions
         modal.querySelectorAll('.remove-question').forEach((btn, index) => {
             btn.addEventListener('click', function() {
                 removeQuestion(index);
             });
         });
         
-        // Close when clicking outside
         window.addEventListener('click', function(event) {
             if (event.target === modal) {
                 document.body.removeChild(modal);
@@ -641,7 +943,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Show enrollment code modal
     const showEnrollmentCodeBtn = document.getElementById('showEnrollmentCode');
     if (showEnrollmentCodeBtn) {
         showEnrollmentCodeBtn.addEventListener('click', function() {
@@ -649,7 +950,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Show participants modal
     const showParticipantsBtn = document.getElementById('showParticipants');
     if (showParticipantsBtn) {
         showParticipantsBtn.addEventListener('click', function() {
@@ -657,14 +957,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Close modals
     document.querySelectorAll('.close').forEach(closeBtn => {
         closeBtn.addEventListener('click', function() {
             this.closest('.modal').style.display = 'none';
         });
     });
     
-    // Copy activity link
     const copyLinkBtn = document.querySelector('.copy-link-btn');
     if (copyLinkBtn) {
         copyLinkBtn.addEventListener('click', function() {
@@ -683,7 +981,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Function to get CSRF token (if ever needed, currently API has csrf=False)
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -698,9 +995,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return cookieValue;
     }
-    // const csrftoken = getCookie('csrftoken'); // Example
 
-    // Event delegation for remove participant button clicks
     const participantsModalList = document.querySelector('#participantsModal .participants-list');
     if (participantsModalList) {
         participantsModalList.addEventListener('click', function(event) {
@@ -708,7 +1003,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (removeButton) {
                 const enrollmentId = removeButton.dataset.enrollmentId;
                 const username = removeButton.dataset.username;
-                const currentUserId = '{{ request.session.user_id }}'; // Get current logged-in user ID
+                const currentUserId = '{{ request.session.user_id }}';
 
                 if (!currentUserId) {
                     alert("Error: Could not verify current user. Please re-login.");
@@ -720,31 +1015,26 @@ document.addEventListener('DOMContentLoaded', function() {
                         method: 'DELETE',
                         headers: {
                             'Content-Type': 'application/json',
-                            // 'X-CSRFToken': csrftoken, // Include if CSRF protection is enabled for API
-                            // 'Authorization': 'Bearer YOUR_JWT_TOKEN_IF_APPLICABLE'
                         },
                     })
                     .then(response => {
-                        if (response.status === 204) { // HTTP 204 No Content - Success
+                        if (response.status === 204) {
                             const participantCard = removeButton.closest('.participant-card');
                             if (participantCard) {
                                 participantCard.remove();
                             }
                             
-                            // Show a custom success message
                             const successMsg = document.createElement('p');
                             successMsg.textContent = `${username} removed successfully.`;
                             successMsg.style.color = 'green';
-                            successMsg.style.textAlign = 'center'; // Ensure text is centered
+                            successMsg.style.textAlign = 'center';
                             successMsg.style.marginBottom = '15px'; 
                             successMsg.style.marginTop = '10px'; 
 
                             const modalTitle = document.querySelector('#participantsModal .modal-title');
                             if (modalTitle) {
-                                // Insert after the title, making it appear below and centered
                                 modalTitle.insertAdjacentElement('afterend', successMsg);
                             } else {
-                                // Fallback if title isn't found (should not happen)
                                 const participantsList = document.querySelector('#participantsModal .participants-list');
                                 if (participantsList) participantsList.prepend(successMsg);
                             }

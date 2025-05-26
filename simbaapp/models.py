@@ -56,6 +56,10 @@ class Activity(models.Model):
     allow_emojis = models.BooleanField(default=True)
     trust_document = models.BooleanField(default=True)
     word_limit = models.PositiveIntegerField(default=0)
+    start_date = models.DateTimeField(blank=True, null=True)
+    end_date = models.DateTimeField(blank=True, null=True)
+    is_visible = models.BooleanField(default=True)
+    allow_redo = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -68,11 +72,15 @@ class Activity(models.Model):
 class Thread(models.Model):
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="threads")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    attempt_number = models.PositiveIntegerField(default=1)
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = (("activity", "user", "attempt_number"),)
+
     def __str__(self):
-        return f"Thread by {self.user} on {self.activity}"
+        return f"Thread by {self.user} on {self.activity} (Attempt {self.attempt_number})"
 
 
 class Message(models.Model):

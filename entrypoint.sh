@@ -49,7 +49,7 @@ if not Activity.objects.filter(title='at').exists():
         title='at',
         description='ad',
         course=course,
-        user=teacher
+        owner=teacher
     )
     print('Default activity created successfully')
 else:

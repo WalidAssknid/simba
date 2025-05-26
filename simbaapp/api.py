@@ -33,7 +33,25 @@ from .schemas import (
     WordFrequencySchema,
     RawMessagesSchema
 )
-import eventTracking as et
+from .eventTracking import (
+    accountCreated,
+    createdActivity,
+    closedChat,
+    closedCourse,
+    createdCourse,
+    deletedActivity,
+    deletedCourse,
+    joinedActivity,
+    joinedCourse,
+    loggedIn,
+    loggedOut,
+    modifiedActivity,
+    modifiedCourse,
+    modifiedProfile,
+    openedChat,
+    openedCourse,
+    sentMessage 
+)
 import time
 
 from django.shortcuts import get_object_or_404
@@ -70,7 +88,7 @@ def register_user(request, payload: UserRegisterSchema):
             password_hash=hashed_password,
             role=payload.role
         )
-        et.accountCreated(user.id,time.time())
+        accountCreated(user.id,time.time())
         return HTTPStatus.CREATED, user
     except Exception as e:
         return HTTPStatus.BAD_REQUEST, {"message": f"Registration failed: {str(e)}"}
@@ -83,7 +101,7 @@ def login_user(request, payload: SignInSchema):
     try:
         user = User.objects.get(username=payload.username)
         if check_password(payload.password, user.password_hash):
-            et.loggedIn(user.id, time.time())
+            loggedIn(user.id, time.time())
             return HTTPStatus.OK, user
         else:
             return HTTPStatus.UNAUTHORIZED, {"message": "Invalid credentials."}
@@ -122,7 +140,7 @@ def update_user_profile(request, user_id: int, payload: UserUpdateSchema):
         user.username = payload.username
         user.email = payload.email
         user.save()
-        et.modifiedProfile(user.id,{"username" : user.username, "email" : user.email},time.time())
+        modifiedProfile(user.id,{"username" : user.username, "email" : user.email},time.time())
         return HTTPStatus.OK, user
     except User.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "User not found."}
@@ -146,7 +164,7 @@ def create_course_api(request, payload: CourseCreateSchema, user_id: int):
             description=payload.description,
             owner=user
         )
-        et.createdCourse(user_id,course.id,{"title" : payload.title,"description" : payload.description, "owner" : user.id},time.time())
+        createdCourse(user_id,course.id,{"title" : payload.title,"description" : payload.description, "owner" : user.id},time.time())
         return HTTPStatus.CREATED, course
     except User.DoesNotExist:
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
@@ -168,7 +186,7 @@ def update_course_api(request, course_id: int, payload: CourseUpdateSchema, user
         course.title = payload.title
         course.description = payload.description if payload.description else course.description
         course.save()
-        et.modifiedCourse(user_id,course_id,{"title" : course.title,"description" : course.description, "owner" : user.id},time.time())
+        modifiedCourse(user_id,course_id,{"title" : course.title,"description" : course.description, "owner" : user.id},time.time())
         return HTTPStatus.OK, course
     except User.DoesNotExist:
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
@@ -190,7 +208,7 @@ def delete_course_api(request, course_id: int, user_id: int):
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can delete this course."}
         
         course.delete()
-        et.deletedCourse(user_id,course_id,time.time())
+        deletedCourse(user_id,course_id,time.time())
         return HTTPStatus.NO_CONTENT, None
     except User.DoesNotExist:
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
@@ -214,7 +232,7 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: int):
 
         activity = Activity.objects.create(
             course=course,
-            user=user,
+            owner=user,
             title=payload.title if payload.title else f"Activity for {course.title}",
             description=payload.description,
             expert_mode=payload.expert_mode,
@@ -232,7 +250,7 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: int):
             is_visible=payload.is_visible,
             allow_redo=payload.allow_redo
         )
-        et.createdActivity(user_id,activity.id,{"course":payload.course_id,
+        createdActivity(user_id,activity.id,{"course":payload.course_id,
             "user":user_id,
             "title":activity.title,
             "description":payload.description,
@@ -285,8 +303,8 @@ def update_activity_api(request, activity_id: int, payload: ActivityUpdateSchema
         activity.allow_redo = payload.allow_redo
         
         activity.save()
-        et.modifiedActivity(user_id,activity_id,{"course":activity.course,
-            "user":user_id,
+        modifiedActivity(user_id,activity_id,{"course":activity.course,
+            "owner":user_id,
             "title":activity.title,
             "description":payload.description,
             "expert_mode":payload.expert_mode,
@@ -317,11 +335,11 @@ def delete_activity_api(request, activity_id: int, user_id: int):
         user = User.objects.get(id=user_id)
         activity = Activity.objects.select_related('course').get(id=activity_id)
         
-        if activity.course.owner_id != user.id or user.role != 'teacher':
+        if activity.course.owner.id != user.id or user.role != 'teacher':
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can delete this activity."}
         
         activity.delete()
-        et.deletedActivity(user_id,activity_id,time.time())
+        deletedActivity(user_id,activity_id,time.time())
         return HTTPStatus.NO_CONTENT, None
     except User.DoesNotExist:
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
@@ -370,6 +388,8 @@ def get_or_create_thread_api(request, payload: ThreadGetOrCreateSchema):
         status_code = HTTPStatus.CREATED if created else HTTPStatus.OK
         if not created:
              thread.save(update_fields=['updated_at'])
+
+        openedChat(payload.user_id,thread.id,time.time())
              
         return status_code, thread
         
@@ -399,6 +419,8 @@ def create_new_attempt_api(request, activity_id: int, user_id: int):
             user_id=user_id,
             attempt_number=new_attempt_number
         )
+
+        openedChat(user_id,thread.id,time.time())
         
         return HTTPStatus.CREATED, thread
         
@@ -460,6 +482,8 @@ def create_message_api(request, thread_id: int, payload: MessageCreateSchema):
             message_number=last_num + 1,
             metadata=metadata
         )
+
+        sentMessage(payload.user_id,message.id,payload.content,time.time())
         return HTTPStatus.CREATED, message
     except Thread.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "Thread not found."}

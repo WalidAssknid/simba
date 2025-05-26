@@ -43,7 +43,7 @@ class CourseEnrollment(models.Model):
 
 class Activity(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="activities")
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     expert_mode = models.BooleanField(default=False)

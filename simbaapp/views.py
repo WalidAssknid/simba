@@ -115,7 +115,7 @@ def chainlit_view(request):
         username = request.session.get('username', 'User')
         
         if thread_id:
-            chainlit_url = f"http://chainlit:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={thread_id}&lang=en"
+            chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={thread_id}&lang=en"
         else:
             try:
                 from django.urls import reverse
@@ -126,21 +126,21 @@ def chainlit_view(request):
                     attempts = response.json()
                     if attempts:
                         latest_thread_id = attempts[0]['id']
-                        chainlit_url = f"http://chainlit:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={latest_thread_id}&lang=en"
+                        chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={latest_thread_id}&lang=en"
                     else:
                         create_api_url = request.build_absolute_uri(reverse('api-1.0.0:create_new_attempt_api') + f"?activity_id={activity_id}&user_id={user_id}")
                         create_response = requests.post(create_api_url)
                         
                         if create_response.status_code == 201:
                             new_thread = create_response.json()
-                            chainlit_url = f"http://chainlit:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={new_thread['id']}&lang=en"
+                            chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={new_thread['id']}&lang=en"
                         else:
-                            chainlit_url = f"http://chainlit:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
+                            chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
                 else:
-                    chainlit_url = f"http://chainlit:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
+                    chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
                     
             except Exception as e:
-                chainlit_url = f"http://chainlit:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
+                chainlit_url = f"http://localhost:8500/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
                 
         context = {
             'activity': activity,

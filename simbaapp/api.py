@@ -26,6 +26,8 @@ from .schemas import (
     ThreadSchema,
     ActivityDetailSchema
 )
+import eventTracking as et
+import time
 
 from django.shortcuts import get_object_or_404
 from http import HTTPStatus
@@ -61,6 +63,7 @@ def register_user(request, payload: UserRegisterSchema):
             password_hash=hashed_password,
             role=payload.role
         )
+        et.accountCreated(user.id,time.time())
         return HTTPStatus.CREATED, user
     except Exception as e:
         return HTTPStatus.BAD_REQUEST, {"message": f"Registration failed: {str(e)}"}
@@ -73,6 +76,7 @@ def login_user(request, payload: SignInSchema):
     try:
         user = User.objects.get(username=payload.username)
         if check_password(payload.password, user.password_hash):
+            et.loggedIn(user.id, time.time())
             return HTTPStatus.OK, user
         else:
             return HTTPStatus.UNAUTHORIZED, {"message": "Invalid credentials."}
@@ -111,7 +115,7 @@ def update_user_profile(request, user_id: int, payload: UserUpdateSchema):
         user.username = payload.username
         user.email = payload.email
         user.save()
-        
+        et.modifiedProfile(user.id,{"username" : user.username, "email" : user.email},time.time())
         return HTTPStatus.OK, user
     except User.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "User not found."}
@@ -135,6 +139,7 @@ def create_course_api(request, payload: CourseCreateSchema, user_id: int):
             description=payload.description,
             owner=user
         )
+        et.createdCourse(user_id,course.id,{"title" : payload.title,"description" : payload.description, "owner" : user.id},time.time())
         return HTTPStatus.CREATED, course
     except User.DoesNotExist:
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
@@ -156,7 +161,7 @@ def update_course_api(request, course_id: int, payload: CourseUpdateSchema, user
         course.title = payload.title
         course.description = payload.description if payload.description else course.description
         course.save()
-        
+        et.modifiedCourse(user_id,course_id,{"title" : course.title,"description" : course.description, "owner" : user.id},time.time())
         return HTTPStatus.OK, course
     except User.DoesNotExist:
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
@@ -178,7 +183,7 @@ def delete_course_api(request, course_id: int, user_id: int):
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can delete this course."}
         
         course.delete()
-        
+        et.deletedCourse(user_id,course_id,time.time())
         return HTTPStatus.NO_CONTENT, None
     except User.DoesNotExist:
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
@@ -216,6 +221,21 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: int):
             trust_document=payload.trust_document,
             word_limit=payload.word_limit
         )
+        et.createdActivity(user_id,activity.id,{"course":payload.course_id,
+            "user":user_id,
+            "title":activity.title,
+            "description":payload.description,
+            "expert_mode":payload.expert_mode,
+            "custom_prompt":payload.custom_prompt,
+            "questions":payload.questions,
+            "agent_attitude":payload.agent_attitude,
+            "subjects":payload.subjects,
+            "restrict_to_subject":payload.restrict_to_subject,
+            "allow_questions":payload.allow_questions,
+            "allow_emojis":payload.allow_emojis,
+            "trust_document":payload.trust_document,
+            "word_limit":payload.word_limit},
+            time.time())
         return HTTPStatus.CREATED, activity
     except User.DoesNotExist:
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
@@ -250,7 +270,21 @@ def update_activity_api(request, activity_id: int, payload: ActivityUpdateSchema
         activity.word_limit = payload.word_limit
         
         activity.save()
-        
+        et.modifiedActivity(user_id,activity_id,{"course":activity.course,
+            "user":user_id,
+            "title":activity.title,
+            "description":payload.description,
+            "expert_mode":payload.expert_mode,
+            "custom_prompt":payload.custom_prompt,
+            "questions":payload.questions,
+            "agent_attitude":payload.agent_attitude,
+            "subjects":payload.subjects,
+            "restrict_to_subject":payload.restrict_to_subject,
+            "allow_questions":payload.allow_questions,
+            "allow_emojis":payload.allow_emojis,
+            "trust_document":payload.trust_document,
+            "word_limit":payload.word_limit},
+            time.time())
         return HTTPStatus.OK, activity
     except User.DoesNotExist:
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
@@ -272,7 +306,7 @@ def delete_activity_api(request, activity_id: int, user_id: int):
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can delete this activity."}
         
         activity.delete()
-        
+        et.deletedActivity(user_id,activity_id,time.time())
         return HTTPStatus.NO_CONTENT, None
     except User.DoesNotExist:
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}

@@ -7,6 +7,11 @@ import logging
 import httpx
 import asyncio
 
+if os.getenv('DEBUG', 'True').lower() == 'true':
+    os.environ.setdefault('CHAINLIT_HOST', '0.0.0.0')
+    os.environ.setdefault('CHAINLIT_PORT', '8500')
+    os.environ.setdefault('CHAINLIT_ALLOW_ORIGINS', '*')
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -7,13 +7,18 @@ services:
       - .env
     environment:
       - DB_HOST=db
+      - SIMBA_API_URL=http://web:8000/api
     volumes:
       - web:/code
+      - static_volume:/app/static
+      - media_volume:/app/media
     entrypoint: ["sh", "/code/entrypoint.sh"]
     ports:
       - "8000:8000"
     depends_on:
       - db
+    networks:
+      - simba-network
   
   chainlit:
     build: .
@@ -21,14 +26,23 @@ services:
       - .env
     environment:
       - DB_HOST=db
+      - CHAINLIT_HOST=0.0.0.0
+      - CHAINLIT_PORT=8500
+      - CHAINLIT_ROOT_PATH=/
+      - CHAINLIT_ALLOW_ORIGINS=*
+      - SIMBA_API_URL=http://web:8000/api
     volumes:
       - web:/code
-    command: ["chainlit", "run", "chainlit_app.py", "--host", "0.0.0.0", "--port", "8500"]
+      - ./public:/code/public
+      - ./.chainlit:/code/.chainlit
+    command: ["chainlit", "run", "chainlit_app.py", "--host", "0.0.0.0", "--port", "8500", "--no-cache"]
     ports:
       - "8500:8500"
     depends_on:
       - db
       - web
+    networks:
+      - simba-network
   
   db:
     image: postgres:16
@@ -43,7 +57,15 @@ services:
     ports:
       - "5433:5433"
     command: ["postgres", "-c", "port=5433"]
+    networks:
+      - simba-network
 
 volumes:
   web:
   db:
+  static_volume:
+  media_volume:
+
+networks:
+  simba-network:
+    driver: bridge

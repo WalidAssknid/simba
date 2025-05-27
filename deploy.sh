@@ -63,7 +63,7 @@ case $ENVIRONMENT in
     "production"|"prod")
         ENVIRONMENT="production"
         COMPOSE_FILE="docker-compose.prod.yml"
-        ENV_FILE=".env.production"
+        ENV_FILE=".env"
         HOST_CHECK="simba-refact.irit.fr"
         ;;
     "staging")

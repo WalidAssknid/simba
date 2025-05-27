@@ -7,6 +7,9 @@ import logging
 import httpx
 import asyncio
 
+if not os.getenv('CHAINLIT_ROOT_PATH'):
+    os.environ['CHAINLIT_ROOT_PATH'] = '/chainlit'
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

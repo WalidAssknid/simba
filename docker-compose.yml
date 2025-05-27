@@ -26,15 +26,10 @@ services:
       - .env
     environment:
       - DB_HOST=db
-      - CHAINLIT_HOST=0.0.0.0
-      - CHAINLIT_PORT=8500
-      - CHAINLIT_ALLOW_ORIGINS=*
       - SIMBA_API_URL=http://web:8000/api
     volumes:
       - web:/code
-      - ./public:/code/public
-      - ./.chainlit:/code/.chainlit
-    command: ["chainlit", "run", "chainlit_app.py", "--host", "0.0.0.0", "--port", "8500", "--no-cache"]
+    command: ["chainlit", "run", "chainlit_app.py", "--host", "0.0.0.0", "--port", "8500"]
     ports:
       - "8500:8500"
     depends_on:

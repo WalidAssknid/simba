@@ -28,17 +28,9 @@ class User(models.Model):
         return self.get_owned_courses_count() < 3
     
     def can_create_activity(self, course=None):
-        """Check if user can create a new activity (limit: 6 per course)"""
-        if course:
-            course_activities_count = Activity.objects.filter(owner=self, course=course).count()
-            return course_activities_count < 6
-        else:
-            owned_courses = Course.objects.filter(owner=self)
-            for owned_course in owned_courses:
-                course_activities_count = Activity.objects.filter(owner=self, course=owned_course).count()
-                if course_activities_count < 6:
-                    return True
-            return False
+        """Check if user can create a new activity (limit: 6 total)"""
+        total_activities_count = Activity.objects.filter(owner=self).count()
+        return total_activities_count < 6
     
     def can_join_course(self):
         """Check if user can join a new course (limit: 3 total including owned)"""

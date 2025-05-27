@@ -312,8 +312,8 @@ def create_activity_view(request, course_id):
         
         # Check if user can create activities (limit check)
         if not user.can_create_activity(course):
-            current_activities = Activity.objects.filter(owner=user, course=course).count()
-            messages.error(request, f"You can only create up to 6 activities per course. This course currently has {current_activities} activities.")
+            total_activities = Activity.objects.filter(owner=user).count()
+            messages.error(request, f"You can only create up to 6 activities total. You currently have {total_activities} activities.")
             return redirect('course_detail', course_id=course_id)
         
         # Check if user has permission to create activities in this course
@@ -486,47 +486,44 @@ def dashboard_view(request):
     student_enrollments = CourseEnrollment.objects.filter(user=user, role='student')
     student_courses = Course.objects.filter(enrollments__in=student_enrollments)
     
+    # Determine available roles for the user
+    has_teacher_role = all_teacher_courses.exists()
+    has_student_role = student_courses.exists()
+    
     # Determine default view_as based on available roles
     view_as = request.GET.get('view_as')
     if not view_as:
         # Auto-detect: prefer teacher if available, otherwise student
-        if all_teacher_courses.exists():
+        if has_teacher_role:
             view_as = 'teacher'
-        elif student_courses.exists():
+        elif has_student_role:
             view_as = 'student'
         else:
-            # User has no courses at all
-            messages.info(request, "You need to create or join a course first to access the dashboard.")
-            return redirect('courses')
+            # User has no courses at all, default to teacher view
+            view_as = 'teacher'
     
+    # Handle view selection and show appropriate warnings
     if view_as == 'teacher':
-        courses = all_teacher_courses.order_by('-created_at')
-        
-        if not courses.exists():
-            # User requested teacher view but has no teacher courses
-            if student_courses.exists():
-                # Redirect to student view instead
-                return redirect(f"{request.path}?view_as=student")
-            else:
-                messages.info(request, "You don't have any courses as a teacher. Create a course or join one as a teacher to access the teacher dashboard.")
-                return redirect('courses')
+        if not has_teacher_role:
+            # User selected teacher view but has no teacher courses
+            messages.warning(request, "You don't have any courses as a teacher. Create a course or join one as a teacher to access teacher features.")
+            courses = Course.objects.none()  # Empty queryset
+        else:
+            courses = all_teacher_courses.order_by('-created_at')
     else:  # view_as == 'student'
-        courses = student_courses.order_by('-created_at')
-        
-        if not courses.exists():
-            # User requested student view but has no student courses
-            if all_teacher_courses.exists():
-                # Redirect to teacher view instead
-                return redirect(f"{request.path}?view_as=teacher")
-            else:
-                messages.info(request, "You don't have any courses as a student. Join a course as a student to access the student dashboard.")
-                return redirect('courses')
+        if not has_student_role:
+            # User selected student view but has no student courses
+            messages.warning(request, "You are not enrolled as a student in any courses. Join a course as a student to view your statistics.")
+            courses = Course.objects.none()  # Empty queryset
+        else:
+            courses = student_courses.order_by('-created_at')
     selected_course_id = request.GET.get('course_id')
     selected_activity_id = request.GET.get('activity_id')
     
     # Set default tab based on view_as
     if view_as == 'student':
-        active_tab = request.GET.get('active_tab', 'student-stats')
+        # Force student-stats tab for student view
+        active_tab = 'student-stats'
     else:
         active_tab = request.GET.get('active_tab', 'conversation-stats')
     
@@ -764,7 +761,9 @@ def dashboard_view(request):
         'active_tab': active_tab,
         'view_as': view_as,
         'user': user,
-        'student_personal_stats': student_personal_stats
+        'student_personal_stats': student_personal_stats,
+        'has_teacher_role': has_teacher_role,
+        'has_student_role': has_student_role
     }
     
     context['activity_names_json'] = json.dumps(activity_names)

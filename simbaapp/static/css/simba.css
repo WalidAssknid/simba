@@ -1169,7 +1169,6 @@ body.auth-page .header {
   overflow: visible;
   cursor: pointer;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
-  z-index: 1;
   pointer-events: auto;
 }
 
@@ -1215,7 +1214,7 @@ body.auth-page .header {
   border-radius: 4px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   width: 180px;
-  z-index: 1010;
+  z-index: 1060;
   display: none;
   font-size: 0.9rem;
 }
@@ -1409,12 +1408,12 @@ body.auth-page .header {
   .activity-menu {
     width: 140px;
     font-size: 0.85rem;
-    z-index: 1011 !important;
+    z-index: 1060 !important;
   }
 
   .activity-menu.active {
     display: block !important;
-    z-index: 1011 !important;
+    z-index: 1060 !important;
   }
 
   .activity-options {
@@ -1822,12 +1821,12 @@ body.auth-page .header {
   .activity-menu {
     width: 140px;
     font-size: 0.85rem;
-    z-index: 1011 !important;
+    z-index: 1060 !important;
   }
 
   .activity-menu.active {
     display: block !important;
-    z-index: 1011 !important;
+    z-index: 1060 !important;
   }
 
   .activity-options {
@@ -1929,7 +1928,7 @@ body.auth-page .header {
 
 .activity-menu.active {
   display: block;
-  z-index: 1000;
+  z-index: 1060;
   position: absolute;
   background-color: white;
   border: 1px solid var(--border-color);

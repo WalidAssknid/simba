@@ -782,11 +782,11 @@
   <div class="tab {% if active_tab == 'raw-data' %}active{% endif %}" data-tab="raw-data">Raw Data</div>
   {% else %}
   <div class="tab {% if active_tab == 'student-stats' or active_tab == 'conversation-stats' %}active{% endif %}" data-tab="student-stats">My Stats</div>
-  <div class="tab {% if active_tab == 'raw-data' %}active{% endif %}" data-tab="raw-data">My Messages</div>
   {% endif %}
 </div>
 
 <!-- Conversation Stats Tab -->
+{% if view_as == 'teacher' %}
 <div id="conversation-stats" class="tab-content {% if active_tab == 'conversation-stats' %}active{% endif %}">
   <div class="metric-cards">
     <div class="metric-card">
@@ -861,6 +861,7 @@
     <div id="summary-spinner" class="spinner"></div>
   </div>
 </div>
+{% endif %}
 
 <!-- Student Stats Tab -->
 <div id="student-stats" class="tab-content {% if active_tab == 'student-stats' %}active{% endif %}">
@@ -929,6 +930,7 @@
 </div>
 
 <!-- Students Engagement Tab (previously Student Clusters) -->
+{% if view_as == 'teacher' %}
 <div id="student-engagement" class="tab-content {% if active_tab == 'student-engagement' %}active{% endif %}">
   <div class="chart-container">
     <h3>Word Cloud Analysis</h3>
@@ -998,8 +1000,10 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 <!-- Raw Data Tab -->
+{% if view_as == 'teacher' %}
 <div id="raw-data" class="tab-content {% if active_tab == 'raw-data' %}active{% endif %}">
   <div class="chart-container">
     <h3>{% if view_as == 'student' %}My Conversation History{% else %}Raw Conversation Data{% endif %}</h3>
@@ -1059,6 +1063,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -1224,11 +1229,19 @@
   }
   
   function updateDashboard() {
-    const viewAs = document.getElementById('view-as-filter').value;
+    const viewAsFilter = document.getElementById('view-as-filter');
+    const viewAs = viewAsFilter ? viewAsFilter.value : '{{ view_as }}';
+    console.log('updateDashboard called with viewAs:', viewAs, 'hasTeacherRole:', '{{ has_teacher_role|yesno:"true,false" }}', 'hasStudentRole:', '{{ has_student_role|yesno:"true,false" }}');
     const courseId = document.getElementById('course-filter').value;
     const activityId = document.getElementById('activity-filter').value;
     
-    const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
+    let activeTab = document.querySelector('.tab.active');
+    let activeTabName = activeTab ? activeTab.getAttribute('data-tab') : 'student-stats';
+    
+    // Force student-stats tab for student view
+    if (viewAs === 'student') {
+      activeTabName = 'student-stats';
+    }
     
     const url = new URL(window.location);
     
@@ -1246,9 +1259,9 @@
       url.searchParams.set('activity_id', activityId);
     }
     
-    url.searchParams.set('active_tab', activeTab);
+    url.searchParams.set('active_tab', activeTabName);
     
-    if (activeTab === 'student-stats') {
+    if (activeTabName === 'student-stats') {
       const studentFilter = document.getElementById('student-filter');
       if (studentFilter && studentFilter.value) {
         url.searchParams.set('student_id', studentFilter.value);

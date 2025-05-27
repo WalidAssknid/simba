@@ -4,12 +4,12 @@ SIMBA
 
 __version__ = "1.0.0"
 __version_info__ = (1, 0, 0)
-__build_date__ = "2025-01-09"
+__build_date__ = "27/05/2025"
 __author__ = "SIMBA Team"
 
 VERSION_HISTORY = {
     "1.0.0": {
-        "date": "2025-01-09",
+        "date": "27/05/2025",
         "features": [
             "Role-based access control per course",
             "Dashboard with teacher/student views",

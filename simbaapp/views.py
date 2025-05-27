@@ -113,7 +113,7 @@ def chainlit_view(request):
         if 'localhost' in request.get_host() or '127.0.0.1' in request.get_host():
             chainlit_base_url = "http://localhost:8500"
         else:
-            chainlit_base_url = f"http://{request.get_host()}:8500"
+            chainlit_base_url = f"https://{request.get_host()}:8500"
         
         if thread_id:
             chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={thread_id}&lang=en"

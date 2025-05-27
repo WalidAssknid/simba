@@ -51,8 +51,8 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-if ! command -v docker-compose &> /dev/null; then
-    print_error "Docker Compose is not installed or not in PATH"
+if ! docker compose version &> /dev/null; then
+    print_error "Docker Compose is not available"
     exit 1
 fi
 
@@ -118,26 +118,26 @@ if [ "$ENVIRONMENT" = "production" ]; then
 fi
 
 print_step "Stopping existing containers..."
-docker-compose -f $COMPOSE_FILE down || true
+docker compose -f $COMPOSE_FILE down || true
 print_success "Containers stopped"
 
 if [ "$ENVIRONMENT" = "production" ]; then
     print_step "Pulling latest Docker images..."
-    docker-compose -f $COMPOSE_FILE pull || print_warning "Some images may need to be built locally"
+    docker compose -f $COMPOSE_FILE pull || print_warning "Some images may need to be built locally"
 fi
 
 print_step "Building and starting containers..."
-docker-compose -f $COMPOSE_FILE up --build -d
+docker compose -f $COMPOSE_FILE up --build -d
 
 print_step "Waiting for services to be ready..."
 sleep 15
 
 print_step "Running database migrations..."
-docker-compose -f $COMPOSE_FILE exec -T web python manage.py migrate
+docker compose -f $COMPOSE_FILE exec -T web python manage.py migrate
 
 if [ "$ENVIRONMENT" = "production" ]; then
     print_step "Collecting static files..."
-    docker-compose -f $COMPOSE_FILE exec -T web python manage.py collectstatic --noinput
+    docker compose -f $COMPOSE_FILE exec -T web python manage.py collectstatic --noinput
     print_success "Static files collected"
 fi
 
@@ -147,19 +147,19 @@ if [ "$ENVIRONMENT" = "production" ]; then
     if curl -f http://localhost:8000 > /dev/null 2>&1; then
         print_success "Application is responding on port 8000 (nginx proxy)"
     else
-        print_warning "Application might not be ready yet. Check logs: docker-compose -f $COMPOSE_FILE logs"
+        print_warning "Application might not be ready yet. Check logs: docker compose -f $COMPOSE_FILE logs"
     fi
 else    
     if curl -f http://localhost:8000 > /dev/null 2>&1; then
         print_success "Application is responding on port 8000"
     else
-        print_warning "Application might not be ready yet. Check logs: docker-compose -f $COMPOSE_FILE logs"
+        print_warning "Application might not be ready yet. Check logs: docker compose -f $COMPOSE_FILE logs"
     fi
 fi
 
 # Show running containers
 print_step "Deployment status:"
-docker-compose -f $COMPOSE_FILE ps
+docker compose -f $COMPOSE_FILE ps
 
 # Show version information
 if [ -f version.py ]; then
@@ -172,11 +172,11 @@ fi
 # Show useful commands
 echo ""
 echo -e "${BLUE}📝 Useful commands:${NC}"
-echo "  • View logs: docker-compose -f $COMPOSE_FILE logs -f"
-echo "  • Stop application: docker-compose -f $COMPOSE_FILE down"
-echo "  • Restart application: docker-compose -f $COMPOSE_FILE restart"
-echo "  • Access shell: docker-compose -f $COMPOSE_FILE exec web bash"
-echo "  • View database: docker-compose -f $COMPOSE_FILE exec db psql -U simba_user -d simba_db"
+echo "  • View logs: docker compose -f $COMPOSE_FILE logs -f"
+echo "  • Stop application: docker compose -f $COMPOSE_FILE down"
+echo "  • Restart application: docker compose -f $COMPOSE_FILE restart"
+echo "  • Access shell: docker compose -f $COMPOSE_FILE exec web bash"
+echo "  • View database: docker compose -f $COMPOSE_FILE exec db psql -U simba_user -d simba_db"
 
 if [ "$ENVIRONMENT" = "production" ]; then
     echo ""

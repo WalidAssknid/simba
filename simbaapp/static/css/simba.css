@@ -384,7 +384,7 @@ main.container {
   margin-top: auto;
   padding: 16px;
   border-top: 1px solid var(--border-color);
-  background-color: #f8f8f8;
+  background-color: #ffffff;
 }
 
 .version-info {
@@ -399,12 +399,6 @@ main.container {
   font-weight: 600;
   color: var(--primary-color);
   margin-bottom: 2px;
-}
-
-.build-date {
-  display: block;
-  font-size: 0.7rem;
-  color: #888;
 }
 
 /* User menu */
@@ -1278,6 +1272,33 @@ body.auth-page .header {
   margin: 0;
 }
 
+.role-info {
+  margin-top: 8px;
+}
+
+.role-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.badge-owner {
+  background-color: #28a745;
+  color: white;
+}
+
+.badge-teacher {
+  background-color: #007bff;
+  color: white;
+}
+
+.badge-student {
+  background-color: #6c757d;
+  color: white;
+}
+
 /* ===== RESPONSIVE DESIGN - MOBILE/TABLET ===== */
 
 /* Tablet styles (768px - 1024px) */
@@ -1409,6 +1430,15 @@ body.auth-page .header {
     font-size: 0.85rem;
   }
 
+  .role-info {
+    margin-top: 6px;
+  }
+
+  .role-badge {
+    font-size: 0.7rem;
+    padding: 1px 6px;
+  }
+
   .action-bar {
     flex-direction: column;
     align-items: stretch;
@@ -1497,6 +1527,8 @@ body.auth-page .header {
   .user-menu-content {
     left: auto;
     right: 0;
+    transform: none;
+    min-width: 120px;
   }
   
   /* Version info mobile adjustments */
@@ -1510,15 +1542,6 @@ body.auth-page .header {
   
   .version-number {
     font-size: 0.75rem;
-  }
-  
-  .build-date {
-    font-size: 0.65rem;
-  }
-  
-  .user-menu-content {
-    transform: none;
-    min-width: 120px;
   }
 
   /* Chainlit container mobile */
@@ -1841,6 +1864,11 @@ body.auth-page .header {
     font-size: 0.8rem;
   }
 
+  .role-badge {
+    font-size: 0.65rem;
+    padding: 1px 5px;
+  }
+
   .metric-cards {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
@@ -1916,12 +1944,7 @@ body.auth-page .header {
   margin-right: 8px;
 }
 
-.user-menu-content {
-  left: auto;
-  right: 0;
-  transform: none;
-  min-width: 120px;
-}
+
 
 .dashboard-header {
   flex-direction: column;

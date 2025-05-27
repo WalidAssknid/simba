@@ -8,5 +8,4 @@ def version_context(request):
     version_info = get_version_info()
     return {
         'app_version': version_info['version'],
-        'app_build_date': version_info['build_date']
     } 

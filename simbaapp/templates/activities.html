@@ -12,7 +12,7 @@
         {% endfor %}
     </select>
     
-    {% if is_teacher %}
+    {% if can_create_activity %}
     <div class="action-buttons">
         <button id="showEnrollmentCode" class="btn btn-secondary">
             Show Enrollment Code
@@ -51,7 +51,7 @@
 </div>
 
 <!-- Include the activity creation popup -->
-{% if is_teacher %}
+{% if can_create_activity %}
     {% with course=None %}
         {% include 'popup_activity.html' %}
     {% endwith %}
@@ -255,14 +255,26 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const selectedCourseId = document.getElementById('courseSelector').value;
             if (!selectedCourseId) {
-                alert('Please select a course first');
+                alert('Please select a course first to create an activity');
                 return;
             }
             
             const activityModal = document.getElementById('activityModal');
             const form = activityModal.querySelector('form');
             
+            // Update form action with selected course ID
             form.action = `/courses/${selectedCourseId}/create_activity/`;
+            
+            // Reset form fields
+            form.reset();
+            form.querySelector('#is-visible').checked = true;
+            form.querySelector('#allow-redo').checked = true;
+            form.querySelector('#allow-questions').checked = true;
+            form.querySelector('#allow-emojis').checked = true;
+            form.querySelector('#trust-document').checked = true;
+            form.querySelector('#custom-prompt-group').style.display = 'none';
+            form.querySelector('#questions-list').innerHTML = '';
+            form.querySelector('#questions-hidden').value = '[]';
             
             activityModal.style.display = 'block';
         });
@@ -524,7 +536,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     emptyState.innerHTML = `
                                         <h3>No activities found</h3>
                                         <p>
-                                            {% if is_teacher %}
+                                            {% if can_create_activity %}
                                             Click the <i class="fas fa-plus"></i> button to create a new activity!
                                             {% else %}
                                             You don't have any activities yet. Ask your teacher to create one!

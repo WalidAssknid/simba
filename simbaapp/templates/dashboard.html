@@ -723,27 +723,7 @@
     width: 100%;
   }
   
-  /* Student view header styling */
-  .student-view-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 24px;
-    border-radius: 8px;
-    margin-bottom: 24px;
-    text-align: center;
-  }
-  
-  .student-view-header h3 {
-    margin: 0 0 8px 0;
-    font-size: 1.5rem;
-    font-weight: 500;
-  }
-  
-  .student-view-header p {
-    margin: 0;
-    opacity: 0.9;
-    font-size: 1rem;
-  }
+
   
   /* Specific chart adjustments for mobile */
   #activity-stats-chart,
@@ -892,11 +872,6 @@
         <option value="{{ student.id }}">{{ student.username }}</option>
       {% endfor %}
     </select>
-  </div>
-  {% else %}
-  <div class="student-view-header">
-    <h3>My Learning Statistics</h3>
-    <p>View your personal learning progress and conversation history</p>
   </div>
   {% endif %}
   
@@ -1274,25 +1249,18 @@
     url.searchParams.set('active_tab', activeTab);
     
     if (activeTab === 'student-stats') {
-      const studentId = document.getElementById('student-filter').value;
-      if (studentId) {
-        url.searchParams.set('student_id', studentId);
+      const studentFilter = document.getElementById('student-filter');
+      if (studentFilter && studentFilter.value) {
+        url.searchParams.set('student_id', studentFilter.value);
       }
     }
     
-    wordCloudData = null;
-    
-    if (activeTab === 'student-engagement') {
-      const spinner = document.getElementById('word-cloud-spinner');
-      spinner.style.display = 'block';
-      
-      window.history.pushState({}, '', url.toString());
-      
-      loadWordCloud();
-      
-      return false;
+    // Clear word cloud data when switching
+    if (typeof wordCloudData !== 'undefined') {
+      wordCloudData = null;
     }
     
+    // Always redirect to ensure proper data loading
     window.location.href = url.toString();
   }
   

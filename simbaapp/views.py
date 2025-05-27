@@ -354,13 +354,27 @@ def create_activity_view(request, course_id):
                 messages.error(request, "Invalid end date format.")
                 return redirect('course_detail', course_id=course_id)
         
+        # Process questions from JSON
+        questions_json = request.POST.get('questions[]', '[]')
+        try:
+            questions = json.loads(questions_json) if questions_json else []
+        except json.JSONDecodeError:
+            questions = []
+        
+        # Process files from JSON
+        files_json = request.POST.get('files[]', '[]')
+        try:
+            files_data = json.loads(files_json) if files_json else []
+        except json.JSONDecodeError:
+            files_data = []
+
         activity_data = {
             "course_id": course_id,
             "title": request.POST.get('activity_title', ''),
             "description": request.POST.get('activity_description', ''),
             "expert_mode": request.POST.get('expert_mode') == 'on',
             "custom_prompt": request.POST.get('custom_prompt', '') if request.POST.get('expert_mode') == 'on' else '',
-            "questions": request.POST.getlist('questions[]') or [],
+            "questions": questions,
             "agent_attitude": request.POST.get('agent_attitude', 'friendly'),
             "subjects": request.POST.get('subjects', ''),
             "restrict_to_subject": request.POST.get('restrict_to_subject') == 'on',
@@ -371,7 +385,8 @@ def create_activity_view(request, course_id):
             "start_date": start_date_obj.isoformat() if start_date_obj else None,
             "end_date": end_date_obj.isoformat() if end_date_obj else None,
             "is_visible": request.POST.get('is_visible') == 'on',
-            "allow_redo": request.POST.get('allow_redo') == 'on'
+            "allow_redo": request.POST.get('allow_redo') == 'on',
+            "files": files_data
         }
         
         api_url = request.build_absolute_uri(reverse('api-1.0.0:create_activity_api') + f"?user_id={user_id}")

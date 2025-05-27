@@ -62,6 +62,7 @@ class ActivityCreateSchema(Schema):
     end_date: Optional[datetime] = None
     is_visible: bool = True
     allow_redo: bool = True
+    files: List[str] = Field(default_factory=list)  
 
 class ActivityUpdateSchema(Schema):
     title: Optional[str] = None
@@ -80,6 +81,7 @@ class ActivityUpdateSchema(Schema):
     end_date: Optional[datetime] = None
     is_visible: bool = True
     allow_redo: bool = True
+    files: List[str] = Field(default_factory=list) 
 
 class ThreadGetOrCreateSchema(Schema):
     activity_id: int
@@ -220,3 +222,17 @@ class WordFrequencySchema(Schema):
 
 class RawMessagesSchema(Schema):
     messages: list
+
+class FileUploadSchema(Schema):
+    filename: str
+    content: str 
+    content_type: str
+
+class ActivityFileSchema(Schema):
+    id: str
+    filename: str
+    size: int
+    created_at: datetime
+
+class ActivityFilesResponseSchema(Schema):
+    files: List[ActivityFileSchema]

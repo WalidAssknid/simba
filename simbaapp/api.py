@@ -31,7 +31,10 @@ from .schemas import (
     StudentAnalysisSchema,
     ClusterResponseSchema,
     WordFrequencySchema,
-    RawMessagesSchema
+    RawMessagesSchema,
+    FileUploadSchema,
+    ActivityFileSchema,
+    ActivityFilesResponseSchema
 )
 from .eventTracking import (
     accountCreated,
@@ -57,6 +60,7 @@ import time
 from django.shortcuts import get_object_or_404
 from http import HTTPStatus
 from . import cluster_students
+from . import openai_assistant
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
 if not django.apps.apps.ready:
@@ -234,6 +238,46 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: int):
         if not can_create:
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner or teachers can create activities."}
 
+        # Prepare activity data for OpenAI assistant
+        activity_data = {
+            'title': payload.title or f"Activity for {course.title}",
+            'description': payload.description or '',
+            'course_title': course.title,
+            'expert_mode': payload.expert_mode,
+            'custom_prompt': payload.custom_prompt,
+            'questions': payload.questions,
+            'agent_attitude': payload.agent_attitude,
+            'subjects': payload.subjects,
+            'restrict_to_subject': payload.restrict_to_subject,
+            'allow_questions': payload.allow_questions,
+            'allow_emojis': payload.allow_emojis,
+            'trust_document': payload.trust_document,
+            'word_limit': payload.word_limit,
+            'start_date': payload.start_date,
+            'end_date': payload.end_date
+        }
+        
+        # Prepare files for upload
+        files_to_upload = []
+        if payload.files:
+            for file_base64 in payload.files:
+                try:
+                    # Decode file info from base64 (assuming format: "filename:content_type:base64_content")
+                    filename, content_type, content = file_base64.split(':', 2)
+                    files_to_upload.append({
+                        'filename': filename,
+                        'content_type': content_type,
+                        'content': content
+                    })
+                except ValueError:
+                    return HTTPStatus.BAD_REQUEST, {"message": "Invalid file format. Expected 'filename:content_type:base64_content'"}
+        
+        # Create OpenAI assistant
+        assistant_result = openai_assistant.create_assistant(activity_data, files_to_upload)
+        
+        if not assistant_result['success']:
+            return HTTPStatus.BAD_REQUEST, {"message": f"Failed to create OpenAI assistant: {assistant_result.get('error', 'Unknown error')}"}
+
         activity = Activity.objects.create(
             course=course,
             owner=user,
@@ -252,7 +296,9 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: int):
             start_date=payload.start_date,
             end_date=payload.end_date,
             is_visible=payload.is_visible,
-            allow_redo=payload.allow_redo
+            allow_redo=payload.allow_redo,
+            openai_assistant_id=assistant_result['assistant_id'],
+            vector_store_id=assistant_result['vector_store_id']
         )
         createdActivity(user,activity.id,{
             "course":payload.course_id,
@@ -299,6 +345,7 @@ def update_activity_api(request, activity_id: int, payload: ActivityUpdateSchema
         if not can_update:
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner or teachers can update this activity."}
         
+        # Update activity fields
         activity.title = payload.title if payload.title is not None else activity.title
         activity.description = payload.description if payload.description is not None else activity.description
         activity.expert_mode = payload.expert_mode
@@ -315,6 +362,52 @@ def update_activity_api(request, activity_id: int, payload: ActivityUpdateSchema
         activity.end_date = payload.end_date
         activity.is_visible = payload.is_visible
         activity.allow_redo = payload.allow_redo
+        
+        # Update OpenAI assistant if it exists
+        if activity.openai_assistant_id:
+            activity_data = {
+                'title': activity.title,
+                'description': activity.description,
+                'course_title': activity.course.title,
+                'expert_mode': activity.expert_mode,
+                'custom_prompt': activity.custom_prompt,
+                'questions': activity.questions,
+                'agent_attitude': activity.agent_attitude,
+                'subjects': activity.subjects,
+                'restrict_to_subject': activity.restrict_to_subject,
+                'allow_questions': activity.allow_questions,
+                'allow_emojis': activity.allow_emojis,
+                'trust_document': activity.trust_document,
+                'word_limit': activity.word_limit,
+                'start_date': activity.start_date,
+                'end_date': activity.end_date
+            }
+            
+            # Prepare files for upload
+            files_to_upload = []
+            if payload.files:
+                for file_base64 in payload.files:
+                    try:
+                        filename, content_type, content = file_base64.split(':', 2)
+                        files_to_upload.append({
+                            'filename': filename,
+                            'content_type': content_type,
+                            'content': content
+                        })
+                    except ValueError:
+                        return HTTPStatus.BAD_REQUEST, {"message": "Invalid file format. Expected 'filename:content_type:base64_content'"}
+            
+            assistant_result = openai_assistant.update_assistant(
+                activity.openai_assistant_id, 
+                activity_data, 
+                files_to_upload
+            )
+            
+            if not assistant_result['success']:
+                return HTTPStatus.BAD_REQUEST, {"message": f"Failed to update OpenAI assistant: {assistant_result.get('error', 'Unknown error')}"}
+            
+            # Update vector store ID if it changed
+            activity.vector_store_id = assistant_result['vector_store_id']
         
         activity.save()
         modifiedActivity(user,activity_id,{
@@ -362,6 +455,18 @@ def delete_activity_api(request, activity_id: int, user_id: int):
         
         if not can_delete:
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can delete this activity."}
+        
+        # Delete OpenAI assistant if it exists
+        if activity.openai_assistant_id:
+            delete_result = openai_assistant.delete_assistant(
+                activity.openai_assistant_id, 
+                activity.vector_store_id
+            )
+            if not delete_result['success']:
+                # Log warning but don't fail the deletion
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to delete OpenAI assistant {activity.openai_assistant_id}: {delete_result.get('error', 'Unknown error')}")
         
         activity.delete()
         deletedActivity(user,activity_id,time.time())
@@ -510,7 +615,7 @@ def create_message_api(request, thread_id: int, payload: MessageCreateSchema):
             metadata=metadata
         )
 
-        sentMessage(payload.user_id,message.id,payload.content,time.time())
+        sentMessage(user, message.id, payload.content, time.time())
         return HTTPStatus.CREATED, message
     except Thread.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "Thread not found."}
@@ -1106,5 +1211,104 @@ def get_raw_messages(request, course_id: str = "all"):
         import traceback
         traceback.print_exc()
         return {"messages": [], "error": str(e)}
+
+# --- Activity File Management Endpoints ---
+@api.get("/activities/{activity_id}/files", response={200: ActivityFilesResponseSchema, 404: ErrorSchema, 500: ErrorSchema})
+def get_activity_files_api(request, activity_id: int):
+    """Get list of files for an activity."""
+    try:
+        activity = Activity.objects.get(id=activity_id)
+        
+        if not activity.vector_store_id:
+            return HTTPStatus.OK, {"files": []}
+        
+        files = openai_assistant.get_assistant_files(activity.vector_store_id)
+        return HTTPStatus.OK, {"files": files}
+        
+    except Activity.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to get activity files: {str(e)}"}
+
+@api.post("/activities/{activity_id}/files", response={201: dict, 400: ErrorSchema, 403: ErrorSchema, 404: ErrorSchema})
+def upload_activity_file_api(request, activity_id: int, payload: FileUploadSchema, user_id: int):
+    """Upload a file to an activity."""
+    try:
+        user = User.objects.get(id=user_id)
+        activity = Activity.objects.select_related('course').get(id=activity_id)
+        
+        # Check permissions
+        is_owner = activity.course.owner_id == user.id
+        enrollment = CourseEnrollment.objects.filter(user=user, course=activity.course).first()
+        can_upload = is_owner or (enrollment and enrollment.role == 'teacher')
+        
+        if not can_upload:
+            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner or teachers can upload files to this activity."}
+        
+        if not activity.vector_store_id:
+            from openai import OpenAI
+            client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            vector_store = client.vector_stores.create(
+                name=f"Activity: {activity.title or 'Untitled'}"
+            )
+            activity.vector_store_id = vector_store.id
+            activity.save()
+        
+        file_data = {
+            'filename': payload.filename,
+            'content_type': payload.content_type,
+            'content': payload.content
+        }
+        
+        result = openai_assistant.upload_file_to_assistant(activity.vector_store_id, file_data)
+        
+        if not result['success']:
+            return HTTPStatus.BAD_REQUEST, {"message": f"Failed to upload file: {result.get('error', 'Unknown error')}"}
+        
+        return HTTPStatus.CREATED, {
+            "message": "File uploaded successfully",
+            "file_id": result['file_id'],
+            "filename": result['filename'],
+            "size": result['size']
+        }
+        
+    except User.DoesNotExist:
+        return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
+    except Activity.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
+    except Exception as e:
+        return HTTPStatus.BAD_REQUEST, {"message": f"File upload failed: {str(e)}"}
+
+@api.delete("/activities/{activity_id}/files/{file_id}", response={204: None, 403: ErrorSchema, 404: ErrorSchema, 500: ErrorSchema})
+def delete_activity_file_api(request, activity_id: int, file_id: str, user_id: int):
+    """Delete a file from an activity."""
+    try:
+        user = User.objects.get(id=user_id)
+        activity = Activity.objects.select_related('course').get(id=activity_id)
+        
+        # Check permissions
+        is_owner = activity.course.owner_id == user.id
+        enrollment = CourseEnrollment.objects.filter(user=user, course=activity.course).first()
+        can_delete = is_owner or (enrollment and enrollment.role == 'teacher')
+        
+        if not can_delete:
+            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner or teachers can delete files from this activity."}
+        
+        if not activity.vector_store_id:
+            return HTTPStatus.NOT_FOUND, {"message": "No files found for this activity."}
+        
+        result = openai_assistant.delete_assistant_file(activity.vector_store_id, file_id)
+        
+        if not result['success']:
+            return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to delete file: {result.get('error', 'Unknown error')}"}
+        
+        return HTTPStatus.NO_CONTENT, None
+        
+    except User.DoesNotExist:
+        return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
+    except Activity.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"File deletion failed: {str(e)}"}
 
 api.add_router("/dashboard", dashboard_router, tags=["Dashboard"])

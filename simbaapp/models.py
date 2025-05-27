@@ -94,6 +94,8 @@ class Activity(models.Model):
     end_date = models.DateTimeField(blank=True, null=True)
     is_visible = models.BooleanField(default=True)
     allow_redo = models.BooleanField(default=True)
+    openai_assistant_id = models.CharField(max_length=255, blank=True, null=True)
+    vector_store_id = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

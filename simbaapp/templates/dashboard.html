@@ -723,6 +723,28 @@
     width: 100%;
   }
   
+  /* Student view header styling */
+  .student-view-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 24px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+  
+  .student-view-header h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.5rem;
+    font-weight: 500;
+  }
+  
+  .student-view-header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1rem;
+  }
+  
   /* Specific chart adjustments for mobile */
   #activity-stats-chart,
   #segmentation-chart {
@@ -746,6 +768,13 @@
 
 <div class="filters">
   <div>
+    <label for="view-as-filter">View as:</label>
+    <select id="view-as-filter" onchange="updateDashboard()">
+      <option value="teacher" {% if view_as == 'teacher' %}selected{% endif %}>Teacher</option>
+      <option value="student" {% if view_as == 'student' %}selected{% endif %}>Student</option>
+    </select>
+  </div>
+  <div>
     <select id="course-filter" onchange="updateDashboard()">
       <option value="all" {% if not selected_course_id %}selected{% endif %}>All Courses</option>
     {% for c in courses %}
@@ -766,10 +795,15 @@
 </div>
 
 <div class="tabs">
+  {% if view_as == 'teacher' %}
   <div class="tab {% if active_tab == 'conversation-stats' %}active{% endif %}" data-tab="conversation-stats">Conversation Stats</div>
   <div class="tab {% if active_tab == 'student-stats' %}active{% endif %}" data-tab="student-stats">Student Stats</div>
   <div class="tab {% if active_tab == 'student-engagement' %}active{% endif %}" data-tab="student-engagement">Students Engagement</div>
   <div class="tab {% if active_tab == 'raw-data' %}active{% endif %}" data-tab="raw-data">Raw Data</div>
+  {% else %}
+  <div class="tab {% if active_tab == 'student-stats' or active_tab == 'conversation-stats' %}active{% endif %}" data-tab="student-stats">My Stats</div>
+  <div class="tab {% if active_tab == 'raw-data' %}active{% endif %}" data-tab="raw-data">My Messages</div>
+  {% endif %}
 </div>
 
 <!-- Conversation Stats Tab -->
@@ -850,6 +884,7 @@
 
 <!-- Student Stats Tab -->
 <div id="student-stats" class="tab-content {% if active_tab == 'student-stats' %}active{% endif %}">
+  {% if view_as == 'teacher' %}
   <div class="filters">
     <select id="student-filter" onchange="loadStudentData()">
       <option value="">Select a student</option>
@@ -858,24 +893,30 @@
       {% endfor %}
     </select>
   </div>
+  {% else %}
+  <div class="student-view-header">
+    <h3>My Learning Statistics</h3>
+    <p>View your personal learning progress and conversation history</p>
+  </div>
+  {% endif %}
   
-  <div id="student-metrics" style="display: none;">
+  <div id="student-metrics" {% if view_as == 'student' %}style="display: block;"{% else %}style="display: none;"{% endif %}>
     <div class="metric-cards">
       <div class="metric-card">
         <h3>Activities</h3>
-        <p id="student-activities-count">-</p>
+        <p id="student-activities-count">{% if view_as == 'student' and student_personal_stats %}{{ student_personal_stats.activities_count }}{% else %}-{% endif %}</p>
       </div>
       <div class="metric-card">
         <h3>Messages</h3>
-        <p id="student-messages-count">-</p>
+        <p id="student-messages-count">{% if view_as == 'student' and student_personal_stats %}{{ student_personal_stats.messages_count }}{% else %}-{% endif %}</p>
       </div>
       <div class="metric-card">
-        <h3>Message Length</h3>
-        <p id="student-total-chars">-</p>
+        <h3>Total Characters</h3>
+        <p id="student-total-chars">{% if view_as == 'student' and student_personal_stats %}{{ student_personal_stats.total_chars|floatformat:0 }}{% else %}-{% endif %}</p>
       </div>
       <div class="metric-card">
         <h3>Retries</h3>
-        <p id="student-retries-count">-</p>
+        <p id="student-retries-count">{% if view_as == 'student' and student_personal_stats %}{{ student_personal_stats.retries_count }}{% else %}-{% endif %}</p>
       </div>
     </div>
     
@@ -986,7 +1027,7 @@
 <!-- Raw Data Tab -->
 <div id="raw-data" class="tab-content {% if active_tab == 'raw-data' %}active{% endif %}">
   <div class="chart-container">
-    <h3>Raw Conversation Data</h3>
+    <h3>{% if view_as == 'student' %}My Conversation History{% else %}Raw Conversation Data{% endif %}</h3>
     <div style="margin-bottom: 10px; text-align: right;">
       <button id="export-csv" class="btn-generate">Export to CSV</button>
     </div>
@@ -1208,12 +1249,15 @@
   }
   
   function updateDashboard() {
+    const viewAs = document.getElementById('view-as-filter').value;
     const courseId = document.getElementById('course-filter').value;
     const activityId = document.getElementById('activity-filter').value;
     
     const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
     
     const url = new URL(window.location);
+    
+    url.searchParams.set('view_as', viewAs);
     
     if (courseId === 'all') {
       url.searchParams.delete('course_id');

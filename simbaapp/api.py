@@ -85,8 +85,7 @@ def register_user(request, payload: UserRegisterSchema):
         user = User.objects.create(
             username=payload.username,
             email=payload.email,
-            password_hash=hashed_password,
-            role=payload.role
+            password_hash=hashed_password
         )
         accountCreated(user,time.time())
         return HTTPStatus.CREATED, user
@@ -156,8 +155,8 @@ def create_course_api(request, payload: CourseCreateSchema, user_id: int):
     """
     try:
         user = User.objects.get(id=user_id)
-        if user.role != 'teacher':
-            return HTTPStatus.FORBIDDEN, {"message": "Only teachers can create courses."}
+        if not user.can_create_course():
+            return HTTPStatus.FORBIDDEN, {"message": "You have reached the maximum number of courses (3)."}
         
         course = Course.objects.create(
             title=payload.title,
@@ -180,7 +179,7 @@ def update_course_api(request, course_id: int, payload: CourseUpdateSchema, user
         user = User.objects.get(id=user_id)
         course = Course.objects.get(id=course_id)
         
-        if course.owner_id != user.id or user.role != 'teacher':
+        if course.owner_id != user.id:
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can update this course."}
         
         course.title = payload.title
@@ -204,7 +203,7 @@ def delete_course_api(request, course_id: int, user_id: int):
         user = User.objects.get(id=user_id)
         course = Course.objects.get(id=course_id)
         
-        if course.owner_id != user.id or user.role != 'teacher':
+        if course.owner_id != user.id:
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can delete this course."}
         
         course.delete()
@@ -227,8 +226,13 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: int):
         user = User.objects.get(id=user_id)
         course = Course.objects.get(id=payload.course_id)
 
-        if course.owner_id != user.id or user.role != 'teacher':
-            return HTTPStatus.FORBIDDEN, {"message": "Only the course teacher can create activities."}
+        # Check if user has permission to create activities in this course
+        is_owner = course.owner_id == user.id
+        enrollment = CourseEnrollment.objects.filter(user=user, course=course).first()
+        can_create = is_owner or (enrollment and enrollment.role == 'teacher')
+        
+        if not can_create:
+            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner or teachers can create activities."}
 
         activity = Activity.objects.create(
             course=course,
@@ -287,8 +291,13 @@ def update_activity_api(request, activity_id: int, payload: ActivityUpdateSchema
         user = User.objects.get(id=user_id)
         activity = Activity.objects.select_related('course').get(id=activity_id)
         
-        if activity.course.owner_id != user.id or user.role != 'teacher':
-            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can update this activity."}
+        # Check if user has permission to update this activity
+        is_owner = activity.course.owner_id == user.id
+        enrollment = CourseEnrollment.objects.filter(user=user, course=activity.course).first()
+        can_update = is_owner or (enrollment and enrollment.role == 'teacher')
+        
+        if not can_update:
+            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner or teachers can update this activity."}
         
         activity.title = payload.title if payload.title is not None else activity.title
         activity.description = payload.description if payload.description is not None else activity.description
@@ -346,7 +355,12 @@ def delete_activity_api(request, activity_id: int, user_id: int):
         user = User.objects.get(id=user_id)
         activity = Activity.objects.select_related('course').get(id=activity_id)
         
-        if activity.course.owner.id != user.id or user.role != 'teacher':
+        # Check if user has permission to delete this activity
+        is_owner = activity.course.owner.id == user.id
+        enrollment = CourseEnrollment.objects.filter(user=user, course=activity.course).first()
+        can_delete = is_owner or (enrollment and enrollment.role == 'teacher')
+        
+        if not can_delete:
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can delete this activity."}
         
         activity.delete()
@@ -482,7 +496,7 @@ def create_message_api(request, thread_id: int, payload: MessageCreateSchema):
         
         metadata = {}
         if payload.role == 'user':
-             metadata = {"user_id": payload.user_id, "author": payload.username, "role": user.role}
+             metadata = {"user_id": payload.user_id, "author": payload.username}
         elif payload.role == 'assistant':
              metadata = {"model": payload.model, "user_id": payload.user_id}
         else:
@@ -515,17 +529,16 @@ def remove_student_from_course(request, enrollment_id: int, current_user_id: int
     try:
         enrollment = CourseEnrollment.objects.select_related('user', 'course__owner').get(id=enrollment_id)
         course_owner_id = enrollment.course.owner.id
-        user_to_remove_role = enrollment.user.role
-
         try:
             requesting_user = User.objects.get(id=current_user_id)
-            if requesting_user.role != 'teacher' or requesting_user.id != course_owner_id:
-                 return HTTPStatus.FORBIDDEN, {"message": "Only the course owner (teacher) can remove participants."}
+            if requesting_user.id != course_owner_id:
+                 return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can remove participants."}
         except User.DoesNotExist:
             return HTTPStatus.BAD_REQUEST, {"message": "Requesting user not found."}
 
-        if user_to_remove_role != 'student':
-            return HTTPStatus.FORBIDDEN, {"message": "Only students can be removed. Teachers cannot remove other users who are not students."}
+        # Only allow removal of students (not teachers or owners)
+        if enrollment.role != 'student':
+            return HTTPStatus.FORBIDDEN, {"message": "Only students can be removed from courses."}
 
         enrollment.delete()
         return HTTPStatus.NO_CONTENT, None
@@ -542,8 +555,13 @@ def toggle_activity_visibility_api(request, activity_id: int, user_id: int, is_v
         user = User.objects.get(id=user_id)
         activity = Activity.objects.select_related('course').get(id=activity_id)
         
-        if activity.course.owner_id != user.id or user.role != 'teacher':
-            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can change activity visibility."}
+        # Check if user has permission to change activity visibility
+        is_owner = activity.course.owner_id == user.id
+        enrollment = CourseEnrollment.objects.filter(user=user, course=activity.course).first()
+        can_modify = is_owner or (enrollment and enrollment.role == 'teacher')
+        
+        if not can_modify:
+            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner or teachers can change activity visibility."}
         
         activity.is_visible = is_visible
         activity.save(update_fields=['is_visible'])
@@ -581,7 +599,7 @@ def get_course_participants_api(request, course_id: int):
         owner_data = {
             "id": course.owner.id,
             "username": course.owner.username,
-            "role": course.owner.role,
+            "role": "owner",
             "is_owner": True,
             "enrollment_id": None
         }
@@ -592,7 +610,7 @@ def get_course_participants_api(request, course_id: int):
                 participant_data = {
                     "id": enrollment.user.id,
                     "username": enrollment.user.username,
-                    "role": enrollment.user.role,
+                    "role": enrollment.role,
                     "is_owner": False,
                     "enrollment_id": enrollment.id
                 }

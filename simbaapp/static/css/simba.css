@@ -2476,3 +2476,58 @@ body.auth-page .header {
   }
 }
 
+/* Action buttons group */
+.action-buttons-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.action-buttons-group .add-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.action-buttons-group .add-button:first-child {
+  background-color: var(--primary-color);
+}
+
+.action-buttons-group .add-button:last-child {
+  background-color: var(--secondary-color);
+}
+
+.action-buttons-group .add-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.action-buttons-group .add-button:first-child:hover {
+  background-color: var(--primary-light);
+}
+
+.action-buttons-group .add-button:last-child:hover {
+  background-color: #ff7043;
+}
+
+@media (max-width: 768px) {
+  .action-buttons-group {
+    gap: 6px;
+  }
+  
+  .action-buttons-group .add-button {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+}
+

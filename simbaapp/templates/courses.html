@@ -7,9 +7,10 @@
 
 {% block content %}
 <div class="courses-container">
-    {% for course in courses %}
+    {% for course_info in courses_with_roles %}
+        {% with course=course_info.course %}
         <div class="course-card">
-            {% if request.session.role == 'teacher' and request.session.user_id == course.owner.id %}
+            {% if course_info.is_owner %}
             <div class="card-options">
                 <button class="dropdown-toggle"><i class="fas fa-angle-down"></i></button>
                 <div class="dropdown-menu">
@@ -22,7 +23,14 @@
                 <div class="card-header course-color-{% cycle '1' '2' '3' '4' %}">
                     <div class="course-info">
                         <h3 class="course-title">{{ course.title }}</h3>
-                        <p class="teacher-name">{{ course.owner.username }}</p>
+                        <p class="teacher-name">
+                            {{ course.owner.username }} - 
+                            {% if course_info.is_owner %}
+                                OWNER
+                            {% elif course_info.enrollment_role %}
+                                {{ course_info.enrollment_role|upper }}
+                            {% endif %}
+                        </p>
                     </div>
                 </div>
                 <div class="card-body">
@@ -32,16 +40,24 @@
                 </div>
             </a>
         </div>
+        {% endwith %}
     {% empty %}
         <div class="empty-state">
             <h3>No courses found</h3>
             <p>
-                {% if request.session.role == 'teacher' %}
+                {% if can_create_course %}
                     Click the <i class="fas fa-plus"></i> button to create a new course!
-                {% else %}
-                    Click the <i class="fas fa-plus"></i> button to join a course!
+                {% endif %}
+                {% if can_join_course %}
+                    {% if can_create_course %}Or{% endif %} Click the <i class="fas fa-plus"></i> button to join a course!
                 {% endif %}
             </p>
+            <div class="limits-info">
+                <p><small>
+                    Courses: {{ owned_courses_count }}/3 owned, {{ enrolled_courses_count }} enrolled<br>
+                    Activities: Up to 6 per course
+                </small></p>
+            </div>
         </div>
     {% endfor %}
 </div>
@@ -273,6 +289,46 @@
   color: #666;
   margin-bottom: 24px;
   text-align: center;
+}
+
+.limits-info {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.role-badge {
+  margin-top: 8px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-owner {
+  background-color: rgba(255, 255, 255, 0.3);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.badge-teacher {
+  background-color: rgba(255, 255, 255, 0.3);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.badge-student {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 </style>
 {% endblock %}

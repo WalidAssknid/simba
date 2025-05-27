@@ -35,9 +35,9 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'db').split(',')
 
 CSRF_TRUSTED_ORIGINS = ['https://simba-refact.irit.fr']
 
-SESSION_COOKIE_SECURE = True
+# SESSION_COOKIE_SECURE = True
 
-CSRF_COOKIE_SECURE = True 
+# CSRF_COOKIE_SECURE = True 
 
 # Application definition
 

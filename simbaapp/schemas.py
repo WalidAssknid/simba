@@ -22,7 +22,6 @@ class UserRegisterSchema(Schema):
     email: EmailStr
     password: str
     password_confirm: str
-    role: str = "student"
 
 class UserUpdateSchema(Schema):
     username: str
@@ -40,6 +39,10 @@ class CourseCreateSchema(Schema):
 class CourseUpdateSchema(Schema):
     title: str
     description: Optional[str] = None
+
+class CourseEnrollmentSchema(Schema):
+    enrollment_code: str
+    role: str = 'student' 
 
 class ActivityCreateSchema(Schema):
     course_id: int 
@@ -97,7 +100,6 @@ class UserOutSchema(Schema):
     id: int
     username: str
     email: str
-    role: str
 
 class ErrorSchema(Schema):
     message: str

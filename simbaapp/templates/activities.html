@@ -105,19 +105,49 @@
 #activityModal .modal-content {
     margin-top: 5%;
 }
+
+.role-info {
+    margin-top: 8px;
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-owner {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-teacher {
+    background-color: #007bff;
+    color: white;
+}
+
+.badge-student {
+    background-color: #6c757d;
+    color: white;
+}
 </style>
 
 <div class="activities-list">
-    {% for activity in activities %}
-    <div class="activity-item" data-course-id="{{ activity.course.id }}" data-activity-id="{{ activity.id }}">
+    {% for activity_info in activities_with_roles %}
+        {% with activity=activity_info.activity course=activity_info.course %}
+        <div class="activity-item" data-course-id="{{ course.id }}" data-activity-id="{{ activity.id }}">
         <div class="activity-options">
-            {% if is_teacher %}
+                {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
             <button class="activity-menu-toggle">
                 <i class="fas fa-ellipsis-v"></i>
             </button>
             {% endif %}
             <div class="activity-menu">
-                {% if is_teacher %}
+                    {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
                 <a href="#" class="activity-menu-item" data-action="edit" data-activity-id="{{ activity.id }}">
                     <i class="fas fa-edit"></i> Edit
                 </a>
@@ -139,14 +169,24 @@
         </div>
         <div class="activity-content">
             <h3 class="activity-title">{{ activity.title }}</h3>
-            <p class="activity-course">{{ activity.course.title }}</p>
+                <p class="activity-course">{{ course.title }}</p>
+                <div class="role-info">
+                    <span class="role-badge badge-{{ activity_info.user_role }}">
+                        {% if activity_info.is_owner %}
+                            Owner
+                        {% else %}
+                            {{ activity_info.user_role|capfirst }}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
         </div>
-    </div>
+        {% endwith %}
     {% empty %}
     <div class="empty-state">
         <h3>No activities found</h3>
         <p>
-            {% if is_teacher %}
+            {% if can_create_activity %}
                 Click the <i class="fas fa-plus"></i> button to create a new activity!
             {% else %}
                 You don't have any activities yet. Ask your teacher to create one!
@@ -177,13 +217,14 @@ document.addEventListener('DOMContentLoaded', function() {
         questionsHidden.value = JSON.stringify([]);
     }
     
-    const isTeacher = document.querySelector('.action-bar').getAttribute('data-is-teacher') === 'true';
     document.querySelectorAll('.activity-item').forEach(item => {
         item.addEventListener('click', function(e) {
             if (!e.target.closest('.activity-options')) {
                 const activityId = this.dataset.activityId;
+                const roleElement = this.querySelector('.role-badge');
+                const userRole = roleElement ? roleElement.textContent.toLowerCase().trim() : 'student';
                 
-                if (isTeacher) {
+                if (userRole === 'owner' || userRole === 'teacher') {
                     window.location.href = `/dashboard/?activity_id=${activityId}&active_tab=conversation-stats`;
                 } else {
                     window.location.href = `/chainlit/?activity_id=${activityId}`;
@@ -697,8 +738,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         participantCard.appendChild(participantInfo);
                         
-                        if ('{{ request.session.role }}' === 'teacher' && 
-                            participant.role === 'student' && 
+                        if (participant.role === 'student' && 
                             !participant.is_owner && 
                             participant.enrollment_id) {
                             

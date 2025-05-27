@@ -16,15 +16,14 @@ from simbaapp.models import User, Course, Activity, CourseEnrollment
 
 # Check if user already exists
 if not User.objects.filter(username='prof').exists():
-    # Create a new teacher user
+    # Create a new teacher user (without role field)
     password = 'prof'
     password_hash = make_password(password)
     
     teacher = User.objects.create(
         username='prof',
         email='prof@gmail.com',
-        password_hash=password_hash,
-        role='teacher'
+        password_hash=password_hash
     )
     print('Default teacher user created successfully')
 else:
@@ -58,15 +57,14 @@ else:
 
 # Check if default student exists
 if not User.objects.filter(username='student').exists():
-    # Create a new student user
+    # Create a new student user (without role field)
     password = 'student'
     password_hash = make_password(password)
     
     student = User.objects.create(
         username='student',
         email='student@gmail.com',
-        password_hash=password_hash,
-        role='student'
+        password_hash=password_hash
     )
     print('Default student user created successfully')
 else:
@@ -78,7 +76,8 @@ course = Course.objects.get(title='ct')
 if not CourseEnrollment.objects.filter(user=student, course=course).exists():
     CourseEnrollment.objects.create(
         user=student,
-        course=course
+        course=course,
+        role='student'  # Specify role in enrollment
     )
     print('Default student enrolled in default course successfully')
 else:

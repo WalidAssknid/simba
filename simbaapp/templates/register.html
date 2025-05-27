@@ -19,13 +19,6 @@
             {% endif %}
             <form method="post" action="{% url 'register' %}">
                 {% csrf_token %}
-                <div class="form-group">
-                    <label for="user-type">User type:</label>
-                    <select name="role" id="user-type" class="form-control">
-                        <option value="student">Student</option>
-                        <option value="teacher">Teacher</option>
-                    </select>
-                </div>
                 
                 <div class="form-group">
                     <label for="username">Username:</label>

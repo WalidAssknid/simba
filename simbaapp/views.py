@@ -33,7 +33,6 @@ def login_view(request):
             
             request.session['user_id'] = user_data['id']
             request.session['username'] = user_data['username']
-            request.session['role'] = user_data['role']
             
             return redirect('courses')
             
@@ -60,7 +59,6 @@ def register_view(request):
         email = request.POST.get('email')
         password = request.POST.get('password')
         password_confirm = request.POST.get('password_confirm')
-        role = request.POST.get('role', 'student')
         
         api_url = request.build_absolute_uri(reverse('api-1.0.0:register_user'))
         
@@ -69,8 +67,7 @@ def register_view(request):
                 'username': username,
                 'email': email,
                 'password': password,
-                'password_confirm': password_confirm,
-                'role': role
+                'password_confirm': password_confirm
             })
             
             response_data = response.json()
@@ -79,7 +76,6 @@ def register_view(request):
                 messages.success(request, "Registration successful!")
                 request.session['user_id'] = response_data['id']
                 request.session['username'] = response_data['username']
-                request.session['role'] = response_data['role']
                 return redirect('courses')
             else:
                  messages.error(request, response_data.get('message', 'Registration failed.'))
@@ -160,27 +156,42 @@ def courses_view(request):
         return redirect('login')
     
     user_id = request.session.get('user_id')
-    role = request.session.get('role')
+    user = User.objects.get(id=user_id)
     
-    if role == 'teacher':
-        user = User.objects.get(id=user_id)
-        courses = Course.objects.filter(owner_id=user_id).order_by('-created_at')
-        
-        messages.info(request, f"Logged in as teacher: {user.username}")
-        
-        context = {
-            'courses': courses,
-            'is_teacher': True,
-            'enrolled_courses': courses
+    # Get courses where user is owner (teacher)
+    owned_courses = Course.objects.filter(owner_id=user_id).order_by('-created_at')
+    
+    # Get courses where user is enrolled (student or teacher)
+    enrolled_courses = Course.objects.filter(enrollments__user=user).order_by('-created_at')
+    
+    # Combine all courses (owned + enrolled)
+    all_courses = (owned_courses | enrolled_courses).distinct().order_by('-created_at')
+    
+    # Add role information to each course
+    courses_with_roles = []
+    for course in all_courses:
+        course_info = {
+            'course': course,
+            'is_owner': course.owner_id == user_id,
+            'enrollment_role': None
         }
-    else:
-        user = User.objects.get(id=user_id)
-        courses = Course.objects.filter(enrollments__user=user).order_by('-created_at')
-        context = {
-            'courses': courses,
-            'is_teacher': False,
-            'enrolled_courses': courses
-        }
+        
+        # Check if user has an enrollment record for this course
+        enrollment = CourseEnrollment.objects.filter(user=user, course=course).first()
+        if enrollment:
+            course_info['enrollment_role'] = enrollment.role
+            
+        courses_with_roles.append(course_info)
+    
+    context = {
+        'courses_with_roles': courses_with_roles,
+        'user': user,
+        'can_create_course': user.can_create_course(),
+        'can_join_course': user.can_join_course(),
+        'owned_courses_count': user.get_owned_courses_count(),
+        'enrolled_courses_count': user.get_enrolled_courses_count(),
+        'total_activities_count': user.get_total_activities_count()
+    }
     
     return render(request, 'courses.html', context) 
 
@@ -192,8 +203,8 @@ def create_course_view(request):
     
     try:
         user = User.objects.get(id=user_id)
-        if user.role != 'teacher':
-            messages.error(request, "Only teachers can create courses.")
+        if not user.can_create_course():
+            messages.error(request, f"You can only create up to 3 courses. You currently have {user.get_owned_courses_count()} courses.")
             return redirect('courses')
     except User.DoesNotExist:
         messages.error(request, "User not found.")
@@ -248,36 +259,44 @@ def course_detail_view(request, course_id):
         return redirect('courses')
         
     has_access = False
-    is_teacher_of_course = False
+    is_owner = course.owner_id == user_id
+    user_role_in_course = None
 
-    if course.owner_id == user_id and user.role == 'teacher':
+    # Check if user is owner
+    if is_owner:
         has_access = True
-        is_teacher_of_course = True
-    elif CourseEnrollment.objects.filter(user=user, course=course).exists():
-        has_access = True
+        user_role_in_course = 'owner'
+    else:
+        # Check if user is enrolled
+        enrollment = CourseEnrollment.objects.filter(user=user, course=course).first()
+        if enrollment:
+            has_access = True
+            user_role_in_course = enrollment.role
 
     if not has_access:
         messages.error(request, "You do not have permission to access this course.")
         return redirect('courses')
     
-    if is_teacher_of_course:
+    # Show all activities if user is owner or teacher, only visible if student
+    if is_owner or user_role_in_course == 'teacher':
         activities = Activity.objects.filter(course=course).order_by('-created_at')
     else:
         activities = Activity.objects.filter(course=course, is_visible=True).order_by('-created_at')
     
     participants = CourseEnrollment.objects.filter(course=course).select_related('user')
     
-    if user.role == 'teacher':
-        enrolled_courses = Course.objects.filter(owner=user)
-    else:
-        enrolled_courses = Course.objects.filter(enrollments__user=user)
+    # Get all courses for navigation
+    owned_courses = Course.objects.filter(owner=user)
+    enrolled_courses = Course.objects.filter(enrollments__user=user)
+    all_courses = (owned_courses | enrolled_courses).distinct()
     
     return render(request, 'course_detail.html', { 
         'course': course, 
         'activities': activities,
-        'is_teacher': is_teacher_of_course,
+        'is_owner': is_owner,
+        'user_role_in_course': user_role_in_course,
         'participants': participants,
-        'enrolled_courses': enrolled_courses,
+        'enrolled_courses': all_courses,
         'active_course': course 
     })
 
@@ -290,7 +309,19 @@ def create_activity_view(request, course_id):
     try:
         user = User.objects.get(id=user_id)
         course = Course.objects.get(id=course_id)
-        if user.role != 'teacher' or course.owner_id != user_id:
+        
+        # Check if user can create activities (limit check)
+        if not user.can_create_activity(course):
+            current_activities = Activity.objects.filter(owner=user, course=course).count()
+            messages.error(request, f"You can only create up to 6 activities per course. This course currently has {current_activities} activities.")
+            return redirect('course_detail', course_id=course_id)
+        
+        # Check if user has permission to create activities in this course
+        is_owner = course.owner_id == user_id
+        enrollment = CourseEnrollment.objects.filter(user=user, course=course).first()
+        can_create = is_owner or (enrollment and enrollment.role == 'teacher')
+        
+        if not can_create:
             messages.error(request, "You do not have permission to create activities in this course.")
             return redirect('course_detail', course_id=course_id) 
     except User.DoesNotExist:
@@ -323,13 +354,27 @@ def create_activity_view(request, course_id):
                 messages.error(request, "Invalid end date format.")
                 return redirect('course_detail', course_id=course_id)
         
+        # Process questions from JSON
+        questions_json = request.POST.get('questions[]', '[]')
+        try:
+            questions = json.loads(questions_json) if questions_json else []
+        except json.JSONDecodeError:
+            questions = []
+        
+        # Process files from JSON
+        files_json = request.POST.get('files[]', '[]')
+        try:
+            files_data = json.loads(files_json) if files_json else []
+        except json.JSONDecodeError:
+            files_data = []
+
         activity_data = {
             "course_id": course_id,
             "title": request.POST.get('activity_title', ''),
             "description": request.POST.get('activity_description', ''),
             "expert_mode": request.POST.get('expert_mode') == 'on',
             "custom_prompt": request.POST.get('custom_prompt', '') if request.POST.get('expert_mode') == 'on' else '',
-            "questions": request.POST.getlist('questions[]') or [],
+            "questions": questions,
             "agent_attitude": request.POST.get('agent_attitude', 'friendly'),
             "subjects": request.POST.get('subjects', ''),
             "restrict_to_subject": request.POST.get('restrict_to_subject') == 'on',
@@ -340,7 +385,8 @@ def create_activity_view(request, course_id):
             "start_date": start_date_obj.isoformat() if start_date_obj else None,
             "end_date": end_date_obj.isoformat() if end_date_obj else None,
             "is_visible": request.POST.get('is_visible') == 'on',
-            "allow_redo": request.POST.get('allow_redo') == 'on'
+            "allow_redo": request.POST.get('allow_redo') == 'on',
+            "files": files_data
         }
         
         api_url = request.build_absolute_uri(reverse('api-1.0.0:create_activity_api') + f"?user_id={user_id}")
@@ -370,66 +416,127 @@ def create_activity_view(request, course_id):
         return redirect('course_detail', course_id=course_id)
 
 def join_course_view(request):
-    """View for students to join courses using enrollment codes"""
+    """View for users to join courses using enrollment codes"""
     if not request.session.get('user_id'):
         return redirect('login')
         
     user_id = request.session.get('user_id')
     user = User.objects.get(id=user_id)
     
-    enrolled_courses = Course.objects.filter(enrollments__user=user).order_by('-created_at')
+    # Get all courses for navigation
+    owned_courses = Course.objects.filter(owner=user)
+    enrolled_courses = Course.objects.filter(enrollments__user=user)
+    all_courses = (owned_courses | enrolled_courses).distinct().order_by('-created_at')
     
     if request.method == 'POST':
         enrollment_code = request.POST.get('enrollment_code')
+        role = request.POST.get('role', 'student')  # Default to student
         
         if not enrollment_code:
             messages.error(request, "Enrollment code is required.")
-            return render(request, 'join_course.html', {'enrolled_courses': enrolled_courses}) 
+            return render(request, 'join_course.html', {'enrolled_courses': all_courses}) 
+        
+        # Check if user can join more courses
+        if not user.can_join_course():
+            total_courses = user.get_owned_courses_count() + user.get_enrolled_courses_count()
+            messages.error(request, f"You can only be in up to 3 courses total. You are currently in {total_courses} courses.")
+            return render(request, 'join_course.html', {'enrolled_courses': all_courses})
             
         try:
             course = Course.objects.get(enrollment_code=enrollment_code)
             
+            # Check if user is already the owner
+            if course.owner_id == user_id:
+                messages.warning(request, f"You are already the owner of the course '{course.title}'.")
+                return redirect('course_detail', course_id=course.id)
+            
+            # Check if user is already enrolled
             if CourseEnrollment.objects.filter(user=user, course=course).exists():
                 messages.warning(request, f"You are already enrolled in the course '{course.title}'.")
+                return redirect('course_detail', course_id=course.id)
             else:
                 CourseEnrollment.objects.create(
                     user=user,
-                    course=course
+                    course=course,
+                    role=role
                 )
                 
-                messages.success(request, f"Successfully enrolled in course '{course.title}'!")
+                messages.success(request, f"Successfully enrolled in course '{course.title}' as {role}!")
             
-            return redirect('activities')
+            return redirect('course_detail', course_id=course.id)
             
         except Course.DoesNotExist:
             messages.error(request, "Invalid enrollment code.")
-            return render(request, 'join_course.html', {'enrolled_courses': enrolled_courses}) 
+            return render(request, 'join_course.html', {'enrolled_courses': all_courses}) 
             
-    return render(request, 'join_course.html', {'enrolled_courses': enrolled_courses})
+    return render(request, 'join_course.html', {'enrolled_courses': all_courses})
 
 def dashboard_view(request):
     if not request.session.get('user_id'):
         return redirect('login')
     user_id = request.session.get('user_id')
     user = User.objects.get(id=user_id)
-    if user.role != 'teacher':
-        messages.error(request, "Only teachers can access the dashboard.")
-        return redirect('courses')
-
-    courses = Course.objects.filter(owner=user).order_by('-created_at')
+    
+    # Check what roles the user has
+    owned_courses = Course.objects.filter(owner=user)
+    teacher_enrollments = CourseEnrollment.objects.filter(user=user, role='teacher')
+    teacher_courses = Course.objects.filter(enrollments__in=teacher_enrollments)
+    all_teacher_courses = (owned_courses | teacher_courses).distinct()
+    
+    student_enrollments = CourseEnrollment.objects.filter(user=user, role='student')
+    student_courses = Course.objects.filter(enrollments__in=student_enrollments)
+    
+    # Determine default view_as based on available roles
+    view_as = request.GET.get('view_as')
+    if not view_as:
+        # Auto-detect: prefer teacher if available, otherwise student
+        if all_teacher_courses.exists():
+            view_as = 'teacher'
+        elif student_courses.exists():
+            view_as = 'student'
+        else:
+            # User has no courses at all
+            messages.info(request, "You need to create or join a course first to access the dashboard.")
+            return redirect('courses')
+    
+    if view_as == 'teacher':
+        courses = all_teacher_courses.order_by('-created_at')
+        
+        if not courses.exists():
+            # User requested teacher view but has no teacher courses
+            if student_courses.exists():
+                # Redirect to student view instead
+                return redirect(f"{request.path}?view_as=student")
+            else:
+                messages.info(request, "You don't have any courses as a teacher. Create a course or join one as a teacher to access the teacher dashboard.")
+                return redirect('courses')
+    else:  # view_as == 'student'
+        courses = student_courses.order_by('-created_at')
+        
+        if not courses.exists():
+            # User requested student view but has no student courses
+            if all_teacher_courses.exists():
+                # Redirect to teacher view instead
+                return redirect(f"{request.path}?view_as=teacher")
+            else:
+                messages.info(request, "You don't have any courses as a student. Join a course as a student to access the student dashboard.")
+                return redirect('courses')
     selected_course_id = request.GET.get('course_id')
     selected_activity_id = request.GET.get('activity_id')
     
-    active_tab = request.GET.get('active_tab', 'conversation-stats')
+    # Set default tab based on view_as
+    if view_as == 'student':
+        active_tab = request.GET.get('active_tab', 'student-stats')
+    else:
+        active_tab = request.GET.get('active_tab', 'conversation-stats')
+    
     if active_tab == 'student-clusters':
         active_tab = 'student-engagement'
     
     authoritative_id_for_logic_and_template = None  
     course_object_for_context = None                
 
-    if not courses.exists():
-        messages.info(request, "No courses found. Create one first.")
-        return redirect('create_course')
+    # This check is now handled above for each view type
 
     if selected_course_id and selected_course_id != 'all': 
         try:
@@ -583,7 +690,54 @@ def dashboard_view(request):
     minutes = int((avg_time_seconds % 3600) // 60)
     avg_time_per_student = f"{hours}h {minutes}m"
     
-    raw_messages = base_msg_query.order_by('-timestamp')[:100]
+    # Filter raw messages based on view_as
+    if view_as == 'student':
+        # Show only the current user's messages
+        raw_messages = base_msg_query.filter(thread__user=user).order_by('-timestamp')[:100]
+    else:
+        # Show all messages for teachers
+        raw_messages = base_msg_query.order_by('-timestamp')[:100]
+    
+    # If viewing as student, prepare personal statistics
+    student_personal_stats = None
+    if view_as == 'student':
+        # Get personal messages for the current user
+        personal_messages = base_msg_query.filter(thread__user=user, role='user')
+        personal_message_count = personal_messages.count()
+        
+        if personal_message_count > 0:
+            total_chars = sum([len(msg.content) for msg in personal_messages])
+            avg_length = total_chars / personal_message_count
+            
+            # Get activities the user participated in
+            participated_activities = Activity.objects.filter(
+                threads__user=user,
+                course__in=courses
+            ).distinct().count()
+            
+            # Get retry count (threads with attempt_number > 1)
+            from simbaapp.models import Thread
+            retry_count = Thread.objects.filter(
+                user=user,
+                activity__course__in=courses,
+                attempt_number__gt=1
+            ).count()
+            
+            student_personal_stats = {
+                'activities_count': participated_activities,
+                'messages_count': personal_message_count,
+                'total_chars': total_chars,
+                'avg_length': round(avg_length, 2),
+                'retries_count': retry_count
+            }
+        else:
+            student_personal_stats = {
+                'activities_count': 0,
+                'messages_count': 0,
+                'total_chars': 0,
+                'avg_length': 0,
+                'retries_count': 0
+            }
     
     context = {
         'courses': courses,
@@ -607,7 +761,10 @@ def dashboard_view(request):
         'segment_few_long': segment_few_long,
         'segment_many_short': segment_many_short,
         'segment_few_short': segment_few_short,
-        'active_tab': active_tab
+        'active_tab': active_tab,
+        'view_as': view_as,
+        'user': user,
+        'student_personal_stats': student_personal_stats
     }
     
     context['activity_names_json'] = json.dumps(activity_names)
@@ -621,18 +778,17 @@ def dashboard_view(request):
     return render(request, 'dashboard.html', context)
     
 def edit_course_view(request, course_id):
-    """View for teachers to edit their courses"""
+    """View for course owners to edit their courses"""
     if not request.session.get('user_id'):
         return redirect('login')
         
     user_id = request.session.get('user_id')
     user = User.objects.get(id=user_id)
     
-    if user.role != 'teacher':
-        messages.error(request, "Only teachers can edit courses.")
-        return redirect('courses')
-    
-    enrolled_courses = Course.objects.filter(owner=user).order_by('-created_at')
+    # Get all courses for navigation
+    owned_courses = Course.objects.filter(owner=user)
+    enrolled_courses = Course.objects.filter(enrollments__user=user)
+    all_courses = (owned_courses | enrolled_courses).distinct().order_by('-created_at')
     
     try:
         course = Course.objects.get(id=course_id)
@@ -650,7 +806,7 @@ def edit_course_view(request, course_id):
                 return render(request, 'create_course.html', {
                     'course': course, 
                     'edit_mode': True,
-                    'enrolled_courses': enrolled_courses
+                    'enrolled_courses': all_courses
                 })
                 
             course.title = title
@@ -663,7 +819,7 @@ def edit_course_view(request, course_id):
         return render(request, 'create_course.html', {
             'course': course, 
             'edit_mode': True,
-            'enrolled_courses': enrolled_courses
+            'enrolled_courses': all_courses
         })
         
     except Course.DoesNotExist:
@@ -676,28 +832,50 @@ def activities_view(request):
         return redirect('login')
     
     user_id = request.session.get('user_id')
-    role = request.session.get('role')
     user = User.objects.get(id=user_id)
     
-    if role == 'teacher':
-        teacher_courses = Course.objects.filter(owner_id=user_id)
-        activities = Activity.objects.filter(course__in=teacher_courses).order_by('-created_at')
-        context = {
-            'activities': activities,
-            'is_teacher': True,
-            'courses': teacher_courses,
-            'enrolled_courses': teacher_courses
-        }
-    else:
-        enrolled_courses = Course.objects.filter(enrollments__user=user)
-        # Students only see visible activities
-        activities = Activity.objects.filter(course__in=enrolled_courses, is_visible=True).order_by('-created_at')
-        context = {
-            'activities': activities,
-            'is_teacher': False,
-            'courses': enrolled_courses,
-            'enrolled_courses': enrolled_courses
-        }
+    # Get all courses user has access to
+    owned_courses = Course.objects.filter(owner_id=user_id)
+    enrolled_courses = Course.objects.filter(enrollments__user=user)
+    all_courses = (owned_courses | enrolled_courses).distinct()
+    
+    # Get activities with role information
+    activities_with_roles = []
+    
+    for course in all_courses:
+        is_owner = course.owner_id == user_id
+        enrollment = CourseEnrollment.objects.filter(user=user, course=course).first()
+        user_role = 'owner' if is_owner else (enrollment.role if enrollment else None)
+        
+        # Get activities based on role
+        if is_owner or (enrollment and enrollment.role == 'teacher'):
+            # Show all activities for owners and teachers
+            course_activities = Activity.objects.filter(course=course).order_by('-created_at')
+        else:
+            # Show only visible activities for students
+            course_activities = Activity.objects.filter(course=course, is_visible=True).order_by('-created_at')
+        
+        for activity in course_activities:
+            activities_with_roles.append({
+                'activity': activity,
+                'course': course,
+                'user_role': user_role,
+                'is_owner': is_owner
+            })
+    
+    # Sort by creation date
+    activities_with_roles.sort(key=lambda x: x['activity'].created_at, reverse=True)
+    
+    # Check if user can create activities (has at least one course with space)
+    can_create_activity = user.can_create_activity()
+    
+    context = {
+        'activities_with_roles': activities_with_roles,
+        'courses': all_courses,
+        'enrolled_courses': all_courses,
+        'user': user,
+        'can_create_activity': can_create_activity
+    }
     
     return render(request, 'activities.html', context)
 
@@ -758,12 +936,12 @@ def profile_view(request):
         except Exception as e:
             messages.error(request, f"An unexpected error occurred: {str(e)}")
     
-    if user.role == 'teacher':
-        enrolled_courses = Course.objects.filter(owner=user)
-    else:
-        enrolled_courses = Course.objects.filter(enrollments__user=user)
+    # Get all courses for navigation
+    owned_courses = Course.objects.filter(owner=user)
+    enrolled_courses = Course.objects.filter(enrollments__user=user)
+    all_courses = (owned_courses | enrolled_courses).distinct()
     
     return render(request, 'profile.html', {
         'user': user,
-        'enrolled_courses': enrolled_courses
+        'enrolled_courses': all_courses
     })

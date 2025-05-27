@@ -5,12 +5,45 @@ class User(models.Model):
     username = models.CharField(max_length=255, unique=True, null=False)
     email = models.EmailField(unique=True, null=False)
     password_hash = models.CharField(max_length=255, null=False)
-    role = models.CharField(max_length=50, default="student")
     created_at = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
         return self.username
+    
+    def get_owned_courses_count(self):
+        """Get the number of courses this user owns (as teacher)"""
+        return Course.objects.filter(owner=self).count()
+    
+    def get_total_activities_count(self):
+        """Get the total number of activities this user has created"""
+        return Activity.objects.filter(owner=self).count()
+    
+    def get_enrolled_courses_count(self):
+        """Get the number of courses this user is enrolled in (as student)"""
+        return CourseEnrollment.objects.filter(user=self).count()
+    
+    def can_create_course(self):
+        """Check if user can create a new course (limit: 3)"""
+        return self.get_owned_courses_count() < 3
+    
+    def can_create_activity(self, course=None):
+        """Check if user can create a new activity (limit: 6 per course)"""
+        if course:
+            course_activities_count = Activity.objects.filter(owner=self, course=course).count()
+            return course_activities_count < 6
+        else:
+            owned_courses = Course.objects.filter(owner=self)
+            for owned_course in owned_courses:
+                course_activities_count = Activity.objects.filter(owner=self, course=owned_course).count()
+                if course_activities_count < 6:
+                    return True
+            return False
+    
+    def can_join_course(self):
+        """Check if user can join a new course (limit: 3 total including owned)"""
+        total_courses = self.get_owned_courses_count() + self.get_enrolled_courses_count()
+        return total_courses < 3
 
 class Course(models.Model):
     title = models.CharField(max_length=255)
@@ -32,13 +65,14 @@ class Course(models.Model):
 class CourseEnrollment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="enrollments")
+    role = models.CharField(max_length=20, choices=[('student', 'Student'), ('teacher', 'Teacher')], default='student')
     joined_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         unique_together = (("user", "course"),)
         
     def __str__(self):
-        return f"{self.user} in {self.course}"
+        return f"{self.user} as {self.role} in {self.course}"
 
 
 class Activity(models.Model):
@@ -60,13 +94,15 @@ class Activity(models.Model):
     end_date = models.DateTimeField(blank=True, null=True)
     is_visible = models.BooleanField(default=True)
     allow_redo = models.BooleanField(default=True)
+    openai_assistant_id = models.CharField(max_length=255, blank=True, null=True)
+    vector_store_id = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         if self.title:
-            return f"{self.title} by {self.user}"
-        return f"Activity by {self.user} on {self.course}"
+            return f"{self.title} by {self.owner}"
+        return f"Activity by {self.owner} on {self.course}"
     
 
 class Thread(models.Model):

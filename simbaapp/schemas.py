@@ -22,7 +22,6 @@ class UserRegisterSchema(Schema):
     email: EmailStr
     password: str
     password_confirm: str
-    role: str = "student"
 
 class UserUpdateSchema(Schema):
     username: str
@@ -40,6 +39,10 @@ class CourseCreateSchema(Schema):
 class CourseUpdateSchema(Schema):
     title: str
     description: Optional[str] = None
+
+class CourseEnrollmentSchema(Schema):
+    enrollment_code: str
+    role: str = 'student' 
 
 class ActivityCreateSchema(Schema):
     course_id: int 
@@ -59,6 +62,7 @@ class ActivityCreateSchema(Schema):
     end_date: Optional[datetime] = None
     is_visible: bool = True
     allow_redo: bool = True
+    files: List[str] = Field(default_factory=list)  
 
 class ActivityUpdateSchema(Schema):
     title: Optional[str] = None
@@ -77,6 +81,7 @@ class ActivityUpdateSchema(Schema):
     end_date: Optional[datetime] = None
     is_visible: bool = True
     allow_redo: bool = True
+    files: List[str] = Field(default_factory=list) 
 
 class ThreadGetOrCreateSchema(Schema):
     activity_id: int
@@ -97,7 +102,6 @@ class UserOutSchema(Schema):
     id: int
     username: str
     email: str
-    role: str
 
 class ErrorSchema(Schema):
     message: str
@@ -218,3 +222,17 @@ class WordFrequencySchema(Schema):
 
 class RawMessagesSchema(Schema):
     messages: list
+
+class FileUploadSchema(Schema):
+    filename: str
+    content: str 
+    content_type: str
+
+class ActivityFileSchema(Schema):
+    id: str
+    filename: str
+    size: int
+    created_at: datetime
+
+class ActivityFilesResponseSchema(Schema):
+    files: List[ActivityFileSchema]

@@ -4,9 +4,8 @@ import django.apps
 from openai import AsyncOpenAI
 import chainlit as cl
 import logging
-import urllib.parse
 import httpx
-import json
+import asyncio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -385,24 +384,82 @@ async def on_message(message: cl.Message):
     try:
         await api_create_message(thread_id, message.content, "user", user_id, username=username)
         
-        system_prompt_content = await _build_system_prompt(activity_data, logger)
+        openai_assistant_id = activity_data.get('openai_assistant_id')
         
-        messages_history_data = await api_get_messages_for_thread(thread_id)
-        openai_messages = [{"role": "system", "content": system_prompt_content}]
-
-        for msg_data in messages_history_data:
-            openai_role = msg_data['role'] if msg_data['role'] in ["assistant", "user"] else "user" 
-            openai_messages.append({"role": openai_role, "content": msg_data['content']})
+        if openai_assistant_id:
+            try:
+                openai_thread_id = cl.user_session.get("openai_thread_id")
+                if not openai_thread_id:
+                    openai_thread = await client.beta.threads.create()
+                    openai_thread_id = openai_thread.id
+                    cl.user_session.set("openai_thread_id", openai_thread_id)
+                    logger.info(f"Created new OpenAI thread: {openai_thread_id}")
+                
+                await client.beta.threads.messages.create(
+                    thread_id=openai_thread_id,
+                    role="user",
+                    content=message.content
+                )
+                
+                run = await client.beta.threads.runs.create(
+                    thread_id=openai_thread_id,
+                    assistant_id=openai_assistant_id
+                )
+                
+                while run.status in ['queued', 'in_progress']:
+                    await asyncio.sleep(1)
+                    run = await client.beta.threads.runs.retrieve(
+                        thread_id=openai_thread_id,
+                        run_id=run.id
+                    )
+                
+                if run.status == 'completed':
+                    messages = await client.beta.threads.messages.list(
+                        thread_id=openai_thread_id,
+                        limit=1
+                    )
+                    
+                    if messages.data:
+                        latest_message = messages.data[0]
+                        if latest_message.content:
+                            ai_response_content = latest_message.content[0].text.value
+                            
+                            await api_create_message(thread_id, ai_response_content, "assistant", user_id, model_name="gpt-4o-mini")
+                            
+                            await cl.Message(content=ai_response_content).send()
+                        else:
+                            await cl.Message(content="I apologize, but I couldn't generate a response. Please try again.").send()
+                    else:
+                        await cl.Message(content="I apologize, but I couldn't retrieve the response. Please try again.").send()
+                else:
+                    logger.error(f"OpenAI run failed with status: {run.status}")
+                    await cl.Message(content="I apologize, but I encountered an error processing your request. Please try again.").send()
+                    
+            except Exception as e:
+                logger.error(f"OpenAI Assistant API Error: {e}")
+                await cl.Message(content=f"I apologize, but I'm having trouble processing your request right now. Please try again in a moment. Error: {str(e)}").send()
+                
+        else:
+            logger.info("Using legacy chat completions mode (no OpenAI assistant)")
             
-        response = await client.chat.completions.create(
-            model=settings["model"],
-            messages=openai_messages,
-            temperature=settings["temperature"],
-        )
-        ai_response_content = response.choices[0].message.content
-        
-        await api_create_message(thread_id, ai_response_content, "assistant", user_id, model_name=settings["model"])
-        await cl.Message(content=ai_response_content).send()
+            system_prompt_content = await _build_system_prompt(activity_data, logger)
+            
+            messages_history_data = await api_get_messages_for_thread(thread_id)
+            openai_messages = [{"role": "system", "content": system_prompt_content}]
+
+            for msg_data in messages_history_data:
+                openai_role = msg_data['role'] if msg_data['role'] in ["assistant", "user"] else "user" 
+                openai_messages.append({"role": openai_role, "content": msg_data['content']})
+                
+            response = await client.chat.completions.create(
+                model=settings["model"],
+                messages=openai_messages,
+                temperature=settings["temperature"],
+            )
+            ai_response_content = response.choices[0].message.content
+            
+            await api_create_message(thread_id, ai_response_content, "assistant", user_id, model_name=settings["model"])
+            await cl.Message(content=ai_response_content).send()
         
     except Exception as e:
         logger.error(f"Error processing message: {e}")

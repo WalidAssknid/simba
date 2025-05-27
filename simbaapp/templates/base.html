@@ -41,11 +41,9 @@
                 <a href="{% url 'activities' %}" class="sidebar-item {% if request.resolver_match.url_name == 'activities' %}active{% endif %}">
                     Activities
                     </a>
-                    {% if request.session.role == 'teacher' %}
-                        <a href="{% url 'dashboard' %}" class="sidebar-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                            Dashboard
-                        </a>
-                {% endif %}
+                    <a href="{% url 'dashboard' %}" class="sidebar-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                        Dashboard
+                    </a>
             {% else %}
                 <a href="{% url 'login' %}" class="sidebar-item {% if request.resolver_match.url_name == 'login' %}active{% endif %}">
                     <i class="fas fa-sign-in-alt"></i> Login
@@ -54,6 +52,13 @@
                     <i class="fas fa-user-plus"></i> Register
                 </a>
             {% endif %}
+        </div>
+        
+        <!-- Version information at bottom of sidebar -->
+        <div class="sidebar-version">
+            <div class="version-info">
+                <span class="version-number">v{{ app_version }}</span>
+            </div>
         </div>
     </nav>
     
@@ -73,18 +78,15 @@
             <div class="header-actions">
                 {% if request.session.user_id %}
                     {% block action_button %}
-                        {% if request.resolver_match.url_name == 'courses' and request.session.role == 'teacher' %}
-                            <a href="{% url 'create_course' %}" class="add-button" title="Create Course">
-                                <i class="fas fa-plus"></i>
-                            </a>
-                        {% elif request.resolver_match.url_name == 'courses' and request.session.role == 'student' %}
-                            <a href="{% url 'join_course' %}" class="add-button" title="Join a Course">
-                                <i class="fas fa-plus"></i>
-                            </a>
-                        {% elif request.resolver_match.url_name == 'course_detail' and request.session.role == 'teacher' %}
-                            <button id="openActivityModal" class="add-button" title="Create Activity">
-                                <i class="fas fa-plus"></i>
-                            </button>
+                        {% if request.resolver_match.url_name == 'courses' %}
+                            <div class="action-buttons-group">
+                                <a href="{% url 'create_course' %}" class="add-button" title="Create Course">
+                                    <i class="fas fa-plus"></i>
+                                </a>
+                                <a href="{% url 'join_course' %}" class="add-button" title="Join a Course">
+                                    <i class="fas fa-user-plus"></i>
+                                </a>
+                            </div>
                         {% endif %}
                     {% endblock %}
                     

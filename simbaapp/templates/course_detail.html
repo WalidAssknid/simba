@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="course-details" data-is-teacher="{{ is_teacher|lower }}">
+<div class="course-details" data-is-owner="{{ is_owner|lower }}" data-user-role="{{ user_role_in_course }}">
     <div class="back-link">
         <a href="{% url 'courses' %}">
             <i class="fas fa-arrow-left"></i> Back to Courses
@@ -34,7 +34,7 @@
             <button id="showParticipants" class="btn btn-secondary">
                 Show Participants
             </button>
-    {% if is_teacher %}
+    {% if is_owner or user_role_in_course == 'teacher' %}
             <button id="createActivityBtn" class="add-button" title="Create Activity">
                 <i class="fas fa-plus"></i>
             </button>
@@ -64,7 +64,7 @@
             <div class="participant-card">
                 <div class="participant-info">
                     <span class="participant-name">{{ course.owner.username }}</span>
-                    <span class="participant-role">{{ course.owner.role }}</span>
+                    <span class="participant-role">Owner</span>
                 </div>
             </div>
             
@@ -74,9 +74,9 @@
                 <div class="participant-card" data-enrollment-id="{{ enrollment.id }}" data-user-id="{{ enrollment.user.id }}">
                     <div class="participant-info">
                         <span class="participant-name">{{ enrollment.user.username }}</span>
-                        <span class="participant-role">{{ enrollment.user.role }}</span>
+                        <span class="participant-role">{{ enrollment.role|capfirst }}</span>
                     </div>
-                    {% if is_teacher and enrollment.user.role == 'student' %}
+                    {% if is_owner and enrollment.role == 'student' %}
                     <button class="remove-participant-btn" data-enrollment-id="{{ enrollment.id }}" data-username="{{ enrollment.user.username }}" title="Remove {{ enrollment.user.username }} from course">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -93,20 +93,20 @@
         <!-- Activities list container -->
         <div id="activities-container">
             <div class="activities-list">
-            {% if is_teacher %}
+            {% if is_owner or user_role_in_course == 'teacher' %}
                 {% include 'popup_activity.html' %}
             {% endif %}
             
                 {% for activity in activities %}
                 <div class="activity-item" data-activity-id="{{ activity.id }}" data-allow-redo="{{ activity.allow_redo|yesno:'true,false' }}">
                     <div class="activity-options">
-                        {% if is_teacher %}
+                        {% if is_owner or user_role_in_course == 'teacher' %}
                         <button class="activity-menu-toggle">
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
                         {% endif %}
                         <div class="activity-menu">
-                            {% if is_teacher %}
+                            {% if is_owner or user_role_in_course == 'teacher' %}
                             <a href="#" class="activity-menu-item" data-action="edit" data-activity-id="{{ activity.id }}">
                                 <i class="fas fa-edit"></i> Edit
                             </a>
@@ -135,7 +135,7 @@
                     <div class="empty-state">
                     <h3>No activities found</h3>
                         <p>
-                            {% if is_teacher %}
+                            {% if is_owner or user_role_in_course == 'teacher' %}
                             Click the <i class="fas fa-plus"></i> button to create a new activity!
                             {% else %}
                             This course doesn't have any activities yet.
@@ -160,7 +160,7 @@
                     <h3 id="activity-title-header"></h3>
                 </div>
                 <div class="header-right">
-                    {% if not is_teacher %}
+                    {% if not is_owner and user_role_in_course != 'teacher' %}
                     <div class="redo-controls" style="display: none;">
                         <button class="btn btn-secondary redo-activity-btn" id="chainlit-redo-btn">
                             <i class="fas fa-redo"></i> <span class="redo-text">Re-do Activity</span>
@@ -207,8 +207,27 @@ document.addEventListener('DOMContentLoaded', function() {
     if (createActivityBtn) {
         createActivityBtn.addEventListener('click', function(e) {
             e.preventDefault();
+            
+            const activityModal = document.getElementById('activityModal');
+            const form = activityModal.querySelector('form');
+            
+            // Make sure form has the correct action
+            const courseId = '{{ course.id }}';
+            form.action = `/courses/${courseId}/create_activity/`;
+            
+            // Reset form fields
+            form.reset();
+            form.querySelector('#is-visible').checked = true;
+            form.querySelector('#allow-redo').checked = true;
+            form.querySelector('#allow-questions').checked = true;
+            form.querySelector('#allow-emojis').checked = true;
+            form.querySelector('#trust-document').checked = true;
+            form.querySelector('#custom-prompt-group').style.display = 'none';
+            form.querySelector('#questions-list').innerHTML = '';
+            form.querySelector('#questions-hidden').value = '[]';
+            
             // Open modal for activity creation
-            document.getElementById('activityModal').style.display = 'block';
+            activityModal.style.display = 'block';
         });
     }
     
@@ -250,7 +269,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const activityTitle = this.querySelector('.activity-title').textContent;
                 const userId = '{{ request.session.user_id }}';
                 const username = '{{ request.session.username }}';
-                const isTeacher = document.querySelector('.course-details').getAttribute('data-is-teacher') === 'true';
+                const courseDetails = document.querySelector('.course-details');
+                const isOwner = courseDetails.getAttribute('data-is-owner') === 'true';
+                const userRole = courseDetails.getAttribute('data-user-role');
+                const isTeacher = isOwner || userRole === 'teacher';
                 
                 console.log('Activity clicked:', activityId, activityTitle); // Debug log
                 
@@ -761,7 +783,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     emptyState.innerHTML = `
                                         <h3>No activities found</h3>
                                         <p>
-                                            {% if is_teacher %}
+                                            {% if is_owner or user_role_in_course == 'teacher' %}
                                             Click the <i class="fas fa-plus"></i> button to create a new activity!
                                             {% else %}
                                             This course doesn't have any activities yet.

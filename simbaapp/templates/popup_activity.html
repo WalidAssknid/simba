@@ -162,6 +162,16 @@
                 </small>
             </div>
             
+            <hr>
+            <h3 class="section-title">Activity Files</h3>
+            <div class="form-group">
+                <label for="activity-files">Upload Files (PDF, TXT, DOC, etc.)</label>
+                <input type="file" id="activity-files" class="form-control" multiple accept=".pdf,.txt,.doc,.docx,.ppt,.pptx,.xls,.xlsx">
+                <small class="form-text">Upload documents that the assistant can reference during conversations.</small>
+                <div id="files-list" class="files-list"></div>
+                <input type="hidden" name="files[]" id="files-hidden">
+            </div>
+            
             <div class="form-actions">
                 <button type="submit" class="btn">Create Activity</button>
             </div>
@@ -181,7 +191,11 @@
         const newQuestion = document.getElementById('new-question');
         const addQuestionBtn = document.getElementById('add-question');
         const questionsHidden = document.getElementById('questions-hidden');
+        const activityFiles = document.getElementById('activity-files');
+        const filesList = document.getElementById('files-list');
+        const filesHidden = document.getElementById('files-hidden');
         let questions = [];
+        let files = [];
 
         // Open modal
         if (openModalBtn) {
@@ -267,6 +281,90 @@
         // Update the hidden field with JSON
         function updateHiddenField() {
             questionsHidden.value = JSON.stringify(questions);
+        }
+
+        // Handle file uploads
+        activityFiles.addEventListener('change', function(e) {
+            const selectedFiles = Array.from(e.target.files);
+            selectedFiles.forEach(file => {
+                addFile(file);
+            });
+            e.target.value = ''; // Reset input
+        });
+
+        // Add a file to the list
+        function addFile(file) {
+            // Convert file to base64
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Content = e.target.result.split(',')[1]; // Remove data:... prefix
+                const fileData = {
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                    content: base64Content
+                };
+                files.push(fileData);
+                updateFilesList();
+                updateFilesHiddenField();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Remove a file from the list
+        function removeFile(index) {
+            files.splice(index, 1);
+            updateFilesList();
+            updateFilesHiddenField();
+        }
+
+        // Update the files list display
+        function updateFilesList() {
+            filesList.innerHTML = '';
+            files.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                const fileInfo = document.createElement('div');
+                fileInfo.className = 'file-info';
+                
+                const fileName = document.createElement('span');
+                fileName.className = 'file-name';
+                fileName.textContent = file.name;
+                
+                const fileSize = document.createElement('span');
+                fileSize.className = 'file-size';
+                fileSize.textContent = formatFileSize(file.size);
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-file';
+                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                removeBtn.type = 'button';
+                removeBtn.addEventListener('click', function() {
+                    removeFile(index);
+                });
+                
+                fileInfo.appendChild(fileName);
+                fileInfo.appendChild(fileSize);
+                fileItem.appendChild(fileInfo);
+                fileItem.appendChild(removeBtn);
+                filesList.appendChild(fileItem);
+            });
+        }
+
+        // Update the hidden field with files data
+        function updateFilesHiddenField() {
+            const filesData = files.map(file => `${file.name}:${file.type}:${file.content}`);
+            filesHidden.value = JSON.stringify(filesData);
+        }
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
     });
 </script>
@@ -358,5 +456,54 @@
         margin-top: 24px;
         display: flex;
         justify-content: flex-end;
+    }
+    
+    /* File upload styles */
+    .files-list {
+        margin-top: 12px;
+    }
+    
+    .file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: var(--background-light);
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        border: 1px solid var(--border-color);
+    }
+    
+    .file-info {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+    }
+    
+    .file-name {
+        font-weight: 500;
+        color: var(--text-color);
+        font-size: 0.9rem;
+    }
+    
+    .file-size {
+        font-size: 0.8rem;
+        color: #666;
+        margin-top: 2px;
+    }
+    
+    .remove-file {
+        background: none;
+        border: none;
+        color: #999;
+        cursor: pointer;
+        padding: 4px;
+        font-size: 14px;
+        transition: color 0.2s ease;
+        margin-left: 8px;
+    }
+    
+    .remove-file:hover {
+        color: var(--danger-color);
     }
 </style>

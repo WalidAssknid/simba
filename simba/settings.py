@@ -35,9 +35,9 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'db').split(',')
 
 CSRF_TRUSTED_ORIGINS = ['https://simba-refact.irit.fr']
 
-SESSION_COOKIE_SECURE = True
+# SESSION_COOKIE_SECURE = True
 
-CSRF_COOKIE_SECURE = True 
+# CSRF_COOKIE_SECURE = True 
 
 # Application definition
 
@@ -84,6 +84,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'simbaapp.context_processors.version_context',
             ],
         },
     },

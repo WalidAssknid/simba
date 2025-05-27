@@ -10,7 +10,6 @@ services:
       - DEBUG=False
       - ALLOWED_HOSTS=simba-refact.irit.fr
       - DB_HOST=db
-      - DB_PORT=5433
     volumes:
       - static_volume:/app/static
       - media_volume:/app/media
@@ -23,21 +22,21 @@ services:
       - "8000"
 
   db:
-    image: postgres:15
+    image: postgres:16
     container_name: simba-db-prod
-    env_file:
-      - .env
+    restart: always
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-simba_db}
-      POSTGRES_USER: ${POSTGRES_USER:-simba_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-simba_password}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
     networks:
       - simba-network
-    expose:
-      - "5433"
+    ports:
+      - "5433:5433"
+    command: ["postgres", "-c", "port=5433"]
 
   nginx:
     image: nginx:alpine
@@ -67,7 +66,6 @@ services:
       - DJANGO_HOST=web
       - DJANGO_PORT=8000
       - DB_HOST=db
-      - DB_PORT=5433
     command: ["chainlit", "run", "chainlit_app.py", "--host", "0.0.0.0", "--port", "8500"]
     depends_on:
       - web

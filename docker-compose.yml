@@ -28,7 +28,6 @@ services:
       - DB_HOST=db
       - CHAINLIT_HOST=0.0.0.0
       - CHAINLIT_PORT=8500
-      - CHAINLIT_ROOT_PATH=/
       - CHAINLIT_ALLOW_ORIGINS=*
       - SIMBA_API_URL=http://web:8000/api
     volumes:

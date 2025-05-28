@@ -14,7 +14,7 @@ urlpatterns = [
     path('courses/<int:course_id>/edit/', views.edit_course_view, name='edit_course'),
     path('activities/', views.activities_view, name='activities'),
     path('courses/<int:course_id>/create_activity/', views.create_activity_view, name='create_activity'), 
-    path('chainlit/', views.chainlit_view, name='chainlit_interface'),
+    path('chat/', views.chainlit_view, name='chainlit_interface'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
     path("api/", api.urls), 
 ]

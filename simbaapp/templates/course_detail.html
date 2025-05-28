@@ -308,7 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (attempts && attempts.length > 0) {
                                 // Use the most recent attempt (first in the list since it's ordered by -attempt_number)
                                 const latestThread = attempts[0];
-                                const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${latestThread.id}`;
+                                const chainlitUrl = `/chat/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${latestThread.id}`;
                                 console.log('Loading existing attempt:', latestThread.id);
                                 forceChainlitReload(chainlitUrl);
                             } else {
@@ -322,21 +322,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                 })
                                 .then(response => response.json())
                                 .then(newThread => {
-                                    const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${newThread.id}`;
+                                    const chainlitUrl = `/chat/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${newThread.id}`;
                                     console.log('Loading new first attempt:', newThread.id);
                                     forceChainlitReload(chainlitUrl);
                                 })
                                 .catch(error => {
                                     console.error('Error creating first attempt:', error);
                                     // Fallback to default URL without thread_id
-                                    const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
+                                    const chainlitUrl = `/chat/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
                                     forceChainlitReload(chainlitUrl);
                                 });
                             }
                         })
                         .catch(error => {
                             console.error('Error loading attempts:', error);
-                            const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
+                            const chainlitUrl = `/chat/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
                             forceChainlitReload(chainlitUrl);
                         });
                     
@@ -451,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(newThread => {
                     console.log('New thread created:', newThread);
-                    const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${newThread.id}`;
+                    const chainlitUrl = `/chat/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${newThread.id}`;
                     console.log('Loading new attempt with URL:', chainlitUrl);
                     forceChainlitReload(chainlitUrl);
                     
@@ -464,7 +464,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             } else {
                 console.log('Loading existing attempt with thread_id:', selectedValue);
-                const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${selectedValue}`;
+                const chainlitUrl = `/chat/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${selectedValue}`;
                 console.log('Loading existing attempt with URL:', chainlitUrl);
                 forceChainlitReload(chainlitUrl);
                 
@@ -721,7 +721,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     .then(attempts => {
                         if (attempts && attempts.length > 0) {
                             const latestThread = attempts[0];
-                            const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${latestThread.id}`;
+                            const chainlitUrl = `/chat/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${latestThread.id}`;
                             console.log('Loading existing attempt:', latestThread.id);
                             forceChainlitReload(chainlitUrl);
                         } else {
@@ -734,20 +734,20 @@ document.addEventListener('DOMContentLoaded', function() {
                             })
                             .then(response => response.json())
                             .then(newThread => {
-                                const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${newThread.id}`;
+                                const chainlitUrl = `/chat/?activity_id=${activityId}&user_id=${userId}&username=${username}&thread_id=${newThread.id}`;
                                 console.log('Loading new first attempt:', newThread.id);
                                 forceChainlitReload(chainlitUrl);
                             })
                             .catch(error => {
                                 console.error('Error creating first attempt:', error);
-                                const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
+                                const chainlitUrl = `/chat/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
                                 forceChainlitReload(chainlitUrl);
                             });
                         }
                     })
                     .catch(error => {
                         console.error('Error loading attempts:', error);
-                        const chainlitUrl = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
+                        const chainlitUrl = `/chat/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
                         forceChainlitReload(chainlitUrl);
                     });
                 
@@ -759,7 +759,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 closeAllMenus();
             } else if (action === 'link') {
                 document.getElementById('activityLinkDisplay').textContent = 
-                    `${window.location.origin}/chainlit/?activity_id=${activityId}`;
+                    `${window.location.origin}/chat/?activity_id=${activityId}`;
                 document.getElementById('activityLinkModal').style.display = 'block';
             } else if (action === 'delete') {
                 if (confirm('Are you sure you want to delete this activity?')) {

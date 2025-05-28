@@ -9,8 +9,8 @@ from .models import User, Course, Activity, CourseEnrollment, Message
 import json
 import logging
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 def home_view(request):
     # If user is already logged in, redirect to courses page
@@ -106,8 +106,7 @@ def chainlit_view(request):
         return redirect('courses')
         
     try:
-        logger.info(f"chainlit_view called with activity_id={activity_id}, thread_id={thread_id}")
-        
+        logger.info(f"chainlit_view called with activity_id={activity_id}, thread_id={thread_id} logged")
         activity = Activity.objects.get(id=activity_id)
         user_id = request.session.get('user_id')
         username = request.session.get('username', 'User')
@@ -257,6 +256,7 @@ def create_course_view(request):
 
 def course_detail_view(request, course_id):
     logger.info(f"requested course {course_id}")
+
     if not request.session.get('user_id'):
         return redirect('login')
     try:

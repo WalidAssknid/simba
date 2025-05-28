@@ -37,23 +37,6 @@ services:
       - web
     networks:
       - simba-network
-
-  nginx:
-    image: nginx:alpine
-    container_name: simba-nginx-prod
-    ports:
-      - "8000:80"
-      - "8443:443"
-    volumes:
-      - ./nginx/prod.conf:/etc/nginx/nginx.conf
-      - static_volume:/app/static
-      - media_volume:/app/media
-      - ./ssl:/etc/nginx/ssl
-    depends_on:
-      - web
-    restart: unless-stopped
-    networks:
-      - simba-network
   
   db:
     image: postgres:16

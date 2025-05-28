@@ -749,9 +749,13 @@
 <div class="filters">
   <div>
     <label for="view-as-filter">View as:</label>
-    <select id="view-as-filter" onchange="updateDashboard()">
-      <option value="teacher" {% if view_as == 'teacher' %}selected{% endif %}>Teacher</option>
-      <option value="student" {% if view_as == 'student' %}selected{% endif %}>Student</option>
+    <select id="view-as-filter" class="form-control" onchange="updateDashboard()">
+        <option value="teacher" {% if view_as == 'teacher' %}selected{% endif %} {% if not has_teacher_role %}disabled title="You need to own a course or be enrolled as a teacher"{% endif %}>
+            Teacher View
+        </option>
+        <option value="student" {% if view_as == 'student' %}selected{% endif %} {% if not has_student_role %}disabled title="You need to be enrolled as a student in a course"{% endif %}>
+            Student View
+        </option>
     </select>
   </div>
   <div>
@@ -1099,24 +1103,53 @@
   window.addEventListener('orientationchange', handleChartResize);
   
   document.addEventListener('DOMContentLoaded', () => {
+    console.log('Dashboard loaded with view_as:', '{{ view_as }}', 'active_tab:', '{{ active_tab }}');
+    
+    // Check if required elements exist
+    console.log('Checking for chart elements...');
+    console.log('activity-stats-chart exists:', !!document.getElementById('activity-stats-chart'));
+    console.log('segmentation-chart exists:', !!document.getElementById('segmentation-chart'));
+    console.log('length-distribution-chart exists:', !!document.getElementById('length-distribution-chart'));
+    console.log('activity-engagement-chart exists:', !!document.getElementById('activity-engagement-chart'));
+    console.log('student-metrics exists:', !!document.getElementById('student-metrics'));
+    console.log('chat-messages exists:', !!document.getElementById('chat-messages'));
+    
     initializeCharts();
     
-    const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
+    const activeTab = document.querySelector('.tab.active');
+    const activeTabName = activeTab ? activeTab.getAttribute('data-tab') : 'student-stats';
+    const currentViewAs = '{{ view_as }}';
+    
+    console.log('Initial active tab:', activeTabName, 'view_as:', currentViewAs);
     
     const urlParams = new URLSearchParams(window.location.search);
     const selectedStudentId = urlParams.get('student_id');
     
-    if (activeTab === 'raw-data') {
+    // Initialize based on active tab
+    if (activeTabName === 'raw-data') {
       updateConversationStats();
-    } else if (activeTab === 'student-engagement') {
+    } else if (activeTabName === 'student-engagement') {
       setTimeout(() => {
         loadWordCloud();
       }, 100);
-    } else if (activeTab === 'student-stats' && selectedStudentId) {
-      document.getElementById('student-filter').value = selectedStudentId;
-      loadStudentData();
+    } else if (activeTabName === 'student-stats') {
+      if (selectedStudentId && currentViewAs === 'teacher') {
+        // Teacher view with specific student selected
+        const studentFilter = document.getElementById('student-filter');
+        if (studentFilter) {
+          studentFilter.value = selectedStudentId;
+          loadStudentData();
+        }
+      } else if (currentViewAs === 'student') {
+        // Student view - load current user's data automatically
+        console.log('Loading student data for current user...');
+        setTimeout(() => {
+          loadCurrentStudentData();
+        }, 100);
+      }
     }
     
+    // Add click listeners to tabs
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
         switchToTab(tab.dataset.tab);
@@ -1125,156 +1158,297 @@
   });
   
   function switchToTab(tabId) {
+    console.log('switchToTab called with:', tabId, 'current view_as:', '{{ view_as }}');
+    
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     
     const tabElement = document.querySelector(`.tab[data-tab="${tabId}"]`);
     if (tabElement) {
       tabElement.classList.add('active');
-      document.getElementById(tabId).classList.add('active');
+      const contentElement = document.getElementById(tabId);
+      if (contentElement) {
+        contentElement.classList.add('active');
+      }
       
       if (tabId === 'raw-data') {
         updateConversationStats();
       } else if (tabId === 'student-engagement') {
         loadWordCloud();
+      } else if (tabId === 'student-stats' && '{{ view_as }}' === 'student') {
+        // Load student data when switching to student-stats tab in student view
+        setTimeout(() => {
+          loadCurrentStudentData();
+        }, 100);
       }
+    } else {
+      console.warn('Tab element not found for:', tabId);
     }
   }
   
+  function loadCurrentStudentData() {
+    console.log('Loading current student data...');
+    const currentUserId = '{{ user.id }}';
+    const courseId = document.getElementById('course-filter').value;
+    
+    if (!currentUserId) {
+      console.error('No current user ID found');
+      return;
+    }
+    
+    // Show the student metrics section
+    const studentMetrics = document.getElementById('student-metrics');
+    if (studentMetrics) {
+      studentMetrics.style.display = 'block';
+    }
+    
+    fetch(`/api/dashboard/student/${currentUserId}/?course_id=${courseId}&requesting_user_id=${currentUserId}`)
+      .then(response => response.json())
+      .then(data => {
+        console.log('Student data received:', data);
+        
+        if (data.error) {
+          console.error('API returned error:', data.error);
+          // Show error message to user
+          document.getElementById('student-activities-count').textContent = 'Error';
+          document.getElementById('student-messages-count').textContent = 'Error';
+          document.getElementById('student-total-chars').textContent = 'Error';
+          document.getElementById('student-retries-count').textContent = 'Error';
+          return;
+        }
+        
+        // Update student metrics
+        document.getElementById('student-activities-count').textContent = data.activities_count || 0;
+        document.getElementById('student-messages-count').textContent = data.messages_count || 0;
+        document.getElementById('student-total-chars').textContent = data.total_chars || 0;
+        document.getElementById('student-retries-count').textContent = data.retries_count || 0;
+        
+        // Update charts if data exists
+        if (data.length_distribution && data.length_distribution.bins && data.length_distribution.values) {
+          updateLengthDistributionChart(data.length_distribution, data.student_length);
+        } else {
+          console.warn('No length distribution data available');
+        }
+        
+        if (data.activity_engagement && data.activity_engagement.labels && data.activity_engagement.values) {
+          updateActivityEngagementChart(data.activity_engagement);
+        } else {
+          console.warn('No activity engagement data available');
+        }
+        
+        // Update conversation history if available
+        if (data.messages && data.messages.length > 0) {
+          updateConversationHistory(data.messages);
+        } else {
+          console.warn('No conversation history available');
+          // Clear conversation history
+          const chatMessages = document.getElementById('chat-messages');
+          if (chatMessages) {
+            chatMessages.innerHTML = '<p>No conversation history available.</p>';
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error loading student data:', error);
+        // Show error state
+        document.getElementById('student-activities-count').textContent = 'Error';
+        document.getElementById('student-messages-count').textContent = 'Error';
+        document.getElementById('student-total-chars').textContent = 'Error';
+        document.getElementById('student-retries-count').textContent = 'Error';
+      });
+  }
+  
   function initializeCharts() {
-    const activityCtx = document.getElementById('activity-stats-chart').getContext('2d');
-    const activityChart = new Chart(activityCtx, {
-      type: 'bar',
-      data: {
-        labels: activityNames,
-        datasets: [{
-          label: 'Messages',
-          data: activityMessageCounts,
-          backgroundColor: 'rgba(54, 162, 235, 0.5)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-          borderWidth: 2
-        }, {
-          label: 'Avg Length',
-          data: activityAvgLengths,
-          backgroundColor: 'rgba(255, 99, 132, 0.5)',
-          borderColor: 'rgba(255, 99, 132, 1)',
-          borderWidth: 1,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            ticks: {
-              padding: -1
-            }
-          },
-          y: {
-            beginAtZero: true,
-            alignToPixels: true
-          }
-        }
-      }
-    });
+    // Only initialize charts that exist in the current view
+    const activityChartElement = document.getElementById('activity-stats-chart');
+    const segmentationChartElement = document.getElementById('segmentation-chart');
     
-    const segmentationCtx = document.getElementById('segmentation-chart').getContext('2d');
-    const segmentationChart = new Chart(segmentationCtx, {
-      type: 'scatter',
-      data: {
-        datasets: [{
-          label: 'Many Long Messages',
-          data: segmentManyLong,
-          backgroundColor: 'rgba(54, 162, 235, 0.5)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-        }, {
-          label: 'Few Long Messages',
-          data: segmentFewLong,
-          backgroundColor: 'rgba(255, 99, 132, 0.5)',
-          borderColor: 'rgba(255, 99, 132, 1)',
-        }, {
-          label: 'Many Short Messages',
-          data: segmentManyShort,
-          backgroundColor: 'rgba(75, 192, 192, 0.5)',
-          borderColor: 'rgba(75, 192, 192, 1)',
-        }, {
-          label: 'Few Short Messages',
-          data: segmentFewShort,
-          backgroundColor: 'rgba(255, 206, 86, 0.5)',
-          borderColor: 'rgba(255, 206, 86, 1)',
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            title: {
-              display: true,
-              text: 'Message Length (chars)'
-            }
+    if (activityChartElement) {
+      try {
+        const activityCtx = activityChartElement.getContext('2d');
+        const activityChart = new Chart(activityCtx, {
+          type: 'bar',
+          data: {
+            labels: activityNames,
+            datasets: [{
+              label: 'Messages',
+              data: activityMessageCounts,
+              backgroundColor: 'rgba(54, 162, 235, 0.5)',
+              borderColor: 'rgba(54, 162, 235, 1)',
+              borderWidth: 2
+            }, {
+              label: 'Avg Length',
+              data: activityAvgLengths,
+              backgroundColor: 'rgba(255, 99, 132, 0.5)',
+              borderColor: 'rgba(255, 99, 132, 1)',
+              borderWidth: 1,
+            }]
           },
-          y: {
-            title: {
-              display: true,
-              text: 'Message Count'
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                ticks: {
+                  padding: -1
+                }
+              },
+              y: {
+                beginAtZero: true,
+                alignToPixels: true
+              }
             }
           }
-        }
+        });
+        window.activityChart = activityChart;
+      } catch (error) {
+        console.error('Error initializing activity chart:', error);
       }
-    });
+    }
     
-    window.activityChart = activityChart;
-    window.segmentationChart = segmentationChart;
+    if (segmentationChartElement) {
+      try {
+        const segmentationCtx = segmentationChartElement.getContext('2d');
+        const segmentationChart = new Chart(segmentationCtx, {
+          type: 'scatter',
+          data: {
+            datasets: [{
+              label: 'Many Long Messages',
+              data: segmentManyLong,
+              backgroundColor: 'rgba(54, 162, 235, 0.5)',
+              borderColor: 'rgba(54, 162, 235, 1)',
+            }, {
+              label: 'Few Long Messages',
+              data: segmentFewLong,
+              backgroundColor: 'rgba(255, 99, 132, 0.5)',
+              borderColor: 'rgba(255, 99, 132, 1)',
+            }, {
+              label: 'Many Short Messages',
+              data: segmentManyShort,
+              backgroundColor: 'rgba(75, 192, 192, 0.5)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+            }, {
+              label: 'Few Short Messages',
+              data: segmentFewShort,
+              backgroundColor: 'rgba(255, 206, 86, 0.5)',
+              borderColor: 'rgba(255, 206, 86, 1)',
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                title: {
+                  display: true,
+                  text: 'Message Length (chars)'
+                }
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: 'Message Count'
+                }
+              }
+            }
+          }
+        });
+        window.segmentationChart = segmentationChart;
+      } catch (error) {
+        console.error('Error initializing segmentation chart:', error);
+      }
+    }
   }
   
   function updateDashboard() {
     const viewAsFilter = document.getElementById('view-as-filter');
     const viewAs = viewAsFilter ? viewAsFilter.value : '{{ view_as }}';
-    console.log('updateDashboard called with viewAs:', viewAs, 'hasTeacherRole:', '{{ has_teacher_role|yesno:"true,false" }}', 'hasStudentRole:', '{{ has_student_role|yesno:"true,false" }}');
-    const courseId = document.getElementById('course-filter').value;
-    const activityId = document.getElementById('activity-filter').value;
+    const currentViewAs = '{{ view_as }}';
     
-    let activeTab = document.querySelector('.tab.active');
-    let activeTabName = activeTab ? activeTab.getAttribute('data-tab') : 'student-stats';
+    console.log('=== updateDashboard START ===');
+    console.log('updateDashboard called:', {
+      newViewAs: viewAs,
+      currentViewAs: currentViewAs,
+      hasTeacherRole: '{{ has_teacher_role|yesno:"true,false" }}',
+      hasStudentRole: '{{ has_student_role|yesno:"true,false" }}'
+    });
     
-    // Force student-stats tab for student view
-    if (viewAs === 'student') {
-      activeTabName = 'student-stats';
+    // Validate permissions before proceeding
+    const hasTeacherRole = '{{ has_teacher_role|yesno:"true,false" }}' === 'true';
+    const hasStudentRole = '{{ has_student_role|yesno:"true,false" }}' === 'true';
+    
+    if (viewAs === 'teacher' && !hasTeacherRole) {
+      alert('You need to own a course or be enrolled as a teacher to access teacher view.');
+      return;
+    } else if (viewAs === 'student' && !hasStudentRole) {
+      alert('You need to be enrolled as a student in a course to access student view.');
+      return;
     }
     
-    const url = new URL(window.location);
-    
-    url.searchParams.set('view_as', viewAs);
-    
-    if (courseId === 'all') {
-      url.searchParams.delete('course_id');
-    } else {
-      url.searchParams.set('course_id', courseId);
-    }
-    
-    if (activityId === 'all') {
-      url.searchParams.delete('activity_id');
-    } else {
-      url.searchParams.set('activity_id', activityId);
-    }
-    
-    url.searchParams.set('active_tab', activeTabName);
-    
-    if (activeTabName === 'student-stats') {
-      const studentFilter = document.getElementById('student-filter');
-      if (studentFilter && studentFilter.value) {
-        url.searchParams.set('student_id', studentFilter.value);
+    // Only redirect if the view has actually changed
+    if (viewAs !== currentViewAs) {
+      console.log(`Switching from ${currentViewAs} to ${viewAs}`);
+      
+      const courseFilter = document.getElementById('course-filter');
+      const activityFilter = document.getElementById('activity-filter');
+      
+      // Get current filters, but reset them when changing views to avoid conflicts
+      const activeTab = document.querySelector('.tab.active');
+      const activeTabName = activeTab ? activeTab.getAttribute('data-tab') : 'conversation-stats';
+      
+      // Build new URL with current filters
+      const urlParams = new URLSearchParams();
+      urlParams.set('view_as', viewAs);
+      
+      // Don't carry over course/activity filters when switching views
+      // This prevents the "course not found" error
+      console.log('Clearing course and activity filters due to view change');
+      
+      // Set appropriate default tab for each view
+      if (viewAs === 'student') {
+        urlParams.set('active_tab', 'student-stats');
+      } else {
+        // For teacher views, keep current tab or default to conversation-stats
+        if (activeTabName !== 'student-stats') {
+          urlParams.set('active_tab', activeTabName);
+        } else {
+          urlParams.set('active_tab', 'conversation-stats');
+        }
       }
+      
+      const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+      console.log('Redirecting to:', newUrl);
+      
+      // Use window.location to redirect
+      window.location = newUrl;
+    } else {
+      console.log('View has not changed, updating current view filters');
+      
+      // Same view, safe to use current filters
+      const courseFilter = document.getElementById('course-filter');
+      const activityFilter = document.getElementById('activity-filter');
+      const courseId = courseFilter ? courseFilter.value : 'all';
+      const activityId = activityFilter ? activityFilter.value : 'all';
+      const activeTab = document.querySelector('.tab.active');
+      const activeTabName = activeTab ? activeTab.getAttribute('data-tab') : 'conversation-stats';
+      
+      // Build URL with all current filters
+      const urlParams = new URLSearchParams();
+      urlParams.set('view_as', viewAs);
+      if (courseId && courseId !== 'all') {
+        urlParams.set('course_id', courseId);
+      }
+      if (activityId && activityId !== 'all') {
+        urlParams.set('activity_id', activityId);
+      }
+      urlParams.set('active_tab', activeTabName);
+      
+      const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+      console.log('Updating with filters:', newUrl);
+      
+      // Use window.location to update with filters
+      window.location = newUrl;
     }
-    
-    // Clear word cloud data when switching
-    if (typeof wordCloudData !== 'undefined') {
-      wordCloudData = null;
-    }
-    
-    // Always redirect to ensure proper data loading
-    window.location.href = url.toString();
   }
   
   function loadStudentData() {
@@ -1340,106 +1514,126 @@
   }
   
   function updateLengthDistributionChart(distribution, studentLength) {
-    const ctx = document.getElementById('length-distribution-chart').getContext('2d');
+    const chartElement = document.getElementById('length-distribution-chart');
+    if (!chartElement) {
+      console.warn('Length distribution chart element not found');
+      return;
+    }
     
-    if (window.lengthChart) window.lengthChart.destroy();
-    
-    window.lengthChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: distribution.bins,
-        datasets: [{
-          label: 'Distribution',
-          data: distribution.values,
-          fill: true,
-          backgroundColor: 'rgba(54, 162, 235, 0.2)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-          tension: 0.4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            title: {
-              display: true,
-              text: 'Message Length (chars)'
+    try {
+      const ctx = chartElement.getContext('2d');
+      
+      if (window.lengthChart) window.lengthChart.destroy();
+      
+      window.lengthChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: distribution.bins,
+          datasets: [{
+            label: 'Distribution',
+            data: distribution.values,
+            fill: true,
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Message Length (chars)'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Frequency'
+              },
+              beginAtZero: true
             }
           },
-          y: {
-            title: {
-              display: true,
-              text: 'Frequency'
-            },
-            beginAtZero: true
-          }
-        },
-        elements: {
-          point: {
-            radius: 0
-          }
-        },
-        plugins: {
-          annotation: {
-            annotations: {
-              line1: {
-                type: 'line',
-                yMin: 0,
-                yMax: Math.max(...distribution.values),
-                xMin: studentLength,
-                xMax: studentLength,
-                borderColor: 'red',
-                borderWidth: 2,
-                borderDash: [5, 5]
+          elements: {
+            point: {
+              radius: 0
+            }
+          },
+          plugins: {
+            annotation: {
+              annotations: {
+                line1: {
+                  type: 'line',
+                  yMin: 0,
+                  yMax: Math.max(...distribution.values),
+                  xMin: studentLength,
+                  xMax: studentLength,
+                  borderColor: 'red',
+                  borderWidth: 2,
+                  borderDash: [5, 5]
+                }
               }
             }
           }
         }
-      }
-    });
+      });
+    } catch (error) {
+      console.error('Error updating length distribution chart:', error);
+    }
   }
   
   function updateActivityEngagementChart(engagement) {
-    const ctx = document.getElementById('activity-engagement-chart').getContext('2d');
+    const chartElement = document.getElementById('activity-engagement-chart');
+    if (!chartElement) {
+      console.warn('Activity engagement chart element not found');
+      return;
+    }
     
-    if (window.engagementChart) window.engagementChart.destroy();
-    
-    window.engagementChart = new Chart(ctx, {
-      type: 'pie',
-      data: {
-        labels: engagement.labels,
-        datasets: [{
-          data: engagement.values,
-          backgroundColor: [
-            'rgba(255, 99, 132, 0.5)',
-            'rgba(54, 162, 235, 0.5)',
-            'rgba(255, 206, 86, 0.5)',
-            'rgba(75, 192, 192, 0.5)',
-            'rgba(153, 102, 255, 0.5)',
-            'rgba(255, 159, 64, 0.5)'
-          ],
-          borderColor: [
-            'rgba(255, 99, 132, 1)',
-            'rgba(54, 162, 235, 1)',
-            'rgba(255, 206, 86, 1)',
-            'rgba(75, 192, 192, 1)',
-            'rgba(153, 102, 255, 1)',
-            'rgba(255, 159, 64, 1)'
-          ],
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'right',
+    try {
+      const ctx = chartElement.getContext('2d');
+      
+      if (window.engagementChart) window.engagementChart.destroy();
+      
+      window.engagementChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: engagement.labels,
+          datasets: [{
+            data: engagement.values,
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.5)',
+              'rgba(54, 162, 235, 0.5)',
+              'rgba(255, 206, 86, 0.5)',
+              'rgba(75, 192, 192, 0.5)',
+              'rgba(153, 102, 255, 0.5)',
+              'rgba(255, 159, 64, 0.5)'
+            ],
+            borderColor: [
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(153, 102, 255, 1)',
+              'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+            }
           }
         }
-      }
-    });
+      });
+    } catch (error) {
+      console.error('Error updating activity engagement chart:', error);
+    }
   }
   
   document.getElementById('generate-summary').addEventListener('click', function() {
@@ -2297,6 +2491,81 @@
     }
     
     container.innerHTML = html;
+  }
+  
+  // Test function to verify student view is working
+  function testStudentView() {
+    console.log('=== TESTING STUDENT VIEW ===');
+    console.log('Current view_as:', '{{ view_as }}');
+    console.log('User ID:', '{{ user.id }}');
+    console.log('Has student role:', '{{ has_student_role|yesno:"true,false" }}');
+    console.log('Student personal stats:', '{{ student_personal_stats|default:"null" }}');
+    
+    const studentMetrics = document.getElementById('student-metrics');
+    console.log('Student metrics element:', studentMetrics);
+    console.log('Student metrics display:', studentMetrics ? studentMetrics.style.display : 'not found');
+    
+    const lengthChart = document.getElementById('length-distribution-chart');
+    const engagementChart = document.getElementById('activity-engagement-chart');
+    console.log('Length chart element:', lengthChart);
+    console.log('Engagement chart element:', engagementChart);
+    
+    if ('{{ view_as }}' === 'student') {
+      console.log('In student view - testing data load...');
+      loadCurrentStudentData();
+    }
+    
+    console.log('=== END TEST ===');
+  }
+  
+  // Call test function after a short delay
+  setTimeout(testStudentView, 500);
+  
+  function updateConversationHistory(messages) {
+    const chatContainer = document.getElementById('chat-messages');
+    if (!chatContainer) {
+      console.warn('Chat messages container not found');
+      return;
+    }
+    
+    chatContainer.innerHTML = '';
+    
+    if (!messages || messages.length === 0) {
+      chatContainer.innerHTML = '<p>No conversation history available.</p>';
+      return;
+    }
+    
+    messages.forEach(msg => {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = msg.role === 'user' ? 'user-message' : 'model-message';
+      
+      const messageHeader = document.createElement('div');
+      messageHeader.className = 'message-header';
+      
+      if (msg.timestamp) {
+        const timeDisplay = document.createElement('span');
+        timeDisplay.className = 'message-time';
+        const messageDate = new Date(msg.timestamp);
+        timeDisplay.textContent = messageDate.toLocaleString();
+        messageHeader.appendChild(timeDisplay);
+      }
+      
+      if (msg.activity_title) {
+        const activityDisplay = document.createElement('span');
+        activityDisplay.className = 'message-activity';
+        activityDisplay.textContent = msg.activity_title;
+        messageHeader.appendChild(activityDisplay);
+      }
+      
+      const messageContent = document.createElement('div');
+      messageContent.className = 'message-content';
+      messageContent.textContent = msg.content;
+      
+      messageDiv.appendChild(messageHeader);
+      messageDiv.appendChild(messageContent);
+      
+      chatContainer.appendChild(messageDiv);
+    });
   }
 </script>
 {% endblock %}

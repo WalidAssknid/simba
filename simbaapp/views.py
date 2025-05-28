@@ -9,6 +9,8 @@ from .models import User, Course, Activity, CourseEnrollment, Message
 import json
 import logging
 
+logger = logging.getLogger(__name__)
+
 def home_view(request):
     # If user is already logged in, redirect to courses page
     if request.session.get('user_id'):
@@ -103,7 +105,6 @@ def chainlit_view(request):
         return redirect('courses')
         
     try:
-        logger = logging.getLogger(__name__)
         logger.info(f"chainlit_view called with activity_id={activity_id}, thread_id={thread_id}")
         
         activity = Activity.objects.get(id=activity_id)
@@ -113,7 +114,7 @@ def chainlit_view(request):
         if 'localhost' in request.get_host() or '127.0.0.1' in request.get_host():
             chainlit_base_url = "http://localhost:8500"
         else:
-            chainlit_base_url = f"https://{request.get_host()}:8500"
+            chainlit_base_url = f"https://{request.get_host()}/chainlit"
         
         if thread_id:
             chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={thread_id}&lang=en"
@@ -477,26 +478,64 @@ def join_course_view(request):
     return render(request, 'join_course.html', {'enrolled_courses': all_courses})
 
 def dashboard_view(request):
+    logger.info(f"Dashboard view called - Session keys: {list(request.session.keys())}")
+    logger.info(f"Session user_id: {request.session.get('user_id')}")
+    logger.info(f"Session age: {request.session.get_expiry_age()}")
+    
     if not request.session.get('user_id'):
+        logger.warning("No user_id in session, redirecting to login")
         return redirect('login')
     user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)
+    
+    try:
+        user = User.objects.get(id=user_id)
+        logger.info(f"User found: {user.username}")
+    except User.DoesNotExist:
+        logger.error(f"User with id {user_id} not found")
+        request.session.flush()
+        return redirect('login')
+    
+    # Debug logging
+    logger.info(f"Dashboard view called for user {user_id}, GET params: {request.GET}")
     
     # Check what roles the user has
+    # 1. Courses where user is the owner (creator) - automatically has teacher privileges + owner privileges
     owned_courses = Course.objects.filter(owner=user)
+    
+    # 2. Courses where user is enrolled as teacher (not owner)
     teacher_enrollments = CourseEnrollment.objects.filter(user=user, role='teacher')
     teacher_courses = Course.objects.filter(enrollments__in=teacher_enrollments)
+    
+    # 3. All courses where user has teacher privileges (owner OR enrolled as teacher)
     all_teacher_courses = (owned_courses | teacher_courses).distinct()
     
+    # 4. Courses where user is enrolled as student
     student_enrollments = CourseEnrollment.objects.filter(user=user, role='student')
     student_courses = Course.objects.filter(enrollments__in=student_enrollments)
     
     # Determine available roles for the user
-    has_teacher_role = all_teacher_courses.exists()
-    has_student_role = student_courses.exists()
+    has_teacher_role = all_teacher_courses.exists()  # Owner OR teacher enrollment
+    has_student_role = student_courses.exists()      # Student enrollment
+    has_owner_role = owned_courses.exists()          # Course owner (subset of teacher role)
+    
+    logger.info(f"User roles - owned_courses: {owned_courses.count()}, teacher_enrollments: {teacher_enrollments.count()}, student_enrollments: {student_enrollments.count()}")
+    logger.info(f"User roles - has_teacher_role: {has_teacher_role}, has_student_role: {has_student_role}, has_owner_role: {has_owner_role}")
     
     # Determine default view_as based on available roles
     view_as = request.GET.get('view_as')
+    logger.info(f"Requested view_as: {view_as}")
+    
+    # Validate view_as request
+    if view_as:
+        if view_as == 'teacher':
+            if not has_teacher_role:
+                messages.warning(request, "You don't have teacher privileges in any courses. You need to own a course or be enrolled as a teacher.")
+                view_as = 'student' if has_student_role else 'teacher'  # Fallback
+        elif view_as == 'student':
+            if not has_student_role:
+                messages.warning(request, "You are not enrolled as a student in any courses. Join a course as a student to access this view.")
+                view_as = 'teacher' if has_teacher_role else 'student'  # Fallback
+    
     if not view_as:
         # Auto-detect: prefer teacher if available, otherwise student
         if has_teacher_role:
@@ -507,23 +546,31 @@ def dashboard_view(request):
             # User has no courses at all, default to teacher view
             view_as = 'teacher'
     
-    # Handle view selection and show appropriate warnings
+    logger.info(f"Final view_as: {view_as}")
+    
+    # Handle view selection - show appropriate courses based on validated view
     if view_as == 'teacher':
         if not has_teacher_role:
-            # User selected teacher view but has no teacher courses
-            messages.warning(request, "You don't have any courses as a teacher. Create a course or join one as a teacher to access teacher features.")
+            messages.info(request, "You don't have any courses yet. Create a course or join one as a teacher to access analytics features.")
             courses = Course.objects.none()  # Empty queryset
         else:
             courses = all_teacher_courses.order_by('-created_at')
     else:  # view_as == 'student'
         if not has_student_role:
-            # User selected student view but has no student courses
-            messages.warning(request, "You are not enrolled as a student in any courses. Join a course as a student to view your statistics.")
+            messages.info(request, "You are not enrolled in any courses as a student yet. Join a course to view your statistics.")
             courses = Course.objects.none()  # Empty queryset
         else:
             courses = student_courses.order_by('-created_at')
+    
+    logger.info(f"Courses count: {courses.count()}")
+    
     selected_course_id = request.GET.get('course_id')
     selected_activity_id = request.GET.get('activity_id')
+    
+    # Debug logging for course selection
+    logger.info(f"Requested course_id: {selected_course_id}")
+    logger.info(f"Available courses: {[c.id for c in courses]}")
+    logger.info(f"Available course titles: {[c.title for c in courses]}")
     
     # Set default tab based on view_as
     if view_as == 'student':
@@ -532,37 +579,112 @@ def dashboard_view(request):
     else:
         active_tab = request.GET.get('active_tab', 'conversation-stats')
     
+    logger.info(f"Active tab: {active_tab}")
+    
     if active_tab == 'student-clusters':
         active_tab = 'student-engagement'
     
     authoritative_id_for_logic_and_template = None  
     course_object_for_context = None                
 
-    # This check is now handled above for each view type
-
     if selected_course_id and selected_course_id != 'all': 
         try:
             course_id_as_int = int(selected_course_id)
             _fetched_course_obj = courses.filter(id=course_id_as_int).first()
+            logger.info(f"Looking for course ID {course_id_as_int} in available courses")
             if _fetched_course_obj:
                 course_object_for_context = _fetched_course_obj
                 authoritative_id_for_logic_and_template = _fetched_course_obj.id 
+                logger.info(f"Found course: {_fetched_course_obj.title}")
             else:
-                messages.warning(request, f"Course ID '{selected_course_id}' not found or not accessible for your account. Defaulting to all courses.")
+                logger.warning(f"Course ID {course_id_as_int} not found in available courses for view_as={view_as}")
+                
+                # Check if course exists in any context (more user-friendly message)
+                course_exists_somewhere = Course.objects.filter(id=course_id_as_int).exists()
+                if course_exists_somewhere:
+                    messages.info(request, f"The selected course is not available in {view_as} view. Showing all available courses instead.")
+                else:
+                    messages.warning(request, f"Course ID '{selected_course_id}' does not exist. Showing all available courses instead.")
+                
                 course_object_for_context = courses.first() 
         except ValueError:
+            logger.error(f"Invalid course ID format: {selected_course_id}")
             messages.warning(request, f"Invalid course ID format: '{selected_course_id}'. Defaulting to all courses.")
             course_object_for_context = courses.first() 
     else:
-        course_object_for_context = courses.first() 
+        course_object_for_context = courses.first()
 
     selected_course_id = authoritative_id_for_logic_and_template
     selected_course = course_object_for_context
+    
+    logger.info(f"Final selected_course_id: {selected_course_id}")
+    logger.info(f"Final selected_course: {selected_course.title if selected_course else 'None'}")
+
+    # Handle empty courses case
+    if not courses.exists():
+        logger.warning(f"No courses available for user {user_id} in {view_as} view")
+        # Return empty dashboard with message
+        context = {
+            'courses': courses,
+            'selected_course': None,
+            'selected_course_id': None,
+            'selected_activity': None,
+            'activities': Activity.objects.none(),
+            'students_count': 0,
+            'activities_count': 0,
+            'total_messages': 0,
+            'avg_message_length': 0,
+            'avg_time_per_student': "0h 0m",
+            'stats_per_student': [],
+            'all_students': [],
+            'raw_messages': [],
+            'enrolled_courses': courses,
+            'activity_names': [],
+            'activity_message_counts': [],
+            'activity_avg_lengths': [],
+            'segment_many_long': [],
+            'segment_few_long': [],
+            'segment_many_short': [],
+            'segment_few_short': [],
+            'active_tab': active_tab,
+            'view_as': view_as,
+            'user': user,
+            'student_personal_stats': None,
+            'has_teacher_role': has_teacher_role,
+            'has_student_role': has_student_role,
+            'has_owner_role': has_owner_role,
+            'owned_courses_count': owned_courses.count(),
+            'teacher_enrollments_count': teacher_enrollments.count(),
+            'student_enrollments_count': student_enrollments.count(),
+            'is_course_owner': owned_courses.exists(),
+            'is_enrolled_teacher': teacher_enrollments.exists(),
+            'is_enrolled_student': student_enrollments.exists(),
+        }
+        
+        # Add JSON context for empty state
+        context['activity_names_json'] = json.dumps([])
+        context['activity_message_counts_json'] = json.dumps([])
+        context['activity_avg_lengths_json'] = json.dumps([])
+        context['segment_many_long_json'] = json.dumps([])
+        context['segment_few_long_json'] = json.dumps([])
+        context['segment_many_short_json'] = json.dumps([])
+        context['segment_few_short_json'] = json.dumps([])
+        
+        return render(request, 'dashboard.html', context)
 
     if selected_course_id is None: 
+        # Show all courses - no specific course selected
         activities = Activity.objects.filter(course__in=courses).order_by('-created_at')
         
-        students = CourseEnrollment.objects.filter(course__in=courses).select_related('user', 'course')
+        # For teacher views, show all enrollments in their courses
+        # For student view, show only student enrollments in courses where user is student
+        if view_as == 'student':
+            students = CourseEnrollment.objects.filter(
+                course__in=courses,
+                role='student'
+            ).select_related('user', 'course')
+        else:
+            students = CourseEnrollment.objects.filter(course__in=courses).select_related('user', 'course')
         
         student_dict = {}
         for enrollment in students:
@@ -585,9 +707,19 @@ def dashboard_view(request):
             thread__activity__course__in=courses
         ).select_related('thread__user', 'thread__activity')
     else:
+        # Specific course selected
         activities = Activity.objects.filter(course=selected_course).order_by('-created_at')
         
-        students = CourseEnrollment.objects.filter(course=selected_course).select_related('user')
+        # For teacher views, show all enrollments in the selected course
+        # For student view, show only student enrollments
+        if view_as == 'student':
+            students = CourseEnrollment.objects.filter(
+                course=selected_course,
+                role='student'
+            ).select_related('user')
+        else:
+            students = CourseEnrollment.objects.filter(course=selected_course).select_related('user')
+            
         all_students = [{'id': s.user.id, 'username': s.user.username} for s in students]
         
         base_msg_query = Message.objects.filter(
@@ -598,7 +730,23 @@ def dashboard_view(request):
     if selected_activity_id and selected_activity_id != 'all':
         selected_activity = activities.filter(id=selected_activity_id).first()
     
-    student_messages_qs = base_msg_query.filter(role='user')
+    # Filter messages based on view_as
+    if view_as == 'student':
+        # For student view, only show the current user's messages (their own data)
+        student_messages_qs = base_msg_query.filter(
+            role='user',
+            thread__user=user
+        )
+    else:
+        # For teacher views, show all user messages from students
+        student_user_ids = CourseEnrollment.objects.filter(
+            course__in=courses,
+            role='student'
+        ).values_list('user_id', flat=True)
+        student_messages_qs = base_msg_query.filter(
+            role='user',
+            thread__user_id__in=student_user_ids
+        )
     
     total_messages = student_messages_qs.count()
     
@@ -625,10 +773,24 @@ def dashboard_view(request):
     
     activity_stats = {}
     for activity in activities:
-        activity_msgs = Message.objects.filter(
-            thread__activity=activity,
-            role='user'
-        )
+        if view_as == 'student':
+            # For student view, only count messages from the current user
+            activity_msgs = Message.objects.filter(
+                thread__activity=activity,
+                role='user',
+                thread__user=user
+            )
+        else:
+            # For teacher views, count messages from all students
+            student_user_ids = CourseEnrollment.objects.filter(
+                course__in=courses,
+                role='student'
+            ).values_list('user_id', flat=True)
+            activity_msgs = Message.objects.filter(
+                thread__activity=activity,
+                role='user',
+                thread__user_id__in=student_user_ids
+            )
         msg_count = activity_msgs.count()
         
         if msg_count > 0:
@@ -694,7 +856,7 @@ def dashboard_view(request):
     
     # Filter raw messages based on view_as
     if view_as == 'student':
-        # Show only the current user's messages
+        # Show only the current user's messages when in student view
         raw_messages = base_msg_query.filter(thread__user=user).order_by('-timestamp')[:100]
     else:
         # Show all messages for teachers
@@ -703,7 +865,7 @@ def dashboard_view(request):
     # If viewing as student, prepare personal statistics
     student_personal_stats = None
     if view_as == 'student':
-        # Get personal messages for the current user
+        # Get personal messages for the current user in courses where they are students
         personal_messages = base_msg_query.filter(thread__user=user, role='user')
         personal_message_count = personal_messages.count()
         
@@ -711,7 +873,7 @@ def dashboard_view(request):
             total_chars = sum([len(msg.content) for msg in personal_messages])
             avg_length = total_chars / personal_message_count
             
-            # Get activities the user participated in
+            # Get activities the user participated in as a student
             participated_activities = Activity.objects.filter(
                 threads__user=user,
                 course__in=courses
@@ -768,7 +930,15 @@ def dashboard_view(request):
         'user': user,
         'student_personal_stats': student_personal_stats,
         'has_teacher_role': has_teacher_role,
-        'has_student_role': has_student_role
+        'has_student_role': has_student_role,
+        'has_owner_role': has_owner_role,
+        # Additional role details for better understanding
+        'owned_courses_count': owned_courses.count(),
+        'teacher_enrollments_count': teacher_enrollments.count(),
+        'student_enrollments_count': student_enrollments.count(),
+        'is_course_owner': owned_courses.exists(),
+        'is_enrolled_teacher': teacher_enrollments.exists(),
+        'is_enrolled_student': student_enrollments.exists(),
     }
     
     context['activity_names_json'] = json.dumps(activity_names)

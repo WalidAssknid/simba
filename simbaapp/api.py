@@ -29,7 +29,6 @@ from .schemas import (
     ConversationStatsSchema,
     SummaryResponseSchema,
     StudentAnalysisSchema,
-    ClusterResponseSchema,
     WordFrequencySchema,
     RawMessagesSchema,
     FileUploadSchema,
@@ -735,23 +734,84 @@ dashboard_router = Router()
 
 
 @dashboard_router.get("/student/{student_id}/", response=StudentDataSchema)
-def get_student_data(request, student_id: int, course_id: str = "all"):
+def get_student_data(request, student_id: int, course_id: str = "all", requesting_user_id: int = None):
     """Get detailed data for a specific student."""
     try:
         student = User.objects.get(id=student_id)
         
+        # Determine if this is a self-query or teacher querying student
+        is_self_query = requesting_user_id is None or requesting_user_id == student_id
+        
+        if not is_self_query:
+            # Validate permissions for teachers viewing student data
+            requesting_user = User.objects.get(id=requesting_user_id)
+            
+            if course_id != "all":
+                course = Course.objects.get(id=course_id)
+                # Check if requesting user is owner or teacher in this course
+                is_owner = course.owner_id == requesting_user_id
+                enrollment = CourseEnrollment.objects.filter(user=requesting_user, course=course).first()
+                has_permission = is_owner or (enrollment and enrollment.role == 'teacher')
+                
+                if not has_permission:
+                    return {"error": "Permission denied. You can only view data for courses where you are owner or teacher."}
+            else:
+                # For "all" courses, check if requesting user has teacher/owner role in any course
+                owned_courses = Course.objects.filter(owner=requesting_user)
+                teacher_enrollments = CourseEnrollment.objects.filter(user=requesting_user, role='teacher')
+                has_any_teacher_role = owned_courses.exists() or teacher_enrollments.exists()
+                
+                if not has_any_teacher_role:
+                    return {"error": "Permission denied. You need teacher or owner privileges to view other students' data."}
+        
+        # Get courses where the student is enrolled as student
         if course_id != "all":
             course = Course.objects.get(id=course_id)
+            # Check if student is enrolled in this course
+            student_enrollment = CourseEnrollment.objects.filter(
+                user=student, 
+                course=course, 
+                role='student'
+            ).first()
+            
+            if not student_enrollment:
+                return {"error": "Student is not enrolled in this course."}
+                
+            # Get messages from this specific course
             messages = Message.objects.filter(
                 thread__user=student, 
                 thread__activity__course=course,
                 role='user'
             ).select_related('thread__activity').order_by('timestamp')
+            
+            threads = Thread.objects.filter(
+                user=student,
+                activity__course=course
+            ).order_by('-updated_at')
+            
+            courses_for_comparison = [course]
         else:
+            # Get all courses where student is enrolled as student
+            student_courses = Course.objects.filter(
+                enrollments__user=student,
+                enrollments__role='student'
+            )
+            
+            if not student_courses.exists():
+                return {"error": "Student is not enrolled in any courses as a student."}
+            
             messages = Message.objects.filter(
                 thread__user=student,
+                thread__activity__course__in=student_courses,
                 role='user'
             ).select_related('thread__activity').order_by('timestamp')
+            
+            threads = Thread.objects.filter(
+                user=student,
+                activity__course__in=student_courses
+            ).order_by('-updated_at')
+            
+            courses_for_comparison = student_courses
         
         activities = set([msg.thread.activity_id for msg in messages])
         activities_count = len(activities)
@@ -764,9 +824,9 @@ def get_student_data(request, student_id: int, course_id: str = "all"):
             activity_name = msg.thread.activity.title or f"Activity {msg.thread.activity.id}"
             activity_counts[activity_name] = activity_counts.get(activity_name, 0) + 1
         
-        threads = Thread.objects.filter(user=student).order_by('-updated_at')
         conversation = []
         
+        # Calculate retries based on filtered threads
         activity_attempts = {}
         for thread in threads:
             activity_id = thread.activity_id
@@ -778,6 +838,7 @@ def get_student_data(request, student_id: int, course_id: str = "all"):
         for activity_id, attempts in activity_attempts.items():
             retries_count += max(len(attempts) - 1, 0)
         
+        # Build conversation history from filtered threads
         if threads.count() <= 5:
             for thread in threads:
                 thread_messages = Message.objects.filter(thread=thread).order_by('message_number')
@@ -794,20 +855,26 @@ def get_student_data(request, student_id: int, course_id: str = "all"):
                 ])
         else:
             recent_thread = threads.first()
-            thread_messages = Message.objects.filter(thread=recent_thread).order_by('message_number')
-            conversation = [
-                {
-                    "role": msg.role, 
-                    "content": msg.content, 
-                    "timestamp": msg.timestamp.isoformat(),
-                    "thread_id": recent_thread.id,
-                    "activity_title": recent_thread.activity.title or f"Activity {recent_thread.activity.id}",
-                    "message_number": msg.message_number
-                } 
-                for msg in thread_messages
-            ]
+            if recent_thread:
+                thread_messages = Message.objects.filter(thread=recent_thread).order_by('message_number')
+                conversation = [
+                    {
+                        "role": msg.role, 
+                        "content": msg.content, 
+                        "timestamp": msg.timestamp.isoformat(),
+                        "thread_id": recent_thread.id,
+                        "activity_title": recent_thread.activity.title or f"Activity {recent_thread.activity.id}",
+                        "message_number": msg.message_number
+                    } 
+                    for msg in thread_messages
+                ]
         
-        all_user_messages = Message.objects.filter(role='user')
+        # For length distribution, use messages from the same courses for comparison
+        all_user_messages = Message.objects.filter(
+            role='user',
+            thread__activity__course__in=courses_for_comparison
+        )
+            
         message_lengths = [len(msg.content) for msg in all_user_messages]
         student_avg_length = total_chars / messages_count if messages_count > 0 else 0
         
@@ -837,20 +904,56 @@ def get_student_data(request, student_id: int, course_id: str = "all"):
         }
     except User.DoesNotExist:
         return {"error": "Student not found"}
+    except Course.DoesNotExist:
+        return {"error": "Course not found"}
     except Exception as e:
         return {"error": str(e)}
 
 @dashboard_router.get("/conversation_stats/", response=ConversationStatsSchema)
-def get_conversation_stats(request, course_id: str = "all"):
+def get_conversation_stats(request, course_id: str = "all", requesting_user_id: int = None):
     """Get detailed conversation statistics for analysis."""
     try:
-        if course_id != "all":
-            course = Course.objects.get(id=course_id)
-            messages = Message.objects.filter(
-                thread__activity__course=course
-            ).select_related('thread__user', 'thread__activity')
+        # Validate permissions if requesting_user_id is provided
+        if requesting_user_id:
+            requesting_user = User.objects.get(id=requesting_user_id)
+            
+            if course_id != "all":
+                course = Course.objects.get(id=course_id)
+                # Check if requesting user is owner or teacher in this course
+                is_owner = course.owner_id == requesting_user_id
+                enrollment = CourseEnrollment.objects.filter(user=requesting_user, course=course).first()
+                has_permission = is_owner or (enrollment and enrollment.role == 'teacher')
+                
+                if not has_permission:
+                    return {"stats": [], "error": "Permission denied. You can only view stats for courses where you are owner or teacher."}
+                    
+                messages = Message.objects.filter(
+                    thread__activity__course=course
+                ).select_related('thread__user', 'thread__activity')
+            else:
+                # For "all" courses, only show data from courses where user has teacher/owner privileges
+                owned_courses = Course.objects.filter(owner=requesting_user)
+                teacher_courses = Course.objects.filter(
+                    enrollments__user=requesting_user,
+                    enrollments__role='teacher'
+                )
+                accessible_courses = (owned_courses | teacher_courses).distinct()
+                
+                if not accessible_courses.exists():
+                    return {"stats": [], "error": "No courses found where you have teacher or owner privileges."}
+                
+                messages = Message.objects.filter(
+                    thread__activity__course__in=accessible_courses
+                ).select_related('thread__user', 'thread__activity')
         else:
-            messages = Message.objects.all().select_related('thread__user', 'thread__activity')
+            # No user validation - return all data (for backward compatibility)
+            if course_id != "all":
+                course = Course.objects.get(id=course_id)
+                messages = Message.objects.filter(
+                    thread__activity__course=course
+                ).select_related('thread__user', 'thread__activity')
+            else:
+                messages = Message.objects.all().select_related('thread__user', 'thread__activity')
         
         user_stats = {}
         
@@ -908,6 +1011,10 @@ def get_conversation_stats(request, course_id: str = "all"):
             })
         
         return {"stats": stats}
+    except User.DoesNotExist:
+        return {"stats": [], "error": "Requesting user not found"}
+    except Course.DoesNotExist:
+        return {"stats": [], "error": "Course not found"}
     except Exception as e:
         return {"stats": [], "error": str(e)}
 
@@ -1042,101 +1149,6 @@ For each point, give precise examples cited verbatim from the student's messages
         return {"analysis": "Activity not found."}
     except Exception as e:
         return {"analysis": f"Error generating analysis: {str(e)}"}
-
-@dashboard_router.get("/student_clusters/", response=ClusterResponseSchema)
-def get_student_clusters(request, course_id: str = "all", n_clusters: int = 3):
-    """Get student clusters based on conversation patterns."""
-    try:
-        if course_id != "all":
-            course = Course.objects.get(id=course_id)
-            messages = Message.objects.filter(
-                thread__activity__course=course
-            ).select_related('thread__user', 'thread__activity')
-        else:
-            messages = Message.objects.all().select_related('thread__user', 'thread__activity')
-        
-        print(f"DEBUG: Retrieved {messages.count()} messages for clustering")
-        
-        message_data = []
-        for msg in messages:
-            message_data.append({
-                'user_id': msg.thread.user_id,
-                'username': msg.thread.user.username,
-                'content': msg.content,
-                'role': msg.role,
-                'activity_id': msg.thread.activity_id,
-                'timestamp': msg.timestamp.isoformat()
-            })
-        
-        print(f"DEBUG: Converted {len(message_data)} messages to clustering format")
-        
-        user_features = cluster_students.extract_features(message_data)
-        
-        print(f"DEBUG: Extracted features for {len(user_features)} users")
-        if not user_features.empty:
-            print(f"DEBUG: User features columns: {user_features.columns.tolist()}")
-            print(f"DEBUG: First user features: {user_features.iloc[0].to_dict() if len(user_features) > 0 else 'No users'}")
-        
-        if user_features.empty:
-            print("DEBUG: No user features extracted, returning empty result")
-            return {
-                "clusters": [],
-                "features": []
-            }
-        
-        n_clusters = min(n_clusters, len(user_features))
-        if n_clusters < 2:
-            n_clusters = 2
-            
-        print(f"DEBUG: Running clustering with n_clusters={n_clusters}")
-        clustered_features = cluster_students.run_clustering(
-            user_features, 
-            n_clusters=n_clusters
-        )
-        
-        try:
-            cluster_names = cluster_students.get_cluster_names(clustered_features)
-            print(f"DEBUG: Generated cluster names: {cluster_names}")
-        except Exception as e:
-            print(f"ERROR in generating cluster names: {str(e)}")
-            cluster_names = {
-                cluster_id: f"Cluster {cluster_id}" 
-                for cluster_id in clustered_features['cluster'].unique()
-            }
-        
-        clusters = []
-        for cluster_id in sorted(clustered_features['cluster'].unique()):
-            cluster_users = clustered_features[clustered_features['cluster'] == cluster_id]
-            clusters.append({
-                'id': int(cluster_id),
-                'name': cluster_names.get(cluster_id, f"Cluster {cluster_id}"),
-                'size': len(cluster_users),
-                'users': cluster_users[['user_id', 'username']].to_dict('records')
-            })
-        
-        features_to_return = [
-            'user_id', 'username', 'num_messages', 'avg_length',
-            'vocab_size', 'lexical_diversity', 'cluster'
-        ]
-        available_features = [f for f in features_to_return if f in clustered_features.columns]
-        
-        feature_data = clustered_features[available_features].to_dict('records')
-        
-        print(f"DEBUG: Returning {len(clusters)} clusters with {len(feature_data)} user features")
-        
-        return {
-            "clusters": clusters,
-            "features": feature_data
-        }
-    except Exception as e:
-        print(f"ERROR in student_clusters: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {
-            "clusters": [],
-            "features": [],
-            "error": str(e)
-        }
 
 @dashboard_router.get("/word_frequencies/", response=WordFrequencySchema)
 def get_word_frequencies(request, course_id: str = "all", min_word_length: int = 3, max_words: int = 100):

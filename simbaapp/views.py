@@ -96,6 +96,7 @@ def register_view(request):
     return render(request, 'register.html')
 
 def chainlit_view(request):
+    logger.info(f"Asked for the chainlit view")
     if not request.session.get('user_id'):
         return redirect('login')
     

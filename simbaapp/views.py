@@ -255,6 +255,7 @@ def create_course_view(request):
     return render(request, 'create_course.html', {'enrolled_courses': enrolled_courses})
 
 def course_detail_view(request, course_id):
+    logger.info(f"requested course {course_id}")
     if not request.session.get('user_id'):
         return redirect('login')
     try:

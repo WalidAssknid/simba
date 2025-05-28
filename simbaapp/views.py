@@ -144,7 +144,7 @@ def chainlit_view(request):
                     
             except Exception as e:
                 chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
-                
+        logger.info(f"chainlit url is {chainlit_url}")
         context = {
             'activity': activity,
             'activity_id': activity_id,

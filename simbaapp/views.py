@@ -127,20 +127,26 @@ def chainlit_view(request):
                 response = requests.get(api_url)
                 
                 if response.status_code == 200:
+                    print(f"response 200", flush=True)
                     attempts = response.json()
                     if attempts:
+                        print(f"attempts {attempts}", flush=True)
                         latest_thread_id = attempts[0]['id']
                         chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={latest_thread_id}&lang=en"
                     else:
+                        print(f"not attempts", flush=True)
                         create_api_url = request.build_absolute_uri(reverse('api-1.0.0:create_new_attempt_api') + f"?activity_id={activity_id}&user_id={user_id}")
                         create_response = requests.post(create_api_url)
                         
                         if create_response.status_code == 201:
+                            print(f"response 201", flush=True)
                             new_thread = create_response.json()
                             chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={new_thread['id']}&lang=en"
                         else:
+                            print(f"response not 201", flush=True)
                             chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
                 else:
+                    print(f"response not 200", flush=True)
                     chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
                     
             except Exception as e:

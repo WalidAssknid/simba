@@ -10,6 +10,7 @@ import json
 import logging
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 def home_view(request):
     # If user is already logged in, redirect to courses page

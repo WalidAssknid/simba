@@ -112,11 +112,11 @@ def chainlit_view(request):
         user_id = request.session.get('user_id')
         username = request.session.get('username', 'User')
         print(f"host : {request.get_host()}", flush=True)
-        # if 'localhost' in request.get_host() or '127.0.0.1' in request.get_host():
-        #     chainlit_base_url = "http://localhost:8500"
-        # else:
-        #     chainlit_base_url = f"https://{request.get_host()}:8500"
-        chainlit_base_url = f"https://simba.irit.fr/chainlit"
+        if 'localhost' in request.get_host() or '127.0.0.1' in request.get_host():
+            chainlit_base_url = "http://localhost:8500"
+        else:
+            chainlit_base_url = f"https://{request.get_host()}:8500"
+        # chainlit_base_url = f"https://simba.irit.fr/chainlit"
         print(f"base url is {chainlit_base_url}", flush=True)
         if thread_id:
             chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={thread_id}&lang=en"

@@ -107,7 +107,7 @@ def chainlit_view(request):
         return redirect('courses')
         
     try:
-        logger.info(f"chainlit_view called with activity_id={activity_id}, thread_id={thread_id} logged")
+        print(f"chainlit_view called with activity_id={activity_id}, thread_id={thread_id}", flush=True)
         activity = Activity.objects.get(id=activity_id)
         user_id = request.session.get('user_id')
         username = request.session.get('username', 'User')
@@ -117,7 +117,7 @@ def chainlit_view(request):
         else:
             chainlit_base_url = f"https://{request.get_host()}:8500"
         
-        logger.info(f"base url is {chainlit_base_url}")
+        print(f"base url is {chainlit_base_url}", flush=True)
         if thread_id:
             chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={thread_id}&lang=en"
         else:
@@ -145,7 +145,7 @@ def chainlit_view(request):
                     
             except Exception as e:
                 chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
-        logger.info(f"chainlit url is {chainlit_url}")
+        print(f"chainlit url is {chainlit_url}", flush=True)
         context = {
             'activity': activity,
             'activity_id': activity_id,

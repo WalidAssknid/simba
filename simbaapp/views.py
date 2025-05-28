@@ -116,7 +116,7 @@ def chainlit_view(request):
         #     chainlit_base_url = "http://localhost:8500"
         # else:
         #     chainlit_base_url = f"https://{request.get_host()}:8500"
-        chainlit_base_url = f"http://simba-refact.irit.fr/chainlit"
+        chainlit_base_url = f"https://simba-refact.irit.fr/chainlit"
         print(f"base url is {chainlit_base_url}", flush=True)
         if thread_id:
             chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={thread_id}&lang=en"

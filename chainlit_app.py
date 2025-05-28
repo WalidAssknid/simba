@@ -221,7 +221,7 @@ Your first message should begin with 'Hello! 😸 I am SIMBA, and I will help yo
 
 @cl.on_chat_start
 async def on_chat_start():
-    logger.info("Chainlit starting new chat session")
+    print("Chainlit starting new chat session", flush=True)
     
     query_params = {}
     try:

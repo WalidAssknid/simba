@@ -1185,6 +1185,8 @@ body.auth-page .header {
   position: relative;
   border-right: 1px solid #eee;
   z-index: 10;
+  gap: 8px;
+  padding: 0 8px;
 }
 
 .activity-menu-toggle {
@@ -1201,6 +1203,37 @@ body.auth-page .header {
 
 .activity-menu-toggle:hover {
   color: var(--primary-color);
+}
+
+.activity-visibility-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  font-size: 1.1rem;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+  border-radius: 3px;
+  min-width: 40px;
+  height: 100%;
+  margin-left: 8px;
+}
+
+.activity-visibility-toggle:hover {
+  color: var(--primary-color);
+  background-color: rgba(74, 108, 247, 0.1);
+}
+
+.activity-visibility-toggle[data-is-visible="false"] {
+  color: #dc3545;
+}
+
+.activity-visibility-toggle[data-is-visible="false"]:hover {
+  color: #c82333;
+  background-color: rgba(220, 53, 69, 0.1);
 }
 
 .activity-menu {
@@ -1403,6 +1436,11 @@ body.auth-page .header {
   .activity-menu-toggle {
     font-size: 1rem;
     padding: 6px;
+  }
+
+  .activity-visibility-toggle {
+    font-size: 1rem;
+    padding: 4px;
   }
 
   .activity-menu {
@@ -1816,6 +1854,11 @@ body.auth-page .header {
   .activity-menu-toggle {
     font-size: 0.9rem;
     padding: 4px;
+  }
+
+  .activity-visibility-toggle {
+    font-size: 0.9rem;
+    padding: 3px;
   }
 
   .activity-menu {

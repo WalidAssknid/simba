@@ -154,10 +154,6 @@
                 <a href="#" class="activity-menu-item" data-action="chat" data-activity-id="{{ activity.id }}">
                     <i class="fas fa-comment"></i> Chat with Activity
                 </a>
-                <a href="#" class="activity-menu-item" data-action="visibility" data-activity-id="{{ activity.id }}" data-is-visible="{{ activity.is_visible|yesno:'true,false' }}">
-                    <i class="fas fa-eye{% if not activity.is_visible %}-slash{% endif %}"></i> 
-                    {% if activity.is_visible %}Hide from Students{% else %}Show to Students{% endif %}
-                </a>
                 <a href="#" class="activity-menu-item" data-action="link" data-activity-id="{{ activity.id }}">
                     <i class="fas fa-link"></i> Get Activity Link
                 </a>
@@ -167,6 +163,11 @@
                 {% endif %}
             </div>
         </div>
+        {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
+        <div class="activity-visibility-toggle" data-activity-id="{{ activity.id }}" data-is-visible="{{ activity.is_visible|yesno:'true,false' }}" title="{% if activity.is_visible %}Hide from students{% else %}Show to students{% endif %}">
+            <i class="fas fa-eye{% if not activity.is_visible %}-slash{% endif %}"></i>
+        </div>
+        {% endif %}
         <div class="activity-content">
             <h3 class="activity-title">{{ activity.title }}</h3>
                 <p class="activity-course">{{ course.title }}</p>
@@ -219,15 +220,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.querySelectorAll('.activity-item').forEach(item => {
         item.addEventListener('click', function(e) {
-            if (!e.target.closest('.activity-options')) {
+            if (!e.target.closest('.activity-options') && !e.target.closest('.activity-visibility-toggle')) {
                 const activityId = this.dataset.activityId;
+                const courseId = this.dataset.courseId;
                 const roleElement = this.querySelector('.role-badge');
                 const userRole = roleElement ? roleElement.textContent.toLowerCase().trim() : 'student';
                 
                 if (userRole === 'owner' || userRole === 'teacher') {
                     window.location.href = `/dashboard/?activity_id=${activityId}&active_tab=conversation-stats`;
                 } else {
-                    window.location.href = `/chainlit/?activity_id=${activityId}`;
+                    // Students should go to course_detail and auto-expand the activity
+                    window.location.href = `/courses/${courseId}/?expand_activity=${activityId}`;
                 }
             }
         });
@@ -301,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     document.addEventListener('click', function(e) {
-        if (!e.target.closest('.activity-options')) {
+        if (!e.target.closest('.activity-options') && !e.target.closest('.activity-visibility-toggle')) {
             closeAllMenus();
         }
     });
@@ -467,48 +470,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     const username = '{{ request.session.username }}';
                     window.location.href = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
                 }
-            } else if (action === 'visibility') {
-                const isVisible = this.dataset.isVisible === 'true';
-                const userId = '{{ request.session.user_id }}';
-                
-                fetch(`/api/activities/${activityId}/visibility?user_id=${userId}&is_visible=${!isVisible}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(data => {
-                            throw new Error(data.message || 'Failed to update activity visibility');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(updatedActivity => {
-                    const menuItem = document.querySelector(`.activity-menu-item[data-action="visibility"][data-activity-id="${activityId}"]`);
-                    if (menuItem) {
-                        const newIsVisible = !isVisible;
-                        menuItem.dataset.isVisible = newIsVisible.toString();
-                        
-                        const icon = menuItem.querySelector('i');
-                        const text = menuItem.childNodes[menuItem.childNodes.length - 1];
-                        
-                        if (newIsVisible) {
-                            icon.className = 'fas fa-eye';
-                            text.textContent = ' Hide from Students';
-                        } else {
-                            icon.className = 'fas fa-eye-slash';
-                            text.textContent = ' Show to Students';
-                        }
-                    }
-                    
-                    alert(`Activity ${!isVisible ? 'shown to' : 'hidden from'} students successfully!`);
-                })
-                .catch(error => {
-                    console.error('Error updating activity visibility:', error);
-                    alert(`Failed to update activity visibility: ${error.message}`);
-                });
             } else if (action === 'link') {
                 document.getElementById('activityLinkDisplay').textContent = 
                     `${window.location.origin}/chainlit/?activity_id=${activityId}`;
@@ -562,6 +523,54 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }
             }
+        });
+    });
+    
+    // Activity visibility toggle (new eye icon)
+    document.querySelectorAll('.activity-visibility-toggle').forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent activity item click
+            
+            const activityId = this.dataset.activityId;
+            const isVisible = this.dataset.isVisible === 'true';
+            const userId = '{{ request.session.user_id }}';
+            
+            fetch(`/api/activities/${activityId}/visibility?user_id=${userId}&is_visible=${!isVisible}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Failed to update activity visibility');
+                    });
+                }
+                return response.json();
+            })
+            .then(updatedActivity => {
+                // Update the visibility toggle icon
+                const newIsVisible = !isVisible;
+                this.dataset.isVisible = newIsVisible.toString();
+                
+                const icon = this.querySelector('i');
+                if (newIsVisible) {
+                    icon.className = 'fas fa-eye';
+                    this.title = 'Hide from students';
+                } else {
+                    icon.className = 'fas fa-eye-slash';
+                    this.title = 'Show to students';
+                }
+                
+                // Show success message
+                alert(`Activity ${newIsVisible ? 'shown to' : 'hidden from'} students successfully!`);
+            })
+            .catch(error => {
+                console.error('Error updating activity visibility:', error);
+                alert(`Failed to update activity visibility: ${error.message}`);
+            });
         });
     });
     
@@ -729,6 +738,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     const participantsList = document.getElementById('participantsList');
                     participantsList.innerHTML = '';
                     
+                    const courseOwnerIdApi = data.owner_id; // Owner ID returned by API
+                    
                     data.participants.forEach(participant => {
                         const participantCard = document.createElement('div');
                         participantCard.className = 'participant-card';
@@ -750,7 +761,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         participantCard.appendChild(participantInfo);
                         
-                        if (participant.role === 'student' && 
+                        // Only show remove button if:
+                        // 1. Current user is the course owner
+                        // 2. Participant is a student (not teacher or owner)
+                        // 3. Participant has an enrollment_id (not the course owner)
+                        if (currentUserId === courseOwnerIdApi && 
+                            participant.role === 'student' && 
                             !participant.is_owner && 
                             participant.enrollment_id) {
                             

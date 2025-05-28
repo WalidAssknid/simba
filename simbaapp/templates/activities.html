@@ -468,11 +468,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     const userId = '{{ request.session.user_id }}';
                     const username = '{{ request.session.username }}';
-                    window.location.href = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
+                    window.location.href = `/localhost:8500/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
                 }
             } else if (action === 'link') {
                 document.getElementById('activityLinkDisplay').textContent = 
-                    `${window.location.origin}/chainlit/?activity_id=${activityId}`;
+                    `${window.location.origin}/localhost:8500/?activity_id=${activityId}`;
                 document.getElementById('activityLinkModal').style.display = 'block';
             } else if (action === 'delete') {
                 if (confirm('Are you sure you want to delete this activity?')) {

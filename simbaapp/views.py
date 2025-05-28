@@ -116,6 +116,7 @@ def chainlit_view(request):
         else:
             chainlit_base_url = f"https://{request.get_host()}:8500"
         
+        logger.info(f"base url is {chainlit_base_url}")
         if thread_id:
             chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={thread_id}&lang=en"
         else:

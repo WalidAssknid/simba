@@ -82,14 +82,14 @@ cot = "full"
 
 # Specify a CSS file that can be used to customize the user interface.
 # The CSS file can be served from the public directory or via an external link.
-# custom_css = "/public/stylesheet.css"
+custom_css = "/public/stylesheet.css"
 
 # Specify a JavaScript file that can be used to customize the user interface.
 # The JavaScript file can be served from the public directory.
 # custom_js = "/public/test.js"
 
 # Custom login page image, relative to public directory or external URL
-# login_page_image = "/public/simba.png"
+login_page_image = "/public/simba.png"
 
 # Custom login page image filter (Tailwind internal filters, no dark/light variants)
 # login_page_image_filter = "brightness-50 grayscale"

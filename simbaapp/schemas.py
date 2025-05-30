@@ -30,6 +30,22 @@ class UserUpdateSchema(Schema):
     new_password: Optional[str] = None
     new_password_confirm: Optional[str] = None
 
+# --- Chainlit Session Schemas ---
+
+class ChainlitSessionInitSchema(Schema):
+    activity_id: int
+    user_id: int
+    username: str
+    thread_id: Optional[int] = None
+
+class ChainlitSessionResponseSchema(Schema):
+    session_id: str
+    activity_id: int
+    user_id: int
+    username: str
+    thread_id: int
+    activity_data: Dict[str, Any]
+
 # --- Input Schemas ---
 
 class CourseCreateSchema(Schema):

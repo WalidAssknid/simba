@@ -20,30 +20,74 @@
     </style>
 </head>
 <body>
-    <!-- JavaScript to check and log iframe URL -->
+    <!-- Pass data to JavaScript variables -->
+    {% if session_data %}
+    <script id="session-data" type="application/json">{{ session_data|safe }}</script>
     <script>
-        console.log("Activity ID parameter:", "{{ activity_id }}");
-        console.log("User ID parameter:", "{{ user_id }}");
-        console.log("Username parameter:", "{{ username }}");
-        console.log("Chainlit URL parameter:", "{{ chainlit_url }}");
-        console.log("Thread ID parameter:", "{{ thread_id }}");
-        
-        // Create global parameters that can be accessed by Chainlit
-        window.SIMBA_PARAMS = {
-            activity_id: "{{ activity_id }}",
-            user_id: "{{ user_id }}",
-            username: "{{ username }}",
-            thread_id: "{{ thread_id }}"
-        };
-        
-        // Also set URL params in localStorage as a backup
-        try {
-            localStorage.setItem('simba_activity_id', "{{ activity_id }}");
-            localStorage.setItem('simba_user_id', "{{ user_id }}");
-            localStorage.setItem('simba_username', "{{ username }}");
-            localStorage.setItem('simba_thread_id', "{{ thread_id }}");
-        } catch (e) {
-            console.warn("Could not save parameters to localStorage:", e);
+        window.SIMBA_MODE = 'session';
+        window.SIMBA_SESSION_ID = "{{ session_id }}";
+    </script>
+    {% else %}
+    <script>
+        window.SIMBA_MODE = 'legacy';
+        window.SIMBA_ACTIVITY_ID = "{{ activity_id }}";
+        window.SIMBA_USER_ID = "{{ user_id }}";
+        window.SIMBA_USERNAME = "{{ username }}";
+        window.SIMBA_THREAD_ID = "{{ thread_id }}";
+    </script>
+    {% endif %}
+    
+    <!-- Main JavaScript logic -->
+    <script>
+        if (window.SIMBA_MODE === 'session') {
+            console.log("Session ID:", window.SIMBA_SESSION_ID);
+            
+            // Get session data from script tag
+            const sessionDataElement = document.getElementById('session-data');
+            const sessionData = JSON.parse(sessionDataElement.textContent);
+            console.log("Session Data:", sessionData);
+            
+            // Create global session data that can be accessed by Chainlit
+            window.SIMBA_SESSION = {
+                session_id: window.SIMBA_SESSION_ID,
+                activity_id: sessionData.activity_id,
+                user_id: sessionData.user_id,
+                username: sessionData.username,
+                thread_id: sessionData.thread_id,
+                activity_data: sessionData.activity_data
+            };
+            
+            // Store session data in localStorage for Chainlit access
+            try {
+                localStorage.setItem('simba_session_id', window.SIMBA_SESSION_ID);
+                localStorage.setItem('simba_session_data', JSON.stringify(window.SIMBA_SESSION));
+            } catch (e) {
+                console.warn("Could not save session data to localStorage:", e);
+            }
+        } else {
+            // Fallback to old parameter method
+            console.log("Activity ID parameter:", window.SIMBA_ACTIVITY_ID);
+            console.log("User ID parameter:", window.SIMBA_USER_ID);
+            console.log("Username parameter:", window.SIMBA_USERNAME);
+            console.log("Thread ID parameter:", window.SIMBA_THREAD_ID);
+            
+            // Create global parameters that can be accessed by Chainlit
+            window.SIMBA_PARAMS = {
+                activity_id: window.SIMBA_ACTIVITY_ID,
+                user_id: window.SIMBA_USER_ID,
+                username: window.SIMBA_USERNAME,
+                thread_id: window.SIMBA_THREAD_ID
+            };
+            
+            // Also set URL params in localStorage as a backup
+            try {
+                localStorage.setItem('simba_activity_id', window.SIMBA_ACTIVITY_ID);
+                localStorage.setItem('simba_user_id', window.SIMBA_USER_ID);
+                localStorage.setItem('simba_username', window.SIMBA_USERNAME);
+                localStorage.setItem('simba_thread_id', window.SIMBA_THREAD_ID);
+            } catch (e) {
+                console.warn("Could not save parameters to localStorage:", e);
+            }
         }
     </script>
     
@@ -66,8 +110,14 @@
             const iframe = document.getElementById('chainlitFrame');
             console.log("Iframe src:", iframe.src);
             
-            if (!iframe.src.includes('activity_id={{ activity_id }}')) {
-                console.error("Parameters missing from iframe URL!");
+            if (window.SIMBA_MODE === 'session') {
+                if (!iframe.src.includes('session_id=' + window.SIMBA_SESSION_ID)) {
+                    console.error("Session ID missing from iframe URL!");
+                }
+            } else {
+                if (!iframe.src.includes('activity_id=' + window.SIMBA_ACTIVITY_ID)) {
+                    console.error("Parameters missing from iframe URL!");
+                }
             }
         });
     </script>

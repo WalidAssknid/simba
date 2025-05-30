@@ -11,35 +11,102 @@ import asyncio
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global parameter storage to help with iframe communication
-SIMBA_PARAM_STORAGE = {}
+# Global session storage
+SIMBA_SESSION_STORAGE = {}
 
-# Special function to extract parameters from various sources
+def get_session_data_from_api(session_id: str):
+    """Get session data from API using session ID"""
+    if session_id in SIMBA_SESSION_STORAGE:
+        return SIMBA_SESSION_STORAGE[session_id]
+    
+    return None
+
+async def fetch_session_data_from_api(session_id: str):
+    """Fetch session data from API asynchronously"""
+    try:
+        async with httpx.AsyncClient() as http_client:
+            response = await http_client.get(f"{SIMBA_API_BASE_URL}/chainlit/session/{session_id}")
+            if response.status_code == 200:
+                session_data = response.json()
+                SIMBA_SESSION_STORAGE[session_id] = session_data
+                return session_data
+            else:
+                logger.warning(f"Session {session_id} not found in API: {response.status_code}")
+                return None
+    except Exception as e:
+        logger.error(f"Error fetching session data from API: {e}")
+        return None
+
 def get_simba_params():
-    """Extract parameters from all possible sources"""
+    """Extract parameters from session data or fallback to URL"""
     params = {}
     
-    # Try to get from storage first
-    params.update(SIMBA_PARAM_STORAGE)
+    logger.info("Starting parameter extraction...")
     
-    # Try to get from URL params if cl.context is available
+    current_url = None
+    
     if hasattr(cl, 'context') and hasattr(cl.context, 'session'):
         if hasattr(cl.context.session, 'root_url'):
-            url = cl.context.session.root_url
-            from urllib.parse import urlparse, parse_qs
-            parsed_url = urlparse(url)
-            url_params = parse_qs(parsed_url.query)
-            for key, values in url_params.items():
-                if values:
-                    params[key] = values[0]
+            current_url = cl.context.session.root_url
+            logger.info(f"Got URL from context.session.root_url: {current_url}")
+        elif hasattr(cl.context.session, 'http_referer'):
+            current_url = cl.context.session.http_referer
+            logger.info(f"Got URL from context.session.http_referer: {current_url}")
     
-    # Try to get from user_session
+    if not current_url and hasattr(cl, 'user_session'):
+        current_url = cl.user_session.get("http_referer", "")
+        logger.info(f"Got URL from user_session: {current_url}")
+    
+    if not current_url:
+        try:
+            import chainlit.context as ctx
+            if hasattr(ctx, 'context') and ctx.context and hasattr(ctx.context, 'session'):
+                if hasattr(ctx.context.session, 'headers'):
+                    referer = ctx.context.session.headers.get('referer')
+                    if referer:
+                        current_url = referer
+                        logger.info(f"Got URL from headers referer: {current_url}")
+        except Exception as e:
+            logger.warning(f"Could not get URL from headers: {e}")
+    
+    if current_url:
+        from urllib.parse import urlparse, parse_qs
+        parsed_url = urlparse(current_url)
+        url_params = parse_qs(parsed_url.query)
+        logger.info(f"Parsed URL params: {url_params}")
+        
+        session_id = url_params.get('session_id', [None])[0]
+        if session_id:
+            logger.info(f"Found session_id in URL: {session_id}")
+            session_data = get_session_data_from_api(session_id)
+            if session_data:
+                logger.info(f"Retrieved session data for session_id: {session_id}")
+                return {
+                    'activity_id': str(session_data['activity_id']),
+                    'user_id': str(session_data['user_id']),
+                    'username': session_data['username'],
+                    'thread_id': str(session_data['thread_id']),
+                    'session_id': session_id,
+                    'activity_data': session_data['activity_data']
+                }
+            else:
+                logger.warning(f"No session data found for session_id: {session_id}")
+        
+        for key, values in url_params.items():
+            if values:
+                params[key] = values[0]
+                logger.info(f"Found URL param: {key} = {values[0]}")
+    else:
+        logger.warning("No URL found in any context")
+    
     if hasattr(cl, 'user_session'):
-        for key in ['activity_id', 'user_id', 'username', 'thread_id']:
+        for key in ['activity_id', 'user_id', 'username', 'thread_id', 'session_id']:
             value = cl.user_session.get(key)
             if value:
                 params[key] = value
+                logger.info(f"Found user_session param: {key} = {value}")
     
+    logger.info(f"Final extracted params: {params}")
     return params
 
 SIMBA_API_BASE_URL = os.getenv('SIMBA_API_URL', 'http://web:8000/api')
@@ -116,6 +183,32 @@ async def api_get_messages_for_thread(thread_id: int):
         except httpx.RequestError as e:
             logger.error(f"Request Error getting messages: {e}")
             raise Exception(f"Request Error: Could not connect to API for messages.")
+
+async def api_init_session(activity_id: int, user_id: int, username: str, thread_id: int = None):
+    """Initialize session via API"""
+    payload = {
+        "activity_id": activity_id,
+        "user_id": user_id,
+        "username": username
+    }
+    if thread_id:
+        payload["thread_id"] = thread_id
+        
+    async with httpx.AsyncClient() as http_client:
+        try:
+            response = await http_client.post(f"{SIMBA_API_BASE_URL}/chainlit/init-session", json=payload)
+            response.raise_for_status()
+            session_data = response.json()
+            
+            SIMBA_SESSION_STORAGE[session_data['session_id']] = session_data
+            
+            return session_data
+        except httpx.HTTPStatusError as e:
+            logger.error(f"API Error initializing session: {e.response.status_code} - {e.response.text}")
+            raise Exception(f"API Error: Could not initialize session. Status: {e.response.status_code}")
+        except httpx.RequestError as e:
+            logger.error(f"Request Error initializing session: {e}")
+            raise Exception(f"Request Error: Could not connect to API for session initialization.")
 
 async def _build_system_prompt(activity_data: dict, logger_instance: logging.Logger) -> str:
     adj1 = activity_data.get('agent_attitude', 'friendly')
@@ -223,97 +316,91 @@ Your first message should begin with 'Hello! 😸 I am SIMBA, and I will help yo
 async def on_chat_start():
     print("Chainlit starting new chat session", flush=True)
     
-    query_params = {}
-    try:
-        from urllib.parse import urlparse, parse_qs
-        current_url = ""
+    params = get_simba_params()
+    logger.info(f"Received parameters: {params}")
+    
+    session_id = params.get('session_id')
+    if session_id:
+        logger.info(f"Found session_id: {session_id}, attempting to fetch session data")
         
-        if hasattr(cl, 'context') and hasattr(cl.context, 'session'):
-            if hasattr(cl.context.session, 'root_url'):
-                current_url = cl.context.session.root_url
-                logger.info(f"Got URL from context.session.root_url: {current_url}")
-            elif hasattr(cl.context.session, 'http_referer'):
-                current_url = cl.context.session.http_referer
-                logger.info(f"Got URL from context.session.http_referer: {current_url}")
+        session_data = await fetch_session_data_from_api(session_id)
         
-        if not current_url and hasattr(cl, 'user_session'):
-            current_url = cl.user_session.get("http_referer", "")
-            logger.info(f"Got URL from user_session: {current_url}")
-        
-        if current_url:
-            parsed_url = urlparse(current_url)
-            url_params = parse_qs(parsed_url.query, keep_blank_values=True)
+        if session_data:
+            activity_id = session_data['activity_id']
+            user_id = session_data['user_id']
+            username = session_data['username']
+            thread_id = session_data['thread_id']
+            activity_data = session_data['activity_data']
             
-            for key, value_list in url_params.items():
-                if value_list:
-                    query_params[key] = value_list[0]
+            logger.info(f"Using session data: activity_id={activity_id}, user_id={user_id}, thread_id={thread_id}")
             
-            logger.info(f"Parsed URL params: {query_params}")
-    except Exception as e:
-        logger.error(f"Error parsing URL parameters: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-    
-    if not query_params.get('activity_id') or not query_params.get('user_id'):
-        logger.info("URL parameters incomplete, trying get_simba_params()")
-        simba_params = get_simba_params()
-        logger.info(f"Got SIMBA params: {simba_params}")
-        for key, value in simba_params.items():
-            if key not in query_params or not query_params[key]:
-                query_params[key] = value
-        
-    activity_id_str = query_params.get('activity_id')
-    user_id_str = query_params.get('user_id')
-    username = query_params.get('username', 'User')
-    thread_id_str = query_params.get('thread_id')
-    
-    logger.info(f"Final parameters - Activity: {activity_id_str}, User: {user_id_str}, Thread: {thread_id_str}")
-    
-    if activity_id_str:
-        SIMBA_PARAM_STORAGE['activity_id'] = activity_id_str
-        cl.user_session.set("activity_id", activity_id_str)
-    if user_id_str:
-        SIMBA_PARAM_STORAGE['user_id'] = user_id_str
-        cl.user_session.set("user_id", user_id_str)
-    if thread_id_str:
-        SIMBA_PARAM_STORAGE['thread_id'] = thread_id_str
-        cl.user_session.set("thread_id", thread_id_str)
-    if username:
-        SIMBA_PARAM_STORAGE['username'] = username
-        cl.user_session.set("username", username)
-    
-    if not activity_id_str or not user_id_str:
-        await cl.Message(content=f"Invalid parameters. Activity ID and User ID are required. Received: {query_params}").send()
-        raise Exception("Invalid parameters: activity_id and user_id are required.")
-
-    try:
-        activity_id = int(activity_id_str)
-        user_id = int(user_id_str)
-        thread_id = int(thread_id_str) if thread_id_str else None
-    except ValueError:
-        await cl.Message(content="Invalid Activity ID, User ID, or Thread ID format.").send()
-        raise Exception("Invalid ID format")
-
-    try:
-        activity_data = await api_get_activity(activity_id)
-
-        if thread_id:
-            thread_data = {'id': thread_id}
-            logger.info(f"Using specific thread: {thread_id}")
-        else:
-            thread_data = await api_get_or_create_thread(activity_id, user_id)
-            thread_id = thread_data['id']
-            logger.info(f"Using default/created thread: {thread_id}")
-            
-            SIMBA_PARAM_STORAGE['thread_id'] = thread_id
+            cl.user_session.set("session_id", session_id)
+            cl.user_session.set("activity_id", activity_id)
+            cl.user_session.set("user_id", user_id)
+            cl.user_session.set("username", username)
             cl.user_session.set("thread_id", thread_id)
+            cl.user_session.set("activity_data", activity_data)
+            
+        else:
+            logger.error(f"Could not fetch session data for session_id: {session_id}")
+            await cl.Message(content=f"Session expired or not found. Please refresh the page.").send()
+            return
+    else:
+        activity_id_str = params.get('activity_id')
+        user_id_str = params.get('user_id')
+        username = params.get('username', 'User')
+        thread_id_str = params.get('thread_id')
         
-        cl.user_session.set("thread_id", thread_id)
-        cl.user_session.set("activity_id", activity_id)
-        cl.user_session.set("user_id", user_id)
-        cl.user_session.set("username", username)
-        cl.user_session.set("activity_data", activity_data)
+        logger.info(f"Fallback parameters - Activity: {activity_id_str}, User: {user_id_str}, Thread: {thread_id_str}")
         
+        if not activity_id_str or not user_id_str:
+            await cl.Message(content=f"Invalid parameters. Activity ID and User ID are required. Received: {params}").send()
+            raise Exception("Invalid parameters: activity_id and user_id are required.")
+
+        try:
+            activity_id = int(activity_id_str)
+            user_id = int(user_id_str)
+            thread_id = int(thread_id_str) if thread_id_str else None
+        except ValueError:
+            await cl.Message(content="Invalid Activity ID, User ID, or Thread ID format.").send()
+            raise Exception("Invalid ID format")
+
+        try:
+            session_data = await api_init_session(activity_id, user_id, username, thread_id)
+            
+            session_id = session_data['session_id']
+            thread_id = session_data['thread_id']
+            activity_data = session_data['activity_data']
+            
+            logger.info(f"Initialized new session: {session_id}")
+            
+            cl.user_session.set("session_id", session_id)
+            cl.user_session.set("activity_id", activity_id)
+            cl.user_session.set("user_id", user_id)
+            cl.user_session.set("username", username)
+            cl.user_session.set("thread_id", thread_id)
+            cl.user_session.set("activity_data", activity_data)
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize session via API, falling back to direct method: {e}")
+            
+            activity_data = await api_get_activity(activity_id)
+            
+            if thread_id:
+                thread_data = {'id': thread_id}
+                logger.info(f"Using specific thread: {thread_id}")
+            else:
+                thread_data = await api_get_or_create_thread(activity_id, user_id)
+                thread_id = thread_data['id']
+                logger.info(f"Using default/created thread: {thread_id}")
+            
+            cl.user_session.set("thread_id", thread_id)
+            cl.user_session.set("activity_id", activity_id)
+            cl.user_session.set("user_id", user_id)
+            cl.user_session.set("username", username)
+            cl.user_session.set("activity_data", activity_data)
+
+    try:    
         previous_messages_data = await api_get_messages_for_thread(thread_id)
         logger.info(f"Loaded {len(previous_messages_data) if previous_messages_data else 0} previous messages for thread {thread_id}")
         
@@ -362,19 +449,20 @@ async def on_message(message: cl.Message):
     username = cl.user_session.get("username", "User")
     thread_id = cl.user_session.get("thread_id")
     activity_data = cl.user_session.get("activity_data")
+    session_id = cl.user_session.get("session_id")
     
     if not activity_id or not user_id or not thread_id:
-        logger.info("Some parameters missing from session, checking SIMBA_PARAM_STORAGE")
+        logger.info("Some parameters missing from session, checking SIMBA_SESSION_STORAGE")
         if not activity_id:
-            activity_id = SIMBA_PARAM_STORAGE.get('activity_id')
+            activity_id = SIMBA_SESSION_STORAGE.get('activity_id')
         if not user_id:
-            user_id = SIMBA_PARAM_STORAGE.get('user_id')
+            user_id = SIMBA_SESSION_STORAGE.get('user_id')
         if not thread_id:
-            thread_id = SIMBA_PARAM_STORAGE.get('thread_id')
+            thread_id = SIMBA_SESSION_STORAGE.get('thread_id')
         if not username:
-            username = SIMBA_PARAM_STORAGE.get('username', 'User')
+            username = SIMBA_SESSION_STORAGE.get('username', 'User')
     
-    logger.info(f"Parameters for message - Activity: {activity_id}, User: {user_id}, Thread: {thread_id}")
+    logger.info(f"Parameters for message - Activity: {activity_id}, User: {user_id}, Thread: {thread_id}, Session: {session_id}")
 
     if not all([activity_id, user_id, thread_id, activity_data]):
         logger.error(f"Missing required parameters - Activity: {activity_id}, User: {user_id}, Thread: {thread_id}")

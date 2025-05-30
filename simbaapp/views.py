@@ -111,56 +111,61 @@ def chainlit_view(request):
         activity = Activity.objects.get(id=activity_id)
         user_id = request.session.get('user_id')
         username = request.session.get('username', 'User')
-        print(f"host : {request.get_host()}", flush=True)
-        # if 'localhost' in request.get_host() or '127.0.0.1' in request.get_host():
-        #     chainlit_base_url = "http://localhost:8500"
-        # else:
-        #     chainlit_base_url = f"https://{request.get_host()}:8500"
-        chainlit_base_url = f"https://simba-refact.irit.fr/chainlit"
-        print(f"base url is {chainlit_base_url}", flush=True)
-        if thread_id:
-            chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={thread_id}&lang=en"
-        else:
-            try:
-                from django.urls import reverse
-                api_url = request.build_absolute_uri(reverse('api-1.0.0:get_user_attempts_api', args=[activity_id, user_id]))
-                response = requests.get(api_url)
-                
-                if response.status_code == 200:
-                    print(f"response 200", flush=True)
-                    attempts = response.json()
-                    if attempts:
-                        print(f"attempts {attempts}", flush=True)
-                        latest_thread_id = attempts[0]['id']
-                        chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={latest_thread_id}&lang=en"
-                    else:
-                        print(f"not attempts", flush=True)
-                        create_api_url = request.build_absolute_uri(reverse('api-1.0.0:create_new_attempt_api') + f"?activity_id={activity_id}&user_id={user_id}")
-                        create_response = requests.post(create_api_url)
-                        
-                        if create_response.status_code == 201:
-                            print(f"response 201", flush=True)
-                            new_thread = create_response.json()
-                            chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={new_thread['id']}&lang=en"
-                        else:
-                            print(f"response not 201", flush=True)
-                            chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
-                else:
-                    print(f"response not 200", flush=True)
-                    chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
-                    
-            except Exception as e:
-                chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
-        print(f"chainlit url is {chainlit_url}", flush=True)
-        context = {
-            'activity': activity,
-            'activity_id': activity_id,
+        
+        # Initialize Chainlit session via API
+        api_url = request.build_absolute_uri(reverse('api-1.0.0:init_chainlit_session'))
+        session_payload = {
+            'activity_id': int(activity_id),
             'user_id': user_id,
-            'username': username,
-            'chainlit_url': chainlit_url,
-            'thread_id': thread_id
+            'username': username
         }
-        return render(request, 'chainlit.html', context)
+        
+        if thread_id:
+            session_payload['thread_id'] = int(thread_id)
+        
+        try:
+            response = requests.post(api_url, json=session_payload)
+            response.raise_for_status()
+            session_data = response.json()
+            
+            # Store session data for Chainlit to access
+            chainlit_base_url = f"http://localhost:8500"
+            print(f"base url is {chainlit_base_url}", flush=True)
+            
+            # Pass session ID instead of individual parameters
+            chainlit_url = f"{chainlit_base_url}/?session_id={session_data['session_id']}"
+            
+            context = {
+                'activity': activity,
+                'activity_id': activity_id,
+                'user_id': user_id,
+                'username': username,
+                'chainlit_url': chainlit_url,
+                'thread_id': session_data['thread_id'],
+                'session_id': session_data['session_id'],
+                'session_data': session_data
+            }
+            return render(request, 'chainlit.html', context)
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to initialize Chainlit session: {e}")
+            # Fallback to old method if API fails
+            chainlit_base_url = f"http://localhost:8500"
+            if thread_id:
+                chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={thread_id}&lang=en"
+            else:
+                chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
+            
+            context = {
+                'activity': activity,
+                'activity_id': activity_id,
+                'user_id': user_id,
+                'username': username,
+                'chainlit_url': chainlit_url,
+                'thread_id': thread_id
+            }
+            return render(request, 'chainlit.html', context)
+            
     except Activity.DoesNotExist:
         messages.error(request, "Activity not found.")
         return redirect('courses')

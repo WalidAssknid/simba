@@ -145,3 +145,23 @@ class Event(models.Model):
 
     def __str__(self):
         return f"subject : {self.user}, verb : {self.verb}, object : {self.object}"
+
+
+class ChainlitSession(models.Model):
+    session_id = models.CharField(max_length=255, unique=True)
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    thread = models.ForeignKey(Thread, on_delete=models.CASCADE)
+    username = models.CharField(max_length=255)
+    session_data = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"Chainlit Session {self.session_id} for {self.user.username}"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['session_id']),
+            models.Index(fields=['expires_at']),
+        ]

@@ -11,104 +11,6 @@ import asyncio
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global session storage
-SIMBA_SESSION_STORAGE = {}
-
-def get_session_data_from_api(session_id: str):
-    """Get session data from API using session ID"""
-    if session_id in SIMBA_SESSION_STORAGE:
-        return SIMBA_SESSION_STORAGE[session_id]
-    
-    return None
-
-async def fetch_session_data_from_api(session_id: str):
-    """Fetch session data from API asynchronously"""
-    try:
-        async with httpx.AsyncClient() as http_client:
-            response = await http_client.get(f"{SIMBA_API_BASE_URL}/chainlit/session/{session_id}")
-            if response.status_code == 200:
-                session_data = response.json()
-                SIMBA_SESSION_STORAGE[session_id] = session_data
-                return session_data
-            else:
-                logger.warning(f"Session {session_id} not found in API: {response.status_code}")
-                return None
-    except Exception as e:
-        logger.error(f"Error fetching session data from API: {e}")
-        return None
-
-def get_simba_params():
-    """Extract parameters from session data or fallback to URL"""
-    params = {}
-    
-    logger.info("Starting parameter extraction...")
-    
-    current_url = None
-    
-    if hasattr(cl, 'context') and hasattr(cl.context, 'session'):
-        if hasattr(cl.context.session, 'root_url'):
-            current_url = cl.context.session.root_url
-            logger.info(f"Got URL from context.session.root_url: {current_url}")
-        elif hasattr(cl.context.session, 'http_referer'):
-            current_url = cl.context.session.http_referer
-            logger.info(f"Got URL from context.session.http_referer: {current_url}")
-    
-    if not current_url and hasattr(cl, 'user_session'):
-        current_url = cl.user_session.get("http_referer", "")
-        logger.info(f"Got URL from user_session: {current_url}")
-    
-    if not current_url:
-        try:
-            import chainlit.context as ctx
-            if hasattr(ctx, 'context') and ctx.context and hasattr(ctx.context, 'session'):
-                if hasattr(ctx.context.session, 'headers'):
-                    referer = ctx.context.session.headers.get('referer')
-                    if referer:
-                        current_url = referer
-                        logger.info(f"Got URL from headers referer: {current_url}")
-        except Exception as e:
-            logger.warning(f"Could not get URL from headers: {e}")
-    
-    if current_url:
-        from urllib.parse import urlparse, parse_qs
-        parsed_url = urlparse(current_url)
-        url_params = parse_qs(parsed_url.query)
-        logger.info(f"Parsed URL params: {url_params}")
-        
-        session_id = url_params.get('session_id', [None])[0]
-        if session_id:
-            logger.info(f"Found session_id in URL: {session_id}")
-            session_data = get_session_data_from_api(session_id)
-            if session_data:
-                logger.info(f"Retrieved session data for session_id: {session_id}")
-                return {
-                    'activity_id': str(session_data['activity_id']),
-                    'user_id': str(session_data['user_id']),
-                    'username': session_data['username'],
-                    'thread_id': str(session_data['thread_id']),
-                    'session_id': session_id,
-                    'activity_data': session_data['activity_data']
-                }
-            else:
-                logger.warning(f"No session data found for session_id: {session_id}")
-        
-        for key, values in url_params.items():
-            if values:
-                params[key] = values[0]
-                logger.info(f"Found URL param: {key} = {values[0]}")
-    else:
-        logger.warning("No URL found in any context")
-    
-    if hasattr(cl, 'user_session'):
-        for key in ['activity_id', 'user_id', 'username', 'thread_id', 'session_id']:
-            value = cl.user_session.get(key)
-            if value:
-                params[key] = value
-                logger.info(f"Found user_session param: {key} = {value}")
-    
-    logger.info(f"Final extracted params: {params}")
-    return params
-
 SIMBA_API_BASE_URL = os.getenv('SIMBA_API_URL', 'http://web:8000/api')
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
@@ -184,31 +86,24 @@ async def api_get_messages_for_thread(thread_id: int):
             logger.error(f"Request Error getting messages: {e}")
             raise Exception(f"Request Error: Could not connect to API for messages.")
 
-async def api_init_session(activity_id: int, user_id: int, username: str, thread_id: int = None):
-    """Initialize session via API"""
-    payload = {
-        "activity_id": activity_id,
-        "user_id": user_id,
-        "username": username
-    }
-    if thread_id:
-        payload["thread_id"] = thread_id
-        
+async def api_get_next_session():
+    """Get the next pending session from the API queue"""
     async with httpx.AsyncClient() as http_client:
         try:
-            response = await http_client.post(f"{SIMBA_API_BASE_URL}/chainlit/init-session", json=payload)
-            response.raise_for_status()
-            session_data = response.json()
-            
-            SIMBA_SESSION_STORAGE[session_data['session_id']] = session_data
-            
-            return session_data
+            response = await http_client.get(f"{SIMBA_API_BASE_URL}/chainlit/next-session")
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 404:
+                logger.info("No pending sessions in queue")
+                return None
+            else:
+                response.raise_for_status()
         except httpx.HTTPStatusError as e:
-            logger.error(f"API Error initializing session: {e.response.status_code} - {e.response.text}")
-            raise Exception(f"API Error: Could not initialize session. Status: {e.response.status_code}")
+            logger.error(f"API Error getting next session: {e.response.status_code} - {e.response.text}")
+            raise Exception(f"API Error: Could not get next session. Status: {e.response.status_code}")
         except httpx.RequestError as e:
-            logger.error(f"Request Error initializing session: {e}")
-            raise Exception(f"Request Error: Could not connect to API for session initialization.")
+            logger.error(f"Request Error getting next session: {e}")
+            raise Exception(f"Request Error: Could not connect to API for next session.")
 
 async def _build_system_prompt(activity_data: dict, logger_instance: logging.Logger) -> str:
     adj1 = activity_data.get('agent_attitude', 'friendly')
@@ -314,91 +209,39 @@ Your first message should begin with 'Hello! 😸 I am SIMBA, and I will help yo
 
 @cl.on_chat_start
 async def on_chat_start():
-    print("Chainlit starting new chat session", flush=True)
+    logger.info("Chainlit starting new chat session")
     
-    params = get_simba_params()
-    logger.info(f"Received parameters: {params}")
-    
-    session_id = params.get('session_id')
-    if session_id:
-        logger.info(f"Found session_id: {session_id}, attempting to fetch session data")
+    # Try to get the next session from the API queue
+    try:
+        session_data = await api_get_next_session()
         
-        session_data = await fetch_session_data_from_api(session_id)
-        
-        if session_data:
-            activity_id = session_data['activity_id']
-            user_id = session_data['user_id']
-            username = session_data['username']
-            thread_id = session_data['thread_id']
-            activity_data = session_data['activity_data']
-            
-            logger.info(f"Using session data: activity_id={activity_id}, user_id={user_id}, thread_id={thread_id}")
-            
-            cl.user_session.set("session_id", session_id)
-            cl.user_session.set("activity_id", activity_id)
-            cl.user_session.set("user_id", user_id)
-            cl.user_session.set("username", username)
-            cl.user_session.set("thread_id", thread_id)
-            cl.user_session.set("activity_data", activity_data)
-            
-        else:
-            logger.error(f"Could not fetch session data for session_id: {session_id}")
-            await cl.Message(content=f"Session expired or not found. Please refresh the page.").send()
+        if not session_data:
+            logger.warning("No pending sessions found in queue")
+            await cl.Message(content="No chat session is currently available. Please try starting a new chat from the course page.").send()
             return
-    else:
-        activity_id_str = params.get('activity_id')
-        user_id_str = params.get('user_id')
-        username = params.get('username', 'User')
-        thread_id_str = params.get('thread_id')
         
-        logger.info(f"Fallback parameters - Activity: {activity_id_str}, User: {user_id_str}, Thread: {thread_id_str}")
+        # Extract session data
+        activity_id = session_data['activity_id']
+        user_id = session_data['user_id']
+        username = session_data['username']
+        thread_id = session_data['thread_id']
+        activity_data = session_data['activity_data']
+        session_id = session_data['session_id']
         
-        if not activity_id_str or not user_id_str:
-            await cl.Message(content=f"Invalid parameters. Activity ID and User ID are required. Received: {params}").send()
-            raise Exception("Invalid parameters: activity_id and user_id are required.")
-
-        try:
-            activity_id = int(activity_id_str)
-            user_id = int(user_id_str)
-            thread_id = int(thread_id_str) if thread_id_str else None
-        except ValueError:
-            await cl.Message(content="Invalid Activity ID, User ID, or Thread ID format.").send()
-            raise Exception("Invalid ID format")
-
-        try:
-            session_data = await api_init_session(activity_id, user_id, username, thread_id)
-            
-            session_id = session_data['session_id']
-            thread_id = session_data['thread_id']
-            activity_data = session_data['activity_data']
-            
-            logger.info(f"Initialized new session: {session_id}")
-            
-            cl.user_session.set("session_id", session_id)
-            cl.user_session.set("activity_id", activity_id)
-            cl.user_session.set("user_id", user_id)
-            cl.user_session.set("username", username)
-            cl.user_session.set("thread_id", thread_id)
-            cl.user_session.set("activity_data", activity_data)
-            
-        except Exception as e:
-            logger.error(f"Failed to initialize session via API, falling back to direct method: {e}")
-            
-            activity_data = await api_get_activity(activity_id)
-            
-            if thread_id:
-                thread_data = {'id': thread_id}
-                logger.info(f"Using specific thread: {thread_id}")
-            else:
-                thread_data = await api_get_or_create_thread(activity_id, user_id)
-                thread_id = thread_data['id']
-                logger.info(f"Using default/created thread: {thread_id}")
-            
-            cl.user_session.set("thread_id", thread_id)
-            cl.user_session.set("activity_id", activity_id)
-            cl.user_session.set("user_id", user_id)
-            cl.user_session.set("username", username)
-            cl.user_session.set("activity_data", activity_data)
+        logger.info(f"Using session data: session_id={session_id}, activity_id={activity_id}, user_id={user_id}, thread_id={thread_id}")
+        
+        # Store in user session
+        cl.user_session.set("session_id", session_id)
+        cl.user_session.set("activity_id", activity_id)
+        cl.user_session.set("user_id", user_id)
+        cl.user_session.set("username", username)
+        cl.user_session.set("thread_id", thread_id)
+        cl.user_session.set("activity_data", activity_data)
+        
+    except Exception as e:
+        logger.error(f"Error getting session data from API: {e}")
+        await cl.Message(content=f"Failed to initialize chat session: {str(e)}").send()
+        return
 
     try:    
         previous_messages_data = await api_get_messages_for_thread(thread_id)
@@ -450,17 +293,6 @@ async def on_message(message: cl.Message):
     thread_id = cl.user_session.get("thread_id")
     activity_data = cl.user_session.get("activity_data")
     session_id = cl.user_session.get("session_id")
-    
-    if not activity_id or not user_id or not thread_id:
-        logger.info("Some parameters missing from session, checking SIMBA_SESSION_STORAGE")
-        if not activity_id:
-            activity_id = SIMBA_SESSION_STORAGE.get('activity_id')
-        if not user_id:
-            user_id = SIMBA_SESSION_STORAGE.get('user_id')
-        if not thread_id:
-            thread_id = SIMBA_SESSION_STORAGE.get('thread_id')
-        if not username:
-            username = SIMBA_SESSION_STORAGE.get('username', 'User')
     
     logger.info(f"Parameters for message - Activity: {activity_id}, User: {user_id}, Thread: {thread_id}, Session: {session_id}")
 

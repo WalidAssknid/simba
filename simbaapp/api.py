@@ -1328,9 +1328,133 @@ def delete_activity_file_api(request, activity_id: int, file_id: str, user_id: i
 # --- Chainlit Session Management ---
 chainlit_router = Router()
 
+# Fila temporária para sessões pendentes - armazena as sessões que estão esperando o Chainlit se conectar
+PENDING_SESSIONS_QUEUE = []
+
+@chainlit_router.post("/create-session", response={200: ChainlitSessionResponseSchema, 400: ErrorSchema, 404: ErrorSchema})
+def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
+    """Create a Chainlit session and add it to the pending queue for Chainlit to pick up."""
+    try:
+        # Validate activity exists
+        activity = Activity.objects.get(id=payload.activity_id)
+        
+        # Validate user exists
+        user = User.objects.get(id=payload.user_id)
+        
+        # Get or create thread
+        if payload.thread_id:
+            # Use specific thread if provided
+            thread = Thread.objects.get(id=payload.thread_id, activity=activity, user=user)
+        else:
+            # Get latest thread or create new one
+            latest_thread = Thread.objects.filter(
+                activity=activity,
+                user=user
+            ).order_by('-attempt_number').first()
+            
+            if latest_thread:
+                thread = latest_thread
+            else:
+                # Create new thread
+                thread = Thread.objects.create(
+                    activity=activity,
+                    user=user,
+                    attempt_number=1
+                )
+        
+        # Generate session ID (could be more sophisticated)
+        import uuid
+        session_id = str(uuid.uuid4())
+        
+        # Prepare activity data for Chainlit
+        activity_data = {
+            'id': activity.id,
+            'title': activity.title,
+            'description': activity.description,
+            'expert_mode': activity.expert_mode,
+            'custom_prompt': activity.custom_prompt,
+            'questions': activity.questions,
+            'agent_attitude': activity.agent_attitude,
+            'subjects': activity.subjects,
+            'restrict_to_subject': activity.restrict_to_subject,
+            'allow_questions': activity.allow_questions,
+            'allow_emojis': activity.allow_emojis,
+            'trust_document': activity.trust_document,
+            'word_limit': activity.word_limit,
+            'openai_assistant_id': activity.openai_assistant_id,
+            'vector_store_id': activity.vector_store_id,
+            'course': {
+                'id': activity.course.id,
+                'title': activity.course.title
+            }
+        }
+        
+        # Prepare session data
+        session_data = {
+            'session_id': session_id,
+            'activity_id': activity.id,
+            'user_id': user.id,
+            'username': payload.username,
+            'thread_id': thread.id,
+            'activity_data': activity_data
+        }
+        
+        # Store session data in database with expiration (1 hour)
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+        expires_at = timezone.now() + timedelta(hours=1)
+        
+        # Delete any existing session for this user/activity to avoid duplicates
+        ChainlitSession.objects.filter(
+            user=user,
+            activity=activity,
+            expires_at__lt=timezone.now()
+        ).delete()
+        
+        chainlit_session = ChainlitSession.objects.create(
+            session_id=session_id,
+            activity=activity,
+            user=user,
+            thread=thread,
+            username=payload.username,
+            session_data=session_data,
+            expires_at=expires_at
+        )
+        
+        # Add to pending sessions queue for Chainlit to pick up
+        PENDING_SESSIONS_QUEUE.append(session_data)
+        
+        # Track event
+        openedChat(user, thread.id, time.time())
+        
+        # Return session data without session_id for frontend use
+        return HTTPStatus.OK, session_data
+        
+    except Activity.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
+    except User.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "User not found."}
+    except Thread.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Thread not found."}
+    except Exception as e:
+        return HTTPStatus.BAD_REQUEST, {"message": f"Failed to create session: {str(e)}"}
+
+@chainlit_router.get("/next-session", response={200: ChainlitSessionResponseSchema, 404: ErrorSchema})
+def get_next_chainlit_session(request):
+    """Get the next session from the pending queue for Chainlit to process."""
+    try:
+        if PENDING_SESSIONS_QUEUE:
+            # Get the first session from the queue
+            session_data = PENDING_SESSIONS_QUEUE.pop(0)
+            return HTTPStatus.OK, session_data
+        else:
+            return HTTPStatus.NOT_FOUND, {"message": "No pending sessions."}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to get next session: {str(e)}"}
+
 @chainlit_router.post("/init-session", response={200: ChainlitSessionResponseSchema, 400: ErrorSchema, 404: ErrorSchema})
 def init_chainlit_session(request, payload: ChainlitSessionInitSchema):
-    """Initialize a Chainlit session with the provided parameters."""
+    """Initialize a Chainlit session with the provided parameters (legacy method)."""
     try:
         # Validate activity exists
         activity = Activity.objects.get(id=payload.activity_id)

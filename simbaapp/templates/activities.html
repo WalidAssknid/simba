@@ -218,6 +218,49 @@ document.addEventListener('DOMContentLoaded', function() {
         questionsHidden.value = JSON.stringify([]);
     }
     
+    // Function to create session and navigate to Chainlit
+    async function startChainlitSession(activityId, threadId = null) {
+        const userId = '{{ request.session.user_id }}';
+        const username = '{{ request.session.username }}';
+        
+        try {
+            const payload = {
+                activity_id: parseInt(activityId),
+                user_id: parseInt(userId),
+                username: username
+            };
+            
+            if (threadId) {
+                payload.thread_id = parseInt(threadId);
+            }
+            
+            console.log('Creating Chainlit session with payload:', payload);
+            
+            const response = await fetch('/api/chainlit/create-session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to create session');
+            }
+            
+            const sessionData = await response.json();
+            console.log('Session created successfully:', sessionData);
+            
+            // Redirect to chat page (which will load Chainlit)
+            window.location.href = '/chat/';
+            
+        } catch (error) {
+            console.error('Error creating session:', error);
+            alert(`Failed to start chat session: ${error.message}`);
+        }
+    }
+    
     document.querySelectorAll('.activity-item').forEach(item => {
         item.addEventListener('click', function(e) {
             if (!e.target.closest('.activity-options') && !e.target.closest('.activity-visibility-toggle')) {
@@ -460,19 +503,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         alert('Failed to load activity details for editing.');
                     });
             } else if (action === 'chat') {
-                const activityItem = document.querySelector(`.activity-item[data-activity-id="${activityId}"]`);
-                const courseId = activityItem ? activityItem.dataset.courseId : null;
-                
-                if (courseId) {
-                    window.location.href = `/courses/${courseId}/?expand_activity=${activityId}`;
-                } else {
-                    const userId = '{{ request.session.user_id }}';
-                    const username = '{{ request.session.username }}';
-                    window.location.href = `/chat/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
-                }
+                startChainlitSession(activityId);
             } else if (action === 'link') {
                 document.getElementById('activityLinkDisplay').textContent = 
-                    `${window.location.origin}/chat/?activity_id=${activityId}`;
+                    `${window.location.origin}/chat/`;
                 document.getElementById('activityLinkModal').style.display = 'block';
             } else if (action === 'delete') {
                 if (confirm('Are you sure you want to delete this activity?')) {

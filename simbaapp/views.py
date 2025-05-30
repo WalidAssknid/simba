@@ -112,8 +112,8 @@ def chainlit_view(request):
         user_id = request.session.get('user_id')
         username = request.session.get('username', 'User')
         
-        # Initialize Chainlit session via API
-        api_url = request.build_absolute_uri(reverse('api-1.0.0:init_chainlit_session'))
+        # Create Chainlit session via new API
+        api_url = request.build_absolute_uri('/api/chainlit/create-session')
         session_payload = {
             'activity_id': int(activity_id),
             'user_id': user_id,
@@ -128,12 +128,9 @@ def chainlit_view(request):
             response.raise_for_status()
             session_data = response.json()
             
-            # Store session data for Chainlit to access
+            # Chainlit URL without any parameters
             chainlit_base_url = f"https://simba-refact.irit.fr/chainlit"
-            print(f"base url is {chainlit_base_url}", flush=True)
-            
-            # Pass session ID instead of individual parameters
-            chainlit_url = f"{chainlit_base_url}/?session_id={session_data['session_id']}"
+            chainlit_url = chainlit_base_url  # No parameters!
             
             context = {
                 'activity': activity,
@@ -148,23 +145,10 @@ def chainlit_view(request):
             return render(request, 'chainlit.html', context)
             
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to initialize Chainlit session: {e}")
-            # Fallback to old method if API fails
-            chainlit_base_url = f"https://simba-refact.irit.fr/chainlit"
-            if thread_id:
-                chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={thread_id}&lang=en"
-            else:
-                chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&lang=en"
-            
-            context = {
-                'activity': activity,
-                'activity_id': activity_id,
-                'user_id': user_id,
-                'username': username,
-                'chainlit_url': chainlit_url,
-                'thread_id': thread_id
-            }
-            return render(request, 'chainlit.html', context)
+            logger.error(f"Failed to create Chainlit session: {e}")
+            # Error - redirect to courses instead of fallback
+            messages.error(request, "Failed to start chat session. Please try again.")
+            return redirect('courses')
             
     except Activity.DoesNotExist:
         messages.error(request, "Activity not found.")

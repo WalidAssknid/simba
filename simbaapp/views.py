@@ -130,7 +130,7 @@ def chainlit_view(request):
             
             # Chainlit URL without any parameters
             chainlit_base_url = f"https://simba-refact.irit.fr/chainlit"
-            chainlit_url = chainlit_base_url  # No parameters!
+            chainlit_url = chainlit_base_url 
             
             context = {
                 'activity': activity,

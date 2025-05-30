@@ -57,7 +57,8 @@
         function loadChainlit() {
             const iframe = document.createElement('iframe');
             iframe.id = 'chainlitFrame';
-            iframe.src = '{{ chainlit_url }}';  // Just the base URL, no parameters
+            // Construct Chainlit URL based on current location or use template variable
+            iframe.src = '{{ chainlit_url }}' || `${window.location.protocol}//${window.location.host}/chainlit`;
             iframe.width = '100%';
             iframe.height = '100%';
             iframe.frameBorder = '0';

@@ -11,7 +11,7 @@ import asyncio
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-SIMBA_API_BASE_URL = os.getenv('SIMBA_API_URL', 'http://web:8000/api')
+SIMBA_API_BASE_URL = 'https://simba-refact.irit.fr/api'
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
 if not django.apps.apps.ready:

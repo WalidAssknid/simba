@@ -44,14 +44,14 @@
         // Store session data globally for Chainlit access
         window.SIMBA_SESSION_DATA = JSON.parse(document.getElementById('session-data').textContent);
         console.log("Session Data loaded:", window.SIMBA_SESSION_DATA);
-        
+            
         // Store in localStorage for Chainlit to access
-        try {
+            try {
             localStorage.setItem('simba_session_data', JSON.stringify(window.SIMBA_SESSION_DATA));
             console.log("Session data stored in localStorage for Chainlit access");
-        } catch (e) {
-            console.warn("Could not save session data to localStorage:", e);
-        }
+            } catch (e) {
+                console.warn("Could not save session data to localStorage:", e);
+            }
         
         // Function to load Chainlit iframe
         function loadChainlit() {

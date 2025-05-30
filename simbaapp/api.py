@@ -1341,6 +1341,30 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
         # Validate user exists
         user = User.objects.get(id=payload.user_id)
         
+        # Clean up expired sessions
+        from datetime import datetime, timedelta
+        from django.utils import timezone
+        ChainlitSession.objects.filter(expires_at__lt=timezone.now()).delete()
+        
+        # Check if there's already a valid session for this user/activity that's not consumed
+        existing_session = ChainlitSession.objects.filter(
+            user=user,
+            activity=activity,
+            expires_at__gt=timezone.now(),
+            is_consumed=False
+        ).first()
+        
+        if existing_session:
+            # Reuse existing session - add back to queue if not already there
+            session_in_queue = any(
+                s.get('session_id') == existing_session.session_id 
+                for s in PENDING_SESSIONS_QUEUE
+            )
+            if not session_in_queue:
+                PENDING_SESSIONS_QUEUE.append(existing_session.session_data)
+            
+            return HTTPStatus.OK, existing_session.session_data
+        
         # Get or create thread
         if payload.thread_id:
             # Use specific thread if provided
@@ -1400,16 +1424,7 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
         }
         
         # Store session data in database with expiration (1 hour)
-        from datetime import datetime, timedelta
-        from django.utils import timezone
         expires_at = timezone.now() + timedelta(hours=1)
-        
-        # Delete any existing session for this user/activity to avoid duplicates
-        ChainlitSession.objects.filter(
-            user=user,
-            activity=activity,
-            expires_at__lt=timezone.now()
-        ).delete()
         
         chainlit_session = ChainlitSession.objects.create(
             session_id=session_id,
@@ -1418,7 +1433,8 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
             thread=thread,
             username=payload.username,
             session_data=session_data,
-            expires_at=expires_at
+            expires_at=expires_at,
+            is_consumed=False
         )
         
         # Add to pending sessions queue for Chainlit to pick up
@@ -1441,14 +1457,32 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
 
 @chainlit_router.get("/next-session", response={200: ChainlitSessionResponseSchema, 404: ErrorSchema})
 def get_next_chainlit_session(request):
-    """Get the next session from the pending queue for Chainlit to process."""
+    """Get the next session from the pending queue or database for Chainlit to process."""
     try:
+        # First, try to get from the in-memory queue (fastest)
         if PENDING_SESSIONS_QUEUE:
-            # Get the first session from the queue
             session_data = PENDING_SESSIONS_QUEUE.pop(0)
             return HTTPStatus.OK, session_data
+        
+        # If queue is empty, try to find a valid session in the database
+        from django.utils import timezone
+        
+        # Look for unexpired sessions in the database
+        valid_session = ChainlitSession.objects.filter(
+            expires_at__gt=timezone.now(),
+            is_consumed=False
+        ).select_related('activity', 'user', 'thread').first()
+        
+        if valid_session:
+            # Mark session as consumed to prevent reuse
+            valid_session.is_consumed = True
+            valid_session.save()
+            
+            # Return the stored session data
+            return HTTPStatus.OK, valid_session.session_data
         else:
             return HTTPStatus.NOT_FOUND, {"message": "No pending sessions."}
+            
     except Exception as e:
         return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to get next session: {str(e)}"}
 

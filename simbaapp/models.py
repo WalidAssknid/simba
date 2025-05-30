@@ -156,6 +156,7 @@ class ChainlitSession(models.Model):
     session_data = models.JSONField()
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
+    is_consumed = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Chainlit Session {self.session_id} for {self.user.username}"
@@ -164,4 +165,5 @@ class ChainlitSession(models.Model):
         indexes = [
             models.Index(fields=['session_id']),
             models.Index(fields=['expires_at']),
+            models.Index(fields=['is_consumed']),
         ]

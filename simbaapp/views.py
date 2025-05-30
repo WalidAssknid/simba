@@ -13,7 +13,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def home_view(request):
-    # If user is already logged in, redirect to courses page
     if request.session.get('user_id'):
         return redirect('courses')
     return render(request, 'home.html')

@@ -211,37 +211,49 @@ Your first message should begin with 'Hello! 😸 I am SIMBA, and I will help yo
 async def on_chat_start():
     logger.info("Chainlit starting new chat session")
     
-    # Try to get the next session from the API queue
-    try:
-        session_data = await api_get_next_session()
-        
-        if not session_data:
-            logger.warning("No pending sessions found in queue")
-            await cl.Message(content="No chat session is currently available. Please try starting a new chat from the course page.").send()
-            return
-        
-        # Extract session data
-        activity_id = session_data['activity_id']
-        user_id = session_data['user_id']
-        username = session_data['username']
-        thread_id = session_data['thread_id']
-        activity_data = session_data['activity_data']
-        session_id = session_data['session_id']
-        
-        logger.info(f"Using session data: session_id={session_id}, activity_id={activity_id}, user_id={user_id}, thread_id={thread_id}")
-        
-        # Store in user session
-        cl.user_session.set("session_id", session_id)
-        cl.user_session.set("activity_id", activity_id)
-        cl.user_session.set("user_id", user_id)
-        cl.user_session.set("username", username)
-        cl.user_session.set("thread_id", thread_id)
-        cl.user_session.set("activity_data", activity_data)
-        
-    except Exception as e:
-        logger.error(f"Error getting session data from API: {e}")
-        await cl.Message(content=f"Failed to initialize chat session: {str(e)}").send()
+    # Try to get the next session from the API queue with retry
+    session_data = None
+    max_retries = 3
+    retry_delay = 0.5  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            session_data = await api_get_next_session()
+            
+            if session_data:
+                break
+            else:
+                logger.info(f"No pending sessions found on attempt {attempt + 1}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay)
+                    
+        except Exception as e:
+            logger.error(f"Error getting session data from API on attempt {attempt + 1}: {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(retry_delay)
+    
+    if not session_data:
+        logger.warning("No pending sessions found after all retry attempts")
+        await cl.Message(content="No chat session is currently available. Please try starting a new chat from the course page.").send()
         return
+    
+    # Extract session data
+    activity_id = session_data['activity_id']
+    user_id = session_data['user_id']
+    username = session_data['username']
+    thread_id = session_data['thread_id']
+    activity_data = session_data['activity_data']
+    session_id = session_data['session_id']
+    
+    logger.info(f"Using session data: session_id={session_id}, activity_id={activity_id}, user_id={user_id}, thread_id={thread_id}")
+    
+    # Store in user session
+    cl.user_session.set("session_id", session_id)
+    cl.user_session.set("activity_id", activity_id)
+    cl.user_session.set("user_id", user_id)
+    cl.user_session.set("username", username)
+    cl.user_session.set("thread_id", thread_id)
+    cl.user_session.set("activity_data", activity_data)
 
     try:    
         previous_messages_data = await api_get_messages_for_thread(thread_id)

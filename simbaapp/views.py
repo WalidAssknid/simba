@@ -129,7 +129,7 @@ def chainlit_view(request):
             session_data = response.json()
             
             # Store session data for Chainlit to access
-            chainlit_base_url = f"http://localhost:8500"
+            chainlit_base_url = f"https://simba-refact.irit.fr/chainlit"
             print(f"base url is {chainlit_base_url}", flush=True)
             
             # Pass session ID instead of individual parameters
@@ -150,7 +150,7 @@ def chainlit_view(request):
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to initialize Chainlit session: {e}")
             # Fallback to old method if API fails
-            chainlit_base_url = f"http://localhost:8500"
+            chainlit_base_url = f"https://simba-refact.irit.fr/chainlit"
             if thread_id:
                 chainlit_url = f"{chainlit_base_url}/?activity_id={activity_id}&user_id={user_id}&username={urllib.parse.quote(username)}&thread_id={thread_id}&lang=en"
             else:

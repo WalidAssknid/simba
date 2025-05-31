@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-def _build_instructions(activity_data: Dict[str, Any]) -> str:
+def _build_instructions(activity_data: Dict[str, Any], has_files: bool = False) -> str:
     """Build the instructions for the OpenAI assistant based on activity data"""
     
     course_title = activity_data.get('course_title', 'this course')
@@ -61,8 +61,19 @@ def _build_instructions(activity_data: Dict[str, Any]) -> str:
     def teaching_adj_gen_str(is_expert_mode):
         return "socratic" if is_expert_mode else "standard"
 
-    def docs_gen_str(mention_documents):
-        return "Encourage them to go and read a section of the provided documents to answer." if mention_documents else ""
+    def docs_gen_str(mention_documents, has_files):
+        if mention_documents and has_files:
+            return "You have access to uploaded documents for this activity. Use these documents to help answer questions and encourage students to reference them when appropriate."
+        elif mention_documents and not has_files:
+            return "Encourage them to go and read a section of the provided documents to answer."
+        elif has_files:
+            return "You have access to uploaded documents for this activity that you can reference to help students."
+        return ""
+
+    def files_gen_str(has_files):
+        if has_files:
+            return "\n\nIMPORTANT: This activity has uploaded files/documents available. You can search through and reference these documents to provide more accurate and detailed responses. When relevant, cite information from these documents and encourage students to explore them."
+        return ""
 
     def limits_gen_str(limit):
         return f"Your answers should be {limit} words maximum." if limit and limit != 0 else ""
@@ -73,7 +84,8 @@ def _build_instructions(activity_data: Dict[str, Any]) -> str:
     teaching_adj_str = teaching_adj_gen_str(expert_mode)
     answers_text = answers_gen_str(expert_mode)
     teaching_type_text = teach_type_gen_str(expert_mode)
-    documents_str = docs_gen_str(trust_document)
+    documents_str = docs_gen_str(trust_document, has_files)
+    files_str = files_gen_str(has_files)
     limits_str = limits_gen_str(word_limit)
 
     full_template = f"""You are a {adj1} {teaching_adj_str} tutor for the course '{course_title}'.
@@ -93,7 +105,7 @@ Help the student answer the following questions:
 
 Your first message should begin with 'Hello! 😸 I am SIMBA, and I will help you reflect on the following questions: ' Followed by the questions to answer.
 
-{limits_str}"""
+{limits_str}{files_str}"""
 
     system_prompt = full_template.strip()
     
@@ -108,7 +120,8 @@ Your first message should begin with 'Hello! 😸 I am SIMBA, and I will help yo
 def create_assistant(activity_data: Dict[str, Any], files: List[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Create a new OpenAI assistant for an activity"""
     try:
-        instructions = _build_instructions(activity_data)
+        has_files = bool(files)
+        instructions = _build_instructions(activity_data, has_files)
         
         vector_store_id = None
         if files:
@@ -180,14 +193,15 @@ def create_assistant(activity_data: Dict[str, Any], files: List[Dict[str, Any]] 
 def update_assistant(assistant_id: str, activity_data: Dict[str, Any], files: List[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Update an existing OpenAI assistant"""
     try:
-        instructions = _build_instructions(activity_data)
-        
         assistant = client.beta.assistants.retrieve(assistant_id)
 
         vector_store_id = None
         if hasattr(assistant.tool_resources, 'file_search') and assistant.tool_resources.file_search:
             if assistant.tool_resources.file_search.vector_store_ids:
                 vector_store_id = assistant.tool_resources.file_search.vector_store_ids[0]
+        
+        has_files = bool(files) or bool(vector_store_id)
+        instructions = _build_instructions(activity_data, has_files)
         
         if files:
             if not vector_store_id:

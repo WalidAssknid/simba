@@ -388,14 +388,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Get the latest thread for this user and activity, then set iframe source
                     fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
                         .then(response => response.json())
-                        .then(attempts => {
+                        .then(data => {
+                            const attempts = data.attempts || [];
                             if (attempts && attempts.length > 0) {
-                                // Use the most recent attempt (first in the list since it's ordered by -attempt_number)
                                 const latestThread = attempts[0];
-                                console.log('Loading existing attempt:', latestThread.id);
-                                startChainlitSession(activityId, latestThread.id);
+                                console.log('Loading existing attempt:', latestThread.thread_id);
+                                startChainlitSession(activityId, latestThread.thread_id);
                             } else {
-                                // No previous attempts, create new one first
                                 console.log('No previous attempts, creating first attempt');
                                 fetch(`/api/threads/new-attempt?activity_id=${activityId}&user_id=${userId}`, {
                                     method: 'POST',
@@ -410,7 +409,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 })
                                 .catch(error => {
                                     console.error('Error creating first attempt:', error);
-                                    // Fallback to default (no specific thread)
                                     startChainlitSession(activityId);
                                 });
                             }
@@ -482,12 +480,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
                 .then(response => response.json())
-                .then(attempts => {
+                .then(data => {
                     chainlitAttemptSelector.innerHTML = '<option value="new">Start New Attempt</option>';
                     
+                    // Access the attempts array from the response object
+                    const attempts = data.attempts || [];
                     attempts.forEach(attempt => {
                         const option = document.createElement('option');
-                        option.value = attempt.id;
+                        option.value = attempt.thread_id;
                         option.textContent = `Attempt ${attempt.attempt_number} (${new Date(attempt.created_at).toLocaleDateString()})`;
                         chainlitAttemptSelector.appendChild(option);
                     });
@@ -796,11 +796,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
                     .then(response => response.json())
-                    .then(attempts => {
+                    .then(data => {
+                        const attempts = data.attempts || [];
                         if (attempts && attempts.length > 0) {
                             const latestThread = attempts[0];
-                            console.log('Loading existing attempt:', latestThread.id);
-                            startChainlitSession(activityId, latestThread.id);
+                            console.log('Loading existing attempt:', latestThread.thread_id);
+                            startChainlitSession(activityId, latestThread.thread_id);
                         } else {
                             console.log('No previous attempts, creating first attempt');
                             fetch(`/api/threads/new-attempt?activity_id=${activityId}&user_id=${userId}`, {

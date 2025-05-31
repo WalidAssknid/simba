@@ -142,6 +142,7 @@ async def _build_system_prompt(activity_data: dict, logger_instance: logging.Log
     word_limit_val = activity_data.get('word_limit', 0)
     custom_prompt_text = activity_data.get('custom_prompt', '')
     allow_bot_to_ask_questions_flag = activity_data.get('allow_questions', True)
+    vector_store_id = activity_data.get('vector_store_id')
 
     def emojiGen(useEmojis):
         return ", using emojis where possible." if useEmojis else "."
@@ -180,16 +181,27 @@ async def _build_system_prompt(activity_data: dict, logger_instance: logging.Log
     def teachingAdjGen_str(is_expert_mode):
         return "socratic" if is_expert_mode else "standard"
 
-    def docsGen_str(mentiondocuments):
+    def docsGen_str(mentiondocuments, has_files):
         nstr = ""
-        if mentiondocuments:
+        if mentiondocuments and has_files:
+            nstr = "You have access to uploaded documents for this activity. Use these documents to help answer questions and encourage students to reference them when appropriate."
+        elif mentiondocuments and not has_files:
             nstr = "Encourage them to go and read a section of the provided documents to answer."
+        elif has_files:
+            nstr = "You have access to uploaded documents for this activity that you can reference to help students."
         return nstr
+
+    def filesGen_str(has_files):
+        if has_files:
+            return "\n\nIMPORTANT: This activity has uploaded files/documents available. You can search through and reference these documents to provide more accurate and detailed responses. When relevant, cite information from these documents and encourage students to explore them."
+        return ""
 
     def limitsGen_str(limit):
         if limit and limit != 0:
             return f"Your answers should be {limit} words maximum."
         return ""
+
+    has_files = bool(vector_store_id)
 
     emojis_str = emojiGen(allow_emojis_flag)
     questions_str = questionsGen_str(questions_list)
@@ -197,7 +209,8 @@ async def _build_system_prompt(activity_data: dict, logger_instance: logging.Log
     teaching_adj_str = teachingAdjGen_str(expert_mode)
     answers_text = answersGen_str(expert_mode)
     teaching_type_text = teachTypeGen_str(expert_mode)
-    documents_str = docsGen_str(trust_document_flag)
+    documents_str = docsGen_str(trust_document_flag, has_files)
+    files_str = filesGen_str(has_files)
     limits_str = limitsGen_str(word_limit_val)
 
     full_template = f"""You are a {adj1} {teaching_adj_str} tutor for the course '{courseName}'.
@@ -217,7 +230,7 @@ Help the student answer the following questions:
 
 Your first message should begin with 'Hello! 😸 I am SIMBA, and I will help you reflect on the following questions: ' Followed by the questions to answer.
 
-{limits_str}"""
+{limits_str}{files_str}"""
     system_prompt = full_template.strip()
     if expert_mode and custom_prompt_text:
         system_prompt += f"\n\n{custom_prompt_text}"

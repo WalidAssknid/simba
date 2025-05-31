@@ -166,8 +166,8 @@ if ENVIRONMENT == 'production':
     SIMBA_API_URL = os.getenv('SIMBA_API_URL_PROD', 'https://simba-refact.irit.fr/api')
     CHAINLIT_URL = os.getenv('CHAINLIT_URL_PROD', 'https://simba-refact.irit.fr/chainlit')
 else:
-    SIMBA_API_URL = os.getenv('SIMBA_API_URL_DEV', 'http://localhost:8000/api')
-    CHAINLIT_URL = os.getenv('CHAINLIT_URL_DEV', 'http://localhost:8500')
+    SIMBA_API_URL = os.getenv('SIMBA_API_URL', 'http://localhost:8000/api')
+    CHAINLIT_URL = os.getenv('CHAINLIT_URL', 'http://localhost:8500')
 
 # Add JWT settings if needed later
 # NINJA_JWT = {

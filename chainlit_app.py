@@ -24,7 +24,7 @@ ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 if ENVIRONMENT == 'production':
     SIMBA_API_BASE_URL = os.getenv('SIMBA_API_URL_PROD', 'https://simba-refact.irit.fr/api')
 else:
-    SIMBA_API_BASE_URL = os.getenv('SIMBA_API_URL_DEV', 'http://web:8000/api')
+    SIMBA_API_BASE_URL = os.getenv('SIMBA_API_URL', 'http://web:8000/api')
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
 if not django.apps.apps.ready:

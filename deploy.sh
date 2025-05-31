@@ -63,7 +63,6 @@ ENVIRONMENT="production"
 COMPOSE_FILE="docker-compose.yml"
 ENV_FILE=".env"
 HOST_CHECK="simba-refact.irit.fr"
-export ENVIRONMENT=production
 
 print_step "Deploying to production environment"
 
@@ -86,23 +85,23 @@ else
 fi
 
 print_step "Stopping existing containers..."
-docker compose -f $COMPOSE_FILE down || true
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE down || true
 print_success "Containers stopped"
 
 print_step "Pulling latest Docker images..."
-docker compose -f $COMPOSE_FILE pull || print_warning "Some images may need to be built locally"
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE pull || print_warning "Some images may need to be built locally"
 
 print_step "Building and starting containers..."
-docker compose -f $COMPOSE_FILE up --build -d
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE up --build -d
 
 print_step "Waiting for services to be ready..."
 sleep 15
 
 print_step "Running database migrations..."
-docker compose -f $COMPOSE_FILE exec -T web python manage.py migrate
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE exec -T web python manage.py migrate
 
 print_step "Collecting static files..."
-docker compose -f $COMPOSE_FILE exec -T web python manage.py collectstatic --noinput
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE exec -T web python manage.py collectstatic --noinput
 print_success "Static files collected"
 
 # Health check
@@ -110,12 +109,12 @@ print_step "Performing health check..."
 if curl -f http://localhost:8000 > /dev/null 2>&1; then
     print_success "Application is responding on port 8000 (nginx proxy)"
 else
-    print_warning "Application might not be ready yet. Check logs: docker compose -f $COMPOSE_FILE logs"
+    print_warning "Application might not be ready yet. Check logs: ENVIRONMENT=production docker compose -f $COMPOSE_FILE logs"
 fi
 
 # Show running containers
 print_step "Deployment status:"
-docker compose -f $COMPOSE_FILE ps
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE ps
 
 # Show version information
 if [ -f version.py ]; then
@@ -128,31 +127,23 @@ fi
 # Show useful commands
 echo ""
 echo -e "${BLUE}📝 Useful commands:${NC}"
-echo "  • View logs: docker compose -f $COMPOSE_FILE logs -f"
-echo "  • Stop application: docker compose -f $COMPOSE_FILE down"
-echo "  • Restart application: docker compose -f $COMPOSE_FILE restart"
-echo "  • Access shell: docker compose -f $COMPOSE_FILE exec web bash"
-echo "  • View database: docker compose -f $COMPOSE_FILE exec db psql -U simba_user -d simba_db"
+echo "  • View logs: ENVIRONMENT=production docker compose -f $COMPOSE_FILE logs -f"
+echo "  • Stop application: ENVIRONMENT=production docker compose -f $COMPOSE_FILE down"
+echo "  • Restart application: ENVIRONMENT=production docker compose -f $COMPOSE_FILE restart"
+echo "  • Access shell: ENVIRONMENT=production docker compose -f $COMPOSE_FILE exec web bash"
+echo "  • View database: ENVIRONMENT=production docker compose -f $COMPOSE_FILE exec db psql -U simba_user -d simba_db"
 
 echo ""
 echo -e "${YELLOW}🔗 Production URLs:${NC}"
 echo "  • Main application: https://simba-refact.irit.fr"
 echo "  • Chainlit: https://simba-refact.irit.fr/chainlit/"
 echo ""
-echo -e "${YELLOW}⚙️  Internal Configuration:${NC}"
-echo "  • Nginx proxy: localhost:8000 → containers"
-echo "  • Web container: internal port 8000"
-echo "  • Chainlit container: internal port 8500"
+
 echo ""
 echo -e "${YELLOW}🔧 Environment Variables:${NC}"
 echo "  • ENVIRONMENT=production"
 echo "  • SIMBA_API_URL_PROD=https://simba-refact.irit.fr/api"
 echo "  • CHAINLIT_URL_PROD=https://simba-refact.irit.fr/chainlit"
 echo ""
-echo -e "${YELLOW}🔒 Security reminders:${NC}"
-echo "  • Configure SSL certificates in nginx/prod.conf"
-echo "  • Set strong passwords in $ENV_FILE"
-echo "  • Ensure external proxy forwards to port 8000"
-echo "  • Set up automated backups with cron"
 
 log "Production deployment completed successfully" 

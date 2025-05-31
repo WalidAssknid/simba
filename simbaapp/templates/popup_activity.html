@@ -41,7 +41,7 @@
             </div>
             <div class="form-group" id="custom-prompt-group" style="display:none;">
                 <label for="custom-prompt">Custom assistant instructions</label>
-                <textarea name="custom_prompt" id="custom-prompt" class="form-control"></textarea>
+                <textarea name="custom-prompt" id="custom-prompt" class="form-control"></textarea>
                 <small class="form-text">Describe how the assistant should behave in this activity.</small>
             </div>
             <div class="form-group">
@@ -127,6 +127,17 @@
                         If enabled, the assistant will use the provided document as a trusted source.
                     </small>
                 </div>
+                <div class="form-group checkbox-group">
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" name="allow_redo" id="allow-redo" checked>
+                        <label for="allow-redo">
+                            Allow students to redo this activity
+                        </label>
+                    </div>
+                    <small class="form-text">
+                        If enabled, students can start the activity again with a fresh conversation.
+                    </small>
+                </div>
                 <div class="form-group">
                     <label for="word-limit">
                         Word limit for assistant responses
@@ -136,6 +147,16 @@
                         0 = no limit. Set a value to limit responses.
                     </small>
                 </div>
+            </div>
+            
+            <hr>
+            <h3 class="section-title">Activity Files</h3>
+            <div class="form-group">
+                <label for="activity-files">Upload Files (PDF, TXT, DOC, etc.)</label>
+                <input type="file" id="activity-files" class="form-control" multiple accept=".c,.cs,.cpp,.doc,.docx,.html,.java,.json,.md,.pdf,.php,.pptx,.py,.rb,.tex,.txt,.css,.js,.sh,.ts">
+                <small class="form-text">Upload documents that the assistant can reference during conversations.</small>
+                <div id="files-list" class="files-list"></div>
+                <input type="hidden" name="files[]" id="files-hidden">
             </div>
             
             <hr>
@@ -149,27 +170,6 @@
                 <label for="end-date">End Date (Optional)</label>
                 <input type="datetime-local" name="end_date" id="end-date" class="form-control">
                 <small class="form-text">When should this activity stop being available to students?</small>
-            </div>
-            <div class="form-group checkbox-group">
-                <div class="checkbox-wrapper">
-                    <input type="checkbox" name="allow_redo" id="allow-redo" checked>
-                    <label for="allow-redo">
-                        Allow students to redo this activity
-                    </label>
-                </div>
-                <small class="form-text">
-                    If enabled, students can start the activity again with a fresh conversation.
-                </small>
-            </div>
-            
-            <hr>
-            <h3 class="section-title">Activity Files</h3>
-            <div class="form-group">
-                <label for="activity-files">Upload Files (PDF, TXT, DOC, etc.)</label>
-                <input type="file" id="activity-files" class="form-control" multiple accept=".pdf,.txt,.doc,.docx,.ppt,.pptx,.xls,.xlsx">
-                <small class="form-text">Upload documents that the assistant can reference during conversations.</small>
-                <div id="files-list" class="files-list"></div>
-                <input type="hidden" name="files[]" id="files-hidden">
             </div>
             
             <div class="form-actions">
@@ -371,6 +371,11 @@
 
 <style>
     /* Estilos específicos para o modal de atividades */
+    #activityModal .modal-content {
+        max-width: 700px;
+        width: 95%;
+    }
+    
     .questions-list {
         margin-bottom: 12px;
     }

@@ -170,9 +170,9 @@ else:
     for idx, msg in enumerate(thermodynamics_messages):
         metadata = None
         if msg['role'] == 'user':
-            metadata = {'user_id': student.id, 'author': 'student', 'role': 'student'}
+            metadata = {'user_id': str(student.id), 'author': 'student', 'role': 'student'}
         elif msg['role'] == 'assistant':
-            metadata = {'model': 'gpt-4o-mini', 'user_id': student.id}
+            metadata = {'model': 'gpt-4o-mini', 'user_id': str(student.id)}
             
         Message.objects.create(
             thread=thread_teacher_course,
@@ -223,9 +223,9 @@ else:
     for idx, msg in enumerate(research_messages):
         metadata = None
         if msg['role'] == 'user':
-            metadata = {'user_id': teacher.id, 'author': 'prof', 'role': 'student'}
+            metadata = {'user_id': str(teacher.id), 'author': 'prof', 'role': 'student'}
         elif msg['role'] == 'assistant':
-            metadata = {'model': 'gpt-4o-mini', 'user_id': teacher.id}
+            metadata = {'model': 'gpt-4o-mini', 'user_id': str(teacher.id)}
             
         Message.objects.create(
             thread=thread_student_course,

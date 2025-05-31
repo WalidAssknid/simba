@@ -2,7 +2,8 @@ import os
 import django
 import django.apps
 from django.contrib.auth.hashers import make_password, check_password
-from .models import User, Course, Activity, Thread, Message, CourseEnrollment, ChainlitSession
+from django.utils import timezone
+from .models import User, Course, Activity, Thread, Message, CourseEnrollment, ChainlitSession, InviteToken, ActivityToken
 from ninja import Swagger, Router, Schema
 from ninja_extra import NinjaExtraAPI
 from ninja_jwt.controller import NinjaJWTDefaultController
@@ -93,7 +94,14 @@ def register_user(request, payload: UserRegisterSchema):
             password_hash=hashed_password
         )
         accountCreated(user,time.time())
-        return HTTPStatus.CREATED, user
+        
+        # Convert UUID to string for response
+        user_data = {
+            "id": str(user.id),
+            "username": user.username,
+            "email": user.email
+        }
+        return HTTPStatus.CREATED, user_data
     except Exception as e:
         return HTTPStatus.BAD_REQUEST, {"message": f"Registration failed: {str(e)}"}
 
@@ -106,7 +114,14 @@ def login_user(request, payload: SignInSchema):
         user = User.objects.get(username=payload.username)
         if check_password(payload.password, user.password_hash):
             loggedIn(user, time.time())
-            return HTTPStatus.OK, user
+            
+            # Convert UUID to string for response
+            user_data = {
+                "id": str(user.id),
+                "username": user.username,
+                "email": user.email
+            }
+            return HTTPStatus.OK, user_data
         else:
             return HTTPStatus.UNAUTHORIZED, {"message": "Invalid credentials."}
     except User.DoesNotExist:
@@ -115,7 +130,7 @@ def login_user(request, payload: SignInSchema):
          return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Login failed: {str(e)}"}
 
 @api.put("/users/{user_id}", response={200: UserOutSchema, 400: ErrorSchema, 401: ErrorSchema, 404: ErrorSchema, 409: ErrorSchema})
-def update_user_profile(request, user_id: int, payload: UserUpdateSchema):
+def update_user_profile(request, user_id: str, payload: UserUpdateSchema):
     """
     Update a user's profile information.
     The current password is required to make any changes.
@@ -145,7 +160,14 @@ def update_user_profile(request, user_id: int, payload: UserUpdateSchema):
         user.email = payload.email
         user.save()
         modifiedProfile(user,{"username" : user.username, "email" : user.email},time.time())
-        return HTTPStatus.OK, user
+        
+        # Convert UUID to string for response
+        user_data = {
+            "id": str(user.id),
+            "username": user.username,
+            "email": user.email
+        }
+        return HTTPStatus.OK, user_data
     except User.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "User not found."}
     except Exception as e:
@@ -153,7 +175,7 @@ def update_user_profile(request, user_id: int, payload: UserUpdateSchema):
 
 # --- Course CRUD ---
 @api.post("/courses", response={201: CourseOutSchema, 400: ErrorSchema, 403: ErrorSchema})
-def create_course_api(request, payload: CourseCreateSchema, user_id: int):
+def create_course_api(request, payload: CourseCreateSchema, user_id: str):
     """
     Create a new course. user_id is passed for now.
     Ideally, this would come from an authenticated token.
@@ -176,7 +198,7 @@ def create_course_api(request, payload: CourseCreateSchema, user_id: int):
         return HTTPStatus.BAD_REQUEST, {"message": f"Course creation failed: {str(e)}"}
 
 @api.put("/courses/{course_id}", response={200: CourseOutSchema, 400: ErrorSchema, 403: ErrorSchema, 404: ErrorSchema})
-def update_course_api(request, course_id: int, payload: CourseUpdateSchema, user_id: int):
+def update_course_api(request, course_id: str, payload: CourseUpdateSchema, user_id: str):
     """
     Update an existing course. Only the owner/teacher can update it.
     """
@@ -200,7 +222,7 @@ def update_course_api(request, course_id: int, payload: CourseUpdateSchema, user
         return HTTPStatus.BAD_REQUEST, {"message": f"Course update failed: {str(e)}"}
 
 @api.delete("/courses/{course_id}", response={204: None, 403: ErrorSchema, 404: ErrorSchema})
-def delete_course_api(request, course_id: int, user_id: int):
+def delete_course_api(request, course_id: str, user_id: str):
     """
     Delete a course. Only the owner/teacher can delete it.
     """
@@ -223,7 +245,7 @@ def delete_course_api(request, course_id: int, user_id: int):
 
 # --- Activity CRUD ---
 @api.post("/activities", response={201: ActivityOutSchema, 400: ErrorSchema, 403: ErrorSchema, 404: ErrorSchema})
-def create_activity_api(request, payload: ActivityCreateSchema, user_id: int):
+def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
     """
     Create a new activity. user_id is passed for now.
     """
@@ -330,108 +352,48 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: int):
         return HTTPStatus.BAD_REQUEST, {"message": f"Activity creation failed: {str(e)}"}
 
 @api.put("/activities/{activity_id}", response={200: ActivityOutSchema, 400: ErrorSchema, 403: ErrorSchema, 404: ErrorSchema})
-def update_activity_api(request, activity_id: int, payload: ActivityUpdateSchema, user_id: int):
+def update_activity_api(request, activity_id: str, payload: ActivityUpdateSchema, user_id: str):
     """
-    Update an existing activity. Only the course owner/teacher can update it.
+    Update an existing activity. Only the owner/teacher can update it.
     """
     try:
         user = User.objects.get(id=user_id)
-        activity = Activity.objects.select_related('course').get(id=activity_id)
+        activity = Activity.objects.get(id=activity_id)
         
-        # Check if user has permission to update this activity
-        is_owner = activity.course.owner_id == user.id
-        enrollment = CourseEnrollment.objects.filter(user=user, course=activity.course).first()
-        can_update = is_owner or (enrollment and enrollment.role == 'teacher')
-        
-        if not can_update:
-            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner or teachers can update this activity."}
+        # Check if user is the owner of the activity or the course
+        if activity.owner_id != user.id and activity.course.owner_id != user.id:
+            return HTTPStatus.FORBIDDEN, {"message": "Only the activity owner or course owner can update this activity."}
         
         # Update activity fields
-        activity.title = payload.title if payload.title is not None else activity.title
-        activity.description = payload.description if payload.description is not None else activity.description
+        if payload.title is not None:
+            activity.title = payload.title
+        if payload.description is not None:
+            activity.description = payload.description
         activity.expert_mode = payload.expert_mode
-        activity.custom_prompt = payload.custom_prompt
+        if payload.custom_prompt is not None:
+            activity.custom_prompt = payload.custom_prompt
         activity.questions = payload.questions
         activity.agent_attitude = payload.agent_attitude
-        activity.subjects = payload.subjects
+        if payload.subjects is not None:
+            activity.subjects = payload.subjects
         activity.restrict_to_subject = payload.restrict_to_subject
         activity.allow_questions = payload.allow_questions
         activity.allow_emojis = payload.allow_emojis
         activity.trust_document = payload.trust_document
         activity.word_limit = payload.word_limit
-        activity.start_date = payload.start_date
-        activity.end_date = payload.end_date
+        if payload.start_date is not None:
+            activity.start_date = payload.start_date
+        if payload.end_date is not None:
+            activity.end_date = payload.end_date
         activity.is_visible = payload.is_visible
         activity.allow_redo = payload.allow_redo
         
-        # Update OpenAI assistant if it exists
-        if activity.openai_assistant_id:
-            activity_data = {
-                'title': activity.title,
-                'description': activity.description,
-                'course_title': activity.course.title,
-                'expert_mode': activity.expert_mode,
-                'custom_prompt': activity.custom_prompt,
-                'questions': activity.questions,
-                'agent_attitude': activity.agent_attitude,
-                'subjects': activity.subjects,
-                'restrict_to_subject': activity.restrict_to_subject,
-                'allow_questions': activity.allow_questions,
-                'allow_emojis': activity.allow_emojis,
-                'trust_document': activity.trust_document,
-                'word_limit': activity.word_limit,
-                'start_date': activity.start_date,
-                'end_date': activity.end_date
-            }
-            
-            # Prepare files for upload
-            files_to_upload = []
-            if payload.files:
-                for file_base64 in payload.files:
-                    try:
-                        filename, content_type, content = file_base64.split(':', 2)
-                        files_to_upload.append({
-                            'filename': filename,
-                            'content_type': content_type,
-                            'content': content
-                        })
-                    except ValueError:
-                        return HTTPStatus.BAD_REQUEST, {"message": "Invalid file format. Expected 'filename:content_type:base64_content'"}
-            
-            assistant_result = openai_assistant.update_assistant(
-                activity.openai_assistant_id, 
-                activity_data, 
-                files_to_upload
-            )
-            
-            if not assistant_result['success']:
-                return HTTPStatus.BAD_REQUEST, {"message": f"Failed to update OpenAI assistant: {assistant_result.get('error', 'Unknown error')}"}
-            
-            # Update vector store ID if it changed
-            activity.vector_store_id = assistant_result['vector_store_id']
+        # Handle files
+        if payload.files:
+            activity.files = payload.files
         
         activity.save()
-        modifiedActivity(user,activity_id,{
-            "course":activity.course.id,
-            "owner":user_id,
-            "title":activity.title,
-            "description":payload.description,
-            "expert_mode":payload.expert_mode,
-            "custom_prompt":payload.custom_prompt,
-            "questions":payload.questions,
-            "agent_attitude":payload.agent_attitude,
-            "subjects":payload.subjects,
-            "restrict_to_subject":payload.restrict_to_subject,
-            "allow_questions":payload.allow_questions,
-            "allow_emojis":payload.allow_emojis,
-            "trust_document":payload.trust_document,
-            "word_limit":payload.word_limit,
-            "start_date":payload.start_date,
-            "end_date":payload.end_date,
-            "is_visible":payload.is_visible,
-            "allow_redo":payload.allow_redo
-        },
-            time.time())
+        modifiedActivity(user,activity_id,{"title" : activity.title,"description" : activity.description, "owner" : user.id},time.time())
         return HTTPStatus.OK, activity
     except User.DoesNotExist:
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
@@ -441,33 +403,17 @@ def update_activity_api(request, activity_id: int, payload: ActivityUpdateSchema
         return HTTPStatus.BAD_REQUEST, {"message": f"Activity update failed: {str(e)}"}
 
 @api.delete("/activities/{activity_id}", response={204: None, 403: ErrorSchema, 404: ErrorSchema})
-def delete_activity_api(request, activity_id: int, user_id: int):
+def delete_activity_api(request, activity_id: str, user_id: str):
     """
-    Delete an activity. Only the course owner/teacher can delete it.
+    Delete an activity. Only the owner/teacher can delete it.
     """
     try:
         user = User.objects.get(id=user_id)
-        activity = Activity.objects.select_related('course').get(id=activity_id)
+        activity = Activity.objects.get(id=activity_id)
         
-        # Check if user has permission to delete this activity
-        is_owner = activity.course.owner.id == user.id
-        enrollment = CourseEnrollment.objects.filter(user=user, course=activity.course).first()
-        can_delete = is_owner or (enrollment and enrollment.role == 'teacher')
-        
-        if not can_delete:
-            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can delete this activity."}
-        
-        # Delete OpenAI assistant if it exists
-        if activity.openai_assistant_id:
-            delete_result = openai_assistant.delete_assistant(
-                activity.openai_assistant_id, 
-                activity.vector_store_id
-            )
-            if not delete_result['success']:
-                # Log warning but don't fail the deletion
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to delete OpenAI assistant {activity.openai_assistant_id}: {delete_result.get('error', 'Unknown error')}")
+        # Check if user is the owner of the activity or the course
+        if activity.owner_id != user.id and activity.course.owner_id != user.id:
+            return HTTPStatus.FORBIDDEN, {"message": "Only the activity owner or course owner can delete this activity."}
         
         activity.delete()
         deletedActivity(user,activity_id,time.time())
@@ -480,15 +426,15 @@ def delete_activity_api(request, activity_id: int, user_id: int):
         return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Activity deletion failed: {str(e)}"}
 
 @api.get("/activities/{activity_id}", response={200: ActivityDetailSchema, 404: ErrorSchema})
-def get_activity_api(request, activity_id: int):
-    """Fetch details for a specific activity."""
+def get_activity_api(request, activity_id: str):
+    """
+    Get a specific activity by ID.
+    """
     try:
         activity = Activity.objects.get(id=activity_id)
         return HTTPStatus.OK, activity
     except Activity.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
-    except Exception as e:
-        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to get activity: {str(e)}"}
 
 # --- Thread and Message Endpoints for Chainlit --- 
 
@@ -530,57 +476,86 @@ def get_or_create_thread_api(request, payload: ThreadGetOrCreateSchema):
     except Exception as e:
         return HTTPStatus.BAD_REQUEST, {"message": f"Thread operation failed: {str(e)}"}
 
-@thread_router.post("/new-attempt", response={201: ThreadSchema, 400: ErrorSchema, 404: ErrorSchema})
-def create_new_attempt_api(request, activity_id: int, user_id: int):
-    """Create a new attempt for an activity."""
+@thread_router.post("/new-attempt", response={201: dict, 400: ErrorSchema, 404: ErrorSchema})
+def create_new_attempt_api(request, activity_id: str, user_id: str):
+    """
+    Create a new attempt for an activity.
+    """
     try:
+        user = User.objects.get(id=user_id)
         activity = Activity.objects.get(id=activity_id)
         
+        # Check if the activity allows redo
         if not activity.allow_redo:
-            return HTTPStatus.BAD_REQUEST, {"message": "This activity does not allow redo attempts."}
+            return HTTPStatus.BAD_REQUEST, {"message": "This activity does not allow multiple attempts."}
         
-        latest_thread = Thread.objects.filter(
+        # Get the highest attempt number for this user and activity
+        max_attempt = Thread.objects.filter(
             activity=activity,
-            user_id=user_id
-        ).order_by('-attempt_number').first()
+            user=user
+        ).aggregate(Max('attempt_number'))['attempt_number__max']
         
-        new_attempt_number = (latest_thread.attempt_number + 1) if latest_thread else 1
+        new_attempt_number = (max_attempt or 0) + 1
         
+        # Create a new thread for this attempt
         thread = Thread.objects.create(
             activity=activity,
-            user_id=user_id,
+            user=user,
             attempt_number=new_attempt_number
         )
-
-        user = User.objects.get(id=user_id)
-        openedChat(user,thread.id,time.time())
         
-        return HTTPStatus.CREATED, thread
-        
+        return HTTPStatus.CREATED, {
+            "thread_id": str(thread.id),
+            "attempt_number": new_attempt_number,
+            "message": f"New attempt #{new_attempt_number} created successfully."
+        }
+    except User.DoesNotExist:
+        return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
     except Activity.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
     except Exception as e:
         return HTTPStatus.BAD_REQUEST, {"message": f"Failed to create new attempt: {str(e)}"}
 
-@thread_router.get("/user-attempts/{activity_id}/{user_id}", response={200: List[ThreadSchema], 404: ErrorSchema})
-def get_user_attempts_api(request, activity_id: int, user_id: int):
-    """Get all attempts for a user on a specific activity."""
+@thread_router.get("/user-attempts/{activity_id}/{user_id}", response={200: dict, 400: ErrorSchema, 404: ErrorSchema})
+def get_user_attempts_api(request, activity_id: str, user_id: str):
+    """
+    Get all attempts for a user in a specific activity.
+    """
     try:
+        user = User.objects.get(id=user_id)
         activity = Activity.objects.get(id=activity_id)
+        
         threads = Thread.objects.filter(
             activity=activity,
-            user_id=user_id
-        ).order_by('-attempt_number')
+            user=user
+        ).order_by('attempt_number')
         
-        return HTTPStatus.OK, list(threads)
+        attempts = []
+        for thread in threads:
+            message_count = Message.objects.filter(thread=thread).count()
+            attempts.append({
+                "thread_id": str(thread.id),
+                "attempt_number": thread.attempt_number,
+                "created_at": thread.created_at,
+                "updated_at": thread.updated_at,
+                "message_count": message_count
+            })
         
+        return HTTPStatus.OK, {
+            "activity_id": str(activity_id),
+            "user_id": str(user_id),
+            "attempts": attempts,
+            "total_attempts": len(attempts)
+        }
+    except User.DoesNotExist:
+        return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
     except Activity.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
     except Exception as e:
-        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to get user attempts: {str(e)}"}
+        return HTTPStatus.BAD_REQUEST, {"message": f"Failed to get attempts: {str(e)}"}
 
 @thread_router.get("/{thread_id}/messages", response={200: List[MessageSchema], 404: ErrorSchema})
-def get_messages_api(request, thread_id: int):
+def get_messages_api(request, thread_id: str):
     """Get all messages for a specific thread."""
     try:
         thread = Thread.objects.get(id=thread_id)
@@ -592,7 +567,7 @@ def get_messages_api(request, thread_id: int):
         return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to get messages: {str(e)}"}
 
 @thread_router.post("/{thread_id}/messages", response={201: MessageSchema, 400: ErrorSchema, 404: ErrorSchema})
-def create_message_api(request, thread_id: int, payload: MessageCreateSchema):
+def create_message_api(request, thread_id: str, payload: MessageCreateSchema):
     """Create a new message within a thread."""
     try:
         thread = Thread.objects.get(id=thread_id)
@@ -602,11 +577,11 @@ def create_message_api(request, thread_id: int, payload: MessageCreateSchema):
         
         metadata = {}
         if payload.role == 'user':
-             metadata = {"user_id": payload.user_id, "author": payload.username}
+             metadata = {"user_id": str(payload.user_id), "author": payload.username}
         elif payload.role == 'assistant':
-             metadata = {"model": payload.model, "user_id": payload.user_id}
+             metadata = {"model": payload.model, "user_id": str(payload.user_id)}
         else:
-             metadata = {"user_id": payload.user_id}
+             metadata = {"user_id": str(payload.user_id)}
              
         message = Message.objects.create(
             thread=thread,
@@ -625,108 +600,102 @@ def create_message_api(request, thread_id: int, payload: MessageCreateSchema):
     except Exception as e:
         return HTTPStatus.BAD_REQUEST, {"message": f"Message creation failed: {str(e)}"}
 
-@api.delete("/enrollments/{enrollment_id}", response={204: None, 403: ErrorSchema, 404: ErrorSchema, 500: ErrorSchema})
-def remove_student_from_course(request, enrollment_id: int, current_user_id: int):
+@api.delete("/enrollments/{enrollment_id}", response={204: None, 403: ErrorSchema, 404: ErrorSchema})
+def remove_student_from_course(request, enrollment_id: str, current_user_id: str):
     """
-    Remove a student from a course. Only the course owner (teacher) can do this.
-    A teacher cannot remove another teacher.
-    `current_user_id` is passed from the client and should be the ID of the logged-in user.
+    Remove a student from a course. Only course owners can do this.
     """
     try:
-        enrollment = CourseEnrollment.objects.select_related('user', 'course__owner').get(id=enrollment_id)
-        course_owner_id = enrollment.course.owner.id
-        try:
-            requesting_user = User.objects.get(id=current_user_id)
-            if requesting_user.id != course_owner_id:
-                 return HTTPStatus.FORBIDDEN, {"message": "Only the course owner can remove participants."}
-        except User.DoesNotExist:
-            return HTTPStatus.BAD_REQUEST, {"message": "Requesting user not found."}
-
-        # Only allow removal of students (not teachers or owners)
-        if enrollment.role != 'student':
-            return HTTPStatus.FORBIDDEN, {"message": "Only students can be removed from courses."}
-
+        current_user = User.objects.get(id=current_user_id)
+        enrollment = CourseEnrollment.objects.get(id=enrollment_id)
+        
+        # Check if the current user is the owner of the course
+        if enrollment.course.owner_id != current_user.id:
+            return HTTPStatus.FORBIDDEN, {"message": "Only course owners can remove students."}
+        
+        # Don't allow removing the course owner
+        if enrollment.user_id == enrollment.course.owner_id:
+            return HTTPStatus.FORBIDDEN, {"message": "Cannot remove the course owner."}
+        
         enrollment.delete()
         return HTTPStatus.NO_CONTENT, None
-
+    except User.DoesNotExist:
+        return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
     except CourseEnrollment.DoesNotExist:
-        return HTTPStatus.NOT_FOUND, {"message": "Enrollment record not found."}
+        return HTTPStatus.NOT_FOUND, {"message": "Enrollment not found."}
     except Exception as e:
         return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to remove student: {str(e)}"}
 
-@api.put("/activities/{activity_id}/visibility", response={200: ActivityOutSchema, 400: ErrorSchema, 403: ErrorSchema, 404: ErrorSchema})
-def toggle_activity_visibility_api(request, activity_id: int, user_id: int, is_visible: bool):
-    """Toggle activity visibility for students."""
+@api.put("/activities/{activity_id}/visibility", response={200: dict, 400: ErrorSchema, 403: ErrorSchema, 404: ErrorSchema})
+def toggle_activity_visibility_api(request, activity_id: str, user_id: str, is_visible: bool):
+    """
+    Toggle activity visibility. Only activity owner or course owner can do this.
+    """
     try:
         user = User.objects.get(id=user_id)
-        activity = Activity.objects.select_related('course').get(id=activity_id)
+        activity = Activity.objects.get(id=activity_id)
         
-        # Check if user has permission to change activity visibility
-        is_owner = activity.course.owner_id == user.id
-        enrollment = CourseEnrollment.objects.filter(user=user, course=activity.course).first()
-        can_modify = is_owner or (enrollment and enrollment.role == 'teacher')
-        
-        if not can_modify:
-            return HTTPStatus.FORBIDDEN, {"message": "Only the course owner or teachers can change activity visibility."}
+        # Check if user is the owner of the activity or the course
+        if activity.owner_id != user.id and activity.course.owner_id != user.id:
+            return HTTPStatus.FORBIDDEN, {"message": "Only the activity owner or course owner can change visibility."}
         
         activity.is_visible = is_visible
-        activity.save(update_fields=['is_visible'])
+        activity.save()
         
-        return HTTPStatus.OK, activity
+        return HTTPStatus.OK, {
+            "activity_id": str(activity_id),
+            "is_visible": is_visible,
+            "message": f"Activity visibility {'enabled' if is_visible else 'disabled'} successfully."
+        }
     except User.DoesNotExist:
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
     except Activity.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
     except Exception as e:
-        return HTTPStatus.BAD_REQUEST, {"message": f"Failed to update activity visibility: {str(e)}"}
+        return HTTPStatus.BAD_REQUEST, {"message": f"Failed to toggle visibility: {str(e)}"}
 
 # Add the thread router to the main API
 api.add_router("/threads", thread_router, tags=["Threads"])
 
 @api.get("/courses/{course_id}", response={200: CourseOutSchema, 404: ErrorSchema})
-def get_course_api(request, course_id: int):
-    """Fetch details for a specific course."""
+def get_course_api(request, course_id: str):
+    """
+    Get a specific course by ID.
+    """
     try:
         course = Course.objects.get(id=course_id)
         return HTTPStatus.OK, course
     except Course.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "Course not found."}
-    except Exception as e:
-        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to get course: {str(e)}"}
 
-@api.get("/courses/{course_id}/participants", response={200: dict, 404: ErrorSchema, 500: ErrorSchema})
-def get_course_participants_api(request, course_id: int):
-    """Fetch all participants for a specific course."""
+@api.get("/courses/{course_id}/participants", response={200: dict, 404: ErrorSchema})
+def get_course_participants_api(request, course_id: str):
+    """
+    Get all participants (students and teachers) in a course.
+    """
     try:
         course = Course.objects.get(id=course_id)
-        enrollments = CourseEnrollment.objects.filter(course_id=course_id).select_related('user')
+        enrollments = CourseEnrollment.objects.filter(course=course).select_related('user')
+        
         participants = []
-        
-        owner_data = {
-            "id": course.owner.id,
-            "username": course.owner.username,
-            "role": "owner",
-            "is_owner": True,
-            "enrollment_id": None
-        }
-        participants.append(owner_data)
-        
         for enrollment in enrollments:
-            if enrollment.user.id != course.owner.id:  
-                participant_data = {
-                    "id": enrollment.user.id,
-                    "username": enrollment.user.username,
-                    "role": enrollment.role,
-                    "is_owner": False,
-                    "enrollment_id": enrollment.id
-                }
-                participants.append(participant_data)
+            participants.append({
+                "enrollment_id": str(enrollment.id),
+                "user_id": str(enrollment.user.id),
+                "username": enrollment.user.username,
+                "email": enrollment.user.email,
+                "role": enrollment.role,
+                "enrolled_at": enrollment.joined_at
+            })
         
-        return HTTPStatus.OK, {"participants": participants, "owner_id": course.owner.id}
+        return HTTPStatus.OK, {
+            "course_id": str(course_id),
+            "course_title": course.title,
+            "participants": participants,
+            "total_participants": len(participants)
+        }
     except Course.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "Course not found."}
-    except Exception as e:
-        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to get participants: {str(e)}"}
 
 
 # api = NinjaAPI(auth=GlobalAuth()) # Apply auth globally if needed
@@ -736,8 +705,10 @@ dashboard_router = Router()
 
 
 @dashboard_router.get("/student/{student_id}/", response=StudentDataSchema)
-def get_student_data(request, student_id: int, course_id: str = "all", requesting_user_id: int = None):
-    """Get detailed data for a specific student."""
+def get_student_data(request, student_id: str, course_id: str = "all", requesting_user_id: str = None):
+    """
+    Get comprehensive analytics data for a specific student.
+    """
     try:
         student = User.objects.get(id=student_id)
         
@@ -912,7 +883,7 @@ def get_student_data(request, student_id: int, course_id: str = "all", requestin
         return {"error": str(e)}
 
 @dashboard_router.get("/conversation_stats/", response=ConversationStatsSchema)
-def get_conversation_stats(request, course_id: str = "all", requesting_user_id: int = None):
+def get_conversation_stats(request, course_id: str = "all", requesting_user_id: str = None):
     """Get detailed conversation statistics for analysis."""
     try:
         # Validate permissions if requesting_user_id is provided
@@ -1021,7 +992,7 @@ def get_conversation_stats(request, course_id: str = "all", requesting_user_id: 
         return {"stats": [], "error": str(e)}
 
 @dashboard_router.get("/generate_summary/", response=SummaryResponseSchema)
-def generate_activity_summary(request, activity_id: int):
+def generate_activity_summary(request, activity_id: str):
     """Generate an AI summary of student conversations in an activity."""
     try:
         from openai import OpenAI
@@ -1080,7 +1051,7 @@ Please provide a concise (less than 200 words) SUMMARY that:
         return {"summary": f"Error generating summary: {str(e)}"}
 
 @dashboard_router.get("/generate_student_analysis/", response=StudentAnalysisSchema)
-def generate_student_analysis(request, student_id: int, activity_id: str = "all"):
+def generate_student_analysis(request, student_id: str, activity_id: str = "all"):
     """Generate an AI analysis of a student's conversation patterns."""
     try:
         from openai import OpenAI
@@ -1228,7 +1199,7 @@ def get_raw_messages(request, course_id: str = "all"):
 
 # --- Activity File Management Endpoints ---
 @api.get("/activities/{activity_id}/files", response={200: ActivityFilesResponseSchema, 404: ErrorSchema, 500: ErrorSchema})
-def get_activity_files_api(request, activity_id: int):
+def get_activity_files_api(request, activity_id: str):
     """Get list of files for an activity."""
     try:
         activity = Activity.objects.get(id=activity_id)
@@ -1245,7 +1216,7 @@ def get_activity_files_api(request, activity_id: int):
         return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to get activity files: {str(e)}"}
 
 @api.post("/activities/{activity_id}/files", response={201: dict, 400: ErrorSchema, 403: ErrorSchema, 404: ErrorSchema})
-def upload_activity_file_api(request, activity_id: int, payload: FileUploadSchema, user_id: int):
+def upload_activity_file_api(request, activity_id: str, payload: FileUploadSchema, user_id: str):
     """Upload a file to an activity."""
     try:
         user = User.objects.get(id=user_id)
@@ -1294,7 +1265,7 @@ def upload_activity_file_api(request, activity_id: int, payload: FileUploadSchem
         return HTTPStatus.BAD_REQUEST, {"message": f"File upload failed: {str(e)}"}
 
 @api.delete("/activities/{activity_id}/files/{file_id}", response={204: None, 403: ErrorSchema, 404: ErrorSchema, 500: ErrorSchema})
-def delete_activity_file_api(request, activity_id: int, file_id: str, user_id: int):
+def delete_activity_file_api(request, activity_id: str, file_id: str, user_id: str):
     """Delete a file from an activity."""
     try:
         user = User.objects.get(id=user_id)
@@ -1392,7 +1363,7 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
         
         # Prepare activity data for Chainlit
         activity_data = {
-            'id': activity.id,
+            'id': str(activity.id),
             'title': activity.title,
             'description': activity.description,
             'expert_mode': activity.expert_mode,
@@ -1408,7 +1379,7 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
             'openai_assistant_id': activity.openai_assistant_id,
             'vector_store_id': activity.vector_store_id,
             'course': {
-                'id': activity.course.id,
+                'id': str(activity.course.id),
                 'title': activity.course.title
             }
         }
@@ -1416,10 +1387,10 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
         # Prepare session data
         session_data = {
             'session_id': session_id,
-            'activity_id': activity.id,
-            'user_id': user.id,
+            'activity_id': str(activity.id),
+            'user_id': str(user.id),
             'username': payload.username,
-            'thread_id': thread.id,
+            'thread_id': str(thread.id),
             'activity_data': activity_data
         }
         
@@ -1523,7 +1494,7 @@ def init_chainlit_session(request, payload: ChainlitSessionInitSchema):
         
         # Prepare activity data for Chainlit
         activity_data = {
-            'id': activity.id,
+            'id': str(activity.id),
             'title': activity.title,
             'description': activity.description,
             'expert_mode': activity.expert_mode,
@@ -1539,7 +1510,7 @@ def init_chainlit_session(request, payload: ChainlitSessionInitSchema):
             'openai_assistant_id': activity.openai_assistant_id,
             'vector_store_id': activity.vector_store_id,
             'course': {
-                'id': activity.course.id,
+                'id': str(activity.course.id),
                 'title': activity.course.title
             }
         }
@@ -1547,10 +1518,10 @@ def init_chainlit_session(request, payload: ChainlitSessionInitSchema):
         # Prepare session data
         session_data = {
             'session_id': session_id,
-            'activity_id': activity.id,
-            'user_id': user.id,
+            'activity_id': str(activity.id),
+            'user_id': str(user.id),
             'username': payload.username,
-            'thread_id': thread.id,
+            'thread_id': str(thread.id),
             'activity_data': activity_data
         }
         
@@ -1614,3 +1585,126 @@ def get_chainlit_session(request, session_id: str):
 
 api.add_router("/chainlit", chainlit_router, tags=["Chainlit"])
 api.add_router("/dashboard", dashboard_router, tags=["Dashboard"])
+
+@api.post("/courses/{course_id}/invite-tokens", response={201: dict, 403: ErrorSchema, 404: ErrorSchema, 500: ErrorSchema})
+def generate_invite_token(request, course_id: str, role: str):
+    """
+    Generate an invite token for a course. Only course owners can generate tokens.
+    """
+    try:
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return HTTPStatus.UNAUTHORIZED, {"message": "Authentication required."}
+        
+        course = Course.objects.select_related('owner').get(id=course_id)
+        user = User.objects.get(id=user_id)
+        
+        # Only course owner can generate invite tokens
+        if course.owner.id != user.id:
+            return HTTPStatus.FORBIDDEN, {"message": "Only course owners can generate invite tokens."}
+        
+        # Validate role
+        if role not in ['student', 'teacher']:
+            return HTTPStatus.BAD_REQUEST, {"message": "Invalid role. Must be 'student' or 'teacher'."}
+        
+        # Check if there's already a valid token for this course and role
+        existing_token = InviteToken.objects.filter(
+            course=course, 
+            role=role, 
+            is_active=True,
+            expires_at__gt=timezone.now()
+        ).first()
+        
+        if existing_token:
+            # Return the existing valid token instead of creating a new one
+            invite_url = f"{request.build_absolute_uri('/').rstrip('/')}/courses/invite/{existing_token.token}"
+            return HTTPStatus.CREATED, {
+                "token": existing_token.token,
+                "invite_url": invite_url,
+                "role": role,
+                "expires_at": existing_token.expires_at.isoformat()
+            }
+        
+        # Create new token only if no valid one exists
+        invite_token = InviteToken.objects.create(
+            course=course,
+            role=role,
+            created_by=user
+        )
+        
+        # Generate the invite URL
+        invite_url = f"{request.build_absolute_uri('/').rstrip('/')}/courses/invite/{invite_token.token}"
+        
+        return HTTPStatus.CREATED, {
+            "token": invite_token.token,
+            "invite_url": invite_url,
+            "role": role,
+            "expires_at": invite_token.expires_at.isoformat()
+        }
+        
+    except Course.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Course not found."}
+    except User.DoesNotExist:
+        return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to generate invite token: {str(e)}"}
+
+@api.post("/activities/{activity_id}/activity-tokens", response={201: dict, 403: ErrorSchema, 404: ErrorSchema, 500: ErrorSchema})
+def generate_activity_token(request, activity_id: str):
+    """
+    Generate an activity token for direct access to an activity. 
+    Only activity owners or course owners can generate tokens.
+    """
+    try:
+        user_id = request.session.get('user_id')
+        if not user_id:
+            return HTTPStatus.UNAUTHORIZED, {"message": "Authentication required."}
+        
+        activity = Activity.objects.select_related('course', 'owner').get(id=activity_id)
+        user = User.objects.get(id=user_id)
+        
+        # Only activity owner or course owner can generate activity tokens
+        if activity.owner.id != user.id and activity.course.owner.id != user.id:
+            return HTTPStatus.FORBIDDEN, {"message": "Only activity or course owners can generate activity tokens."}
+        
+        # Check if there's already a valid token for this activity
+        existing_token = ActivityToken.objects.filter(
+            activity=activity, 
+            is_active=True,
+            expires_at__gt=timezone.now()
+        ).first()
+        
+        if existing_token:
+            # Return the existing valid token instead of creating a new one
+            activity_url = f"{request.build_absolute_uri('/').rstrip('/')}/activities/join/{existing_token.token}"
+            return HTTPStatus.CREATED, {
+                "token": existing_token.token,
+                "activity_url": activity_url,
+                "activity_title": activity.title,
+                "course_title": activity.course.title,
+                "expires_at": existing_token.expires_at.isoformat()
+            }
+        
+        # Create new token only if no valid one exists
+        activity_token = ActivityToken.objects.create(
+            activity=activity,
+            created_by=user
+        )
+        
+        # Generate the activity URL
+        activity_url = f"{request.build_absolute_uri('/').rstrip('/')}/activities/join/{activity_token.token}"
+        
+        return HTTPStatus.CREATED, {
+            "token": activity_token.token,
+            "activity_url": activity_url,
+            "activity_title": activity.title,
+            "course_title": activity.course.title,
+            "expires_at": activity_token.expires_at.isoformat()
+        }
+        
+    except Activity.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
+    except User.DoesNotExist:
+        return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to generate activity token: {str(e)}"}

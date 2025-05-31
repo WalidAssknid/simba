@@ -28,6 +28,11 @@
     <div class="action-bar">
         <h3>{{ course.title }}</h3>
         <div class="action-buttons">
+            {% if is_owner %}
+            <button id="generateInviteLinks" class="btn btn-secondary">
+                Generate Invite Links
+            </button>
+            {% endif %}
             <button id="showEnrollmentCode" class="btn btn-secondary">
                 Show Enrollment Code
             </button>
@@ -41,6 +46,47 @@
             {% endif %}
         </div>
     </div>
+    
+    <!-- Generate Invite Links Modal -->
+    {% if is_owner %}
+    <div id="inviteLinksModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 class="modal-title">Generate Invite Links</h3>
+            <div class="invite-links-content">
+                <p>Generate invite links to allow people to join your course with specific roles:</p>
+                
+                <div class="invite-section">
+                    <h4>Student Invite Link</h4>
+                    <p>People who use this link will join as students</p>
+                    <button id="generateStudentLink" class="btn btn-primary" data-role="student">
+                        Generate Student Link
+                    </button>
+                    <div id="studentLinkResult" class="link-result" style="display: none;">
+                        <div class="code-display" id="studentLinkDisplay"></div>
+                        <button class="btn btn-secondary copy-link-btn" data-target="studentLinkDisplay">
+                            Copy Link
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="invite-section">
+                    <h4>Teacher Invite Link</h4>
+                    <p>People who use this link will join as teachers</p>
+                    <button id="generateTeacherLink" class="btn btn-primary" data-role="teacher">
+                        Generate Teacher Link
+                    </button>
+                    <div id="teacherLinkResult" class="link-result" style="display: none;">
+                        <div class="code-display" id="teacherLinkDisplay"></div>
+                        <button class="btn btn-secondary copy-link-btn" data-target="teacherLinkDisplay">
+                            Copy Link
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     
     <!-- Enrollment Code Modal -->
     <div id="enrollmentCodeModal" class="modal">
@@ -194,7 +240,7 @@
             <h3 class="modal-title">Activity Link</h3>
             <p>Share this link with students to access the activity:</p>
             <div class="code-display" id="activityLinkDisplay"></div>
-            <button class="btn btn-primary copy-link-btn">Copy Link</button>
+            <button class="btn btn-primary copy-link-btn" data-target="activityLinkDisplay">Copy Link</button>
         </div>
     </div>
 </div>
@@ -258,13 +304,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             const payload = {
-                activity_id: parseInt(activityId),
-                user_id: parseInt(userId),
+                activity_id: activityId,
+                user_id: userId,
                 username: username
             };
             
             if (threadId) {
-                payload.thread_id = parseInt(threadId);
+                payload.thread_id = threadId;
             }
             
             console.log('Creating Chainlit session with payload:', payload);
@@ -498,7 +544,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 console.log('Loading existing attempt with thread_id:', selectedValue);
                 console.log('Loading existing attempt with thread:', selectedValue);
-                startChainlitSession(activityId, parseInt(selectedValue));
+                startChainlitSession(activityId, selectedValue);
                 
                 chainlitAttemptDropdown.style.display = 'none';
                 chainlitRedoBtn.style.display = 'block';
@@ -786,9 +832,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 closeAllMenus();
             } else if (action === 'link') {
-                document.getElementById('activityLinkDisplay').textContent = 
-                    `${window.location.origin}/chat/`;
-                document.getElementById('activityLinkModal').style.display = 'block';
+                // Generate activity token and show the link
+                fetch(`/api/activities/${activityId}/activity-tokens`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.message || 'Failed to generate activity link');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('activityLinkDisplay').textContent = data.activity_url;
+                    document.getElementById('activityLinkModal').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error generating activity link:', error);
+                    alert(`Failed to generate activity link: ${error.message}`);
+                });
             } else if (action === 'delete') {
                 if (confirm('Are you sure you want to delete this activity?')) {
                     const userId = '{{ request.session.user_id }}';
@@ -1112,6 +1178,162 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+
+    // Generate Invite Links functionality
+    const generateInviteLinksBtn = document.getElementById('generateInviteLinks');
+    if (generateInviteLinksBtn) {
+        generateInviteLinksBtn.addEventListener('click', function() {
+            document.getElementById('inviteLinksModal').style.display = 'block';
+        });
+    }
+
+    // Generate Student Link
+    const generateStudentLinkBtn = document.getElementById('generateStudentLink');
+    if (generateStudentLinkBtn) {
+        generateStudentLinkBtn.addEventListener('click', function() {
+            generateInviteLink('student');
+        });
+    }
+
+    // Generate Teacher Link
+    const generateTeacherLinkBtn = document.getElementById('generateTeacherLink');
+    if (generateTeacherLinkBtn) {
+        generateTeacherLinkBtn.addEventListener('click', function() {
+            generateInviteLink('teacher');
+        });
+    }
+
+    // Copy invite link buttons
+    document.querySelectorAll('.copy-link-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetId = this.dataset.target;
+            if (targetId) {
+                const linkElement = document.getElementById(targetId);
+                const linkText = linkElement.textContent;
+                
+                navigator.clipboard.writeText(linkText)
+                    .then(() => {
+                        const originalText = this.textContent;
+                        this.textContent = 'Copied!';
+                        setTimeout(() => {
+                            this.textContent = originalText;
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy link:', err);
+                        alert('Failed to copy link to clipboard');
+                    });
+            }
+        });
+    });
+
+    function generateInviteLink(role) {
+        const courseId = '{{ course.id }}';
+        const btn = document.getElementById(`generate${role.charAt(0).toUpperCase() + role.slice(1)}Link`);
+        const resultDiv = document.getElementById(`${role}LinkResult`);
+        const displayDiv = document.getElementById(`${role}LinkDisplay`);
+        
+        // Disable button and show loading
+        btn.disabled = true;
+        btn.textContent = 'Generating...';
+        
+        fetch(`/api/courses/${courseId}/invite-tokens?role=${role}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Failed to generate invite link');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Show the invite link
+            displayDiv.textContent = data.invite_url;
+            resultDiv.style.display = 'block';
+            
+            // Re-enable button
+            btn.disabled = false;
+            btn.textContent = `Generate ${role.charAt(0).toUpperCase() + role.slice(1)} Link`;
+        })
+        .catch(error => {
+            console.error('Error generating invite link:', error);
+            alert(`Failed to generate invite link: ${error.message}`);
+            
+            // Re-enable button
+            btn.disabled = false;
+            btn.textContent = `Generate ${role.charAt(0).toUpperCase() + role.slice(1)} Link`;
+        });
+    }
 });
 </script>
+
+<style>
+/* Invite Links Modal Styles */
+.invite-links-content {
+    padding: 16px 0;
+}
+
+.invite-section {
+    margin-bottom: 32px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.invite-section h4 {
+    margin: 0 0 8px 0;
+    color: var(--text-color);
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.invite-section p {
+    margin: 0 0 16px 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.link-result {
+    margin-top: 16px;
+    padding: 16px;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.link-result .code-display {
+    margin-bottom: 12px;
+    word-break: break-all;
+    font-size: 0.9rem;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Activity Link Modal Styles */
+#activityLinkModal .code-display {
+    word-break: break-all;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    max-width: 100%;
+    padding: 12px;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+    max-height: 100px;
+    overflow-y: auto;
+}
+</style>
 {% endblock %}

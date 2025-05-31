@@ -9,7 +9,7 @@ import asyncio
 from chainlit import make_async
 import requests
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from datetime import datetime
 
 # Configure logging
@@ -37,56 +37,61 @@ settings = {
     "temperature": 0.7,
 }
 
-# --- API Client Helpers ---
-async def api_get_activity(activity_id: int):
-    async with httpx.AsyncClient() as http_client:
-        try:
-            response = await http_client.get(f"{SIMBA_API_BASE_URL}/activities/{activity_id}")
-            response.raise_for_status() 
+
+async def api_get_activity(activity_id: str):
+    """Get activity data from the API."""
+    try:
+        response = requests.get(f"{SIMBA_API_BASE_URL}/activities/{activity_id}")
+        if response.status_code == 200:
             return response.json()
-        except httpx.HTTPStatusError as e:
-            logger.error(f"API Error getting activity {activity_id}: {e.response.status_code} - {e.response.text}")
-            raise Exception(f"API Error: Could not fetch activity. Status: {e.response.status_code}")
-        except httpx.RequestError as e:
-            logger.error(f"Request Error getting activity {activity_id}: {e}")
-            raise Exception(f"Request Error: Could not connect to API to fetch activity.")
+        else:
+            print(f"Failed to get activity: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"Error getting activity: {e}")
+        return None
 
-async def api_get_or_create_thread(activity_id: int, user_id: int):
-    payload = {"activity_id": activity_id, "user_id": user_id}
-    async with httpx.AsyncClient() as http_client:
-        try:
-            response = await http_client.post(f"{SIMBA_API_BASE_URL}/threads/get-or-create", json=payload)
-            response.raise_for_status()
+async def api_get_or_create_thread(activity_id: str, user_id: str):
+    """Get or create a thread for the user and activity."""
+    try:
+        response = requests.post(f"{SIMBA_API_BASE_URL}/threads/get-or-create", json={
+            "activity_id": activity_id,
+            "user_id": user_id
+        })
+        if response.status_code in [200, 201]:
             return response.json()
-        except httpx.HTTPStatusError as e:
-            logger.error(f"API Error get/create thread: {e.response.status_code} - {e.response.text}")
-            raise Exception(f"API Error: Could not get/create thread. Status: {e.response.status_code}")
-        except httpx.RequestError as e:
-            logger.error(f"Request Error get/create thread: {e}")
-            raise Exception(f"Request Error: Could not connect to API for thread.")
+        else:
+            print(f"Failed to get/create thread: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"Error getting/creating thread: {e}")
+        return None
 
-async def api_create_message(thread_id: int, content: str, role: str, user_id: int, username: str = None, model_name: str = None):
-    payload = {
-        "thread_id": thread_id, 
-        "content": content,
-        "role": role,
-        "user_id": user_id,
-        "username": username,
-        "model": model_name
-    }
-    async with httpx.AsyncClient() as http_client:
-        try:
-            response = await http_client.post(f"{SIMBA_API_BASE_URL}/threads/{thread_id}/messages", json=payload)
-            response.raise_for_status()
-            return response.json() 
-        except httpx.HTTPStatusError as e:
-            logger.error(f"API Error creating message: {e.response.status_code} - {e.response.text}")
-            raise Exception(f"API Error: Could not create message. Status: {e.response.status_code}")
-        except httpx.RequestError as e:
-            logger.error(f"Request Error creating message: {e}")
-            raise Exception(f"Request Error: Could not connect to API for message.")
+async def api_create_message(thread_id: str, content: str, role: str, user_id: str, username: str = None, model_name: str = None):
+    """Create a message via the API."""
+    try:
+        payload = {
+            "thread_id": thread_id,
+            "content": content,
+            "role": role,
+            "user_id": user_id
+        }
+        if username:
+            payload["username"] = username
+        if model_name:
+            payload["model"] = model_name
+            
+        response = requests.post(f"{SIMBA_API_BASE_URL}/threads/{thread_id}/messages", json=payload)
+        if response.status_code == 201:
+            return response.json()
+        else:
+            print(f"Failed to create message: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"Error creating message: {e}")
+        return None
 
-async def api_get_messages_for_thread(thread_id: int):
+async def api_get_messages_for_thread(thread_id: str):
     async with httpx.AsyncClient() as http_client:
         try:
             response = await http_client.get(f"{SIMBA_API_BASE_URL}/threads/{thread_id}/messages")

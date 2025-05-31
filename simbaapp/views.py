@@ -5,7 +5,7 @@ import urllib
 import requests
 from django.urls import reverse
 from django.conf import settings
-from .models import User, Course, Activity, CourseEnrollment, Message
+from .models import User, Course, Activity, CourseEnrollment, Message, Thread, ChainlitSession, InviteToken, ActivityToken
 import json
 import logging
 from django.contrib.auth import authenticate, login, logout
@@ -82,6 +82,12 @@ def register_view(request):
                 messages.success(request, "Registration successful!")
                 request.session['user_id'] = response_data['id']
                 request.session['username'] = response_data['username']
+                
+                # Check for next parameter to redirect after registration
+                next_url = request.GET.get('next') or request.POST.get('next')
+                if next_url:
+                    return redirect(next_url)
+                
                 return redirect('courses')
             else:
                  messages.error(request, response_data.get('message', 'Registration failed.'))
@@ -95,8 +101,11 @@ def register_view(request):
                  messages.error(request, "An unexpected error occurred during registration.")
         except Exception as e:
             messages.error(request, f"An unexpected error occurred: {str(e)}")
-            
-    return render(request, 'register.html')
+    
+    # Pass next parameter to template for hidden field
+    next_url = request.GET.get('next')
+    context = {'next_url': next_url} if next_url else {}
+    return render(request, 'register.html', context)
 
 def chainlit_view(request):
     logger.info(f"Asked for the chainlit view")
@@ -113,21 +122,21 @@ def chainlit_view(request):
         print(f"chainlit_view called with activity_id={activity_id}, thread_id={thread_id}", flush=True)
         activity = Activity.objects.get(id=activity_id)
         user_id = request.session.get('user_id')
-        username = request.session.get('username', 'User')
+        user = User.objects.get(id=user_id)
         
-        # Create Chainlit session via new API
-        api_url = request.build_absolute_uri('/api/chainlit/create-session')
-        session_payload = {
-            'activity_id': int(activity_id),
-            'user_id': user_id,
-            'username': username
+        # Prepare data for Chainlit session
+        session_data = {
+            'activity_id': str(activity_id),
+            'user_id': str(user_id),
+            'username': user.username,
+            'thread_id': None  # Will be set by Chainlit
         }
         
         if thread_id:
-            session_payload['thread_id'] = int(thread_id)
+            session_data['thread_id'] = str(thread_id)
         
         try:
-            response = requests.post(api_url, json=session_payload)
+            response = requests.post(request.build_absolute_uri('/api/chainlit/create-session'), json=session_data)
             response.raise_for_status()
             session_data = response.json()
             
@@ -139,7 +148,7 @@ def chainlit_view(request):
                 'activity': activity,
                 'activity_id': activity_id,
                 'user_id': user_id,
-                'username': username,
+                'username': user.username,
                 'chainlit_url': chainlit_url,
                 'thread_id': session_data['thread_id'],
                 'session_id': session_data['session_id'],
@@ -165,7 +174,7 @@ def courses_view(request):
     user = User.objects.get(id=user_id)
     
     # Get courses where user is owner (teacher)
-    owned_courses = Course.objects.filter(owner_id=user_id).order_by('-created_at')
+    owned_courses = Course.objects.filter(owner=user).order_by('-created_at')
     
     # Get courses where user is enrolled (student or teacher)
     enrolled_courses = Course.objects.filter(enrollments__user=user).order_by('-created_at')
@@ -178,7 +187,7 @@ def courses_view(request):
     for course in all_courses:
         course_info = {
             'course': course,
-            'is_owner': course.owner_id == user_id,
+            'is_owner': course.owner.id == user.id,
             'enrollment_role': None
         }
         
@@ -267,7 +276,7 @@ def course_detail_view(request, course_id):
         return redirect('courses')
         
     has_access = False
-    is_owner = course.owner_id == user_id
+    is_owner = course.owner.id == user.id
     user_role_in_course = None
 
     # Check if user is owner
@@ -298,6 +307,9 @@ def course_detail_view(request, course_id):
     enrolled_courses = Course.objects.filter(enrollments__user=user)
     all_courses = (owned_courses | enrolled_courses).distinct()
     
+    # Check for expand_activity parameter
+    expand_activity_id = request.GET.get('expand_activity')
+    
     return render(request, 'course_detail.html', { 
         'course': course, 
         'activities': activities,
@@ -306,7 +318,8 @@ def course_detail_view(request, course_id):
         'participants': participants,
         'enrolled_courses': all_courses,
         'active_course': course,
-        'chainlit_url': settings.CHAINLIT_URL
+        'chainlit_url': settings.CHAINLIT_URL,
+        'expand_activity_id': expand_activity_id
     })
 
 def create_activity_view(request, course_id):
@@ -326,7 +339,7 @@ def create_activity_view(request, course_id):
             return redirect('course_detail', course_id=course_id)
         
         # Check if user has permission to create activities in this course
-        is_owner = course.owner_id == user_id
+        is_owner = course.owner.id == user.id
         enrollment = CourseEnrollment.objects.filter(user=user, course=course).first()
         can_create = is_owner or (enrollment and enrollment.role == 'teacher')
         
@@ -424,8 +437,119 @@ def create_activity_view(request, course_id):
     else:
         return redirect('course_detail', course_id=course_id)
 
+def invite_join_view(request, token):
+    """View for users to join courses using invite tokens"""
+    try:
+        from simbaapp.models import InviteToken
+        invite_token = InviteToken.objects.select_related('course', 'created_by').get(token=token)
+        
+        # Check if token is valid
+        if not invite_token.is_valid():
+            messages.error(request, "This invite link has expired or is no longer valid.")
+            return redirect('courses')
+        
+        # If user is not logged in, redirect to register with next parameter
+        if not request.session.get('user_id'):
+            return redirect(f'/register/?next=/courses/invite/{token}')
+        
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)
+        course = invite_token.course
+        
+        # Check if user can join more courses
+        if not user.can_join_course():
+            total_courses = user.get_owned_courses_count() + user.get_enrolled_courses_count()
+            messages.error(request, f"You can only be in up to 3 courses total. You are currently in {total_courses} courses.")
+            return redirect('courses')
+        
+        # Check if user is already the owner
+        if course.owner.id == user.id:
+            messages.warning(request, f"You are already the owner of the course '{course.title}'.")
+            return redirect('course_detail', course_id=course.id)
+        
+        # Check if user is already enrolled
+        if CourseEnrollment.objects.filter(user=user, course=course).exists():
+            messages.warning(request, f"You are already enrolled in the course '{course.title}'.")
+            return redirect('course_detail', course_id=course.id)
+        
+        # Enroll user with the role specified in the token
+        CourseEnrollment.objects.create(
+            user=user,
+            course=course,
+            role=invite_token.role
+        )
+        
+        messages.success(request, f"Successfully enrolled in course '{course.title}' as {invite_token.role}!")
+        return redirect('course_detail', course_id=course.id)
+        
+    except InviteToken.DoesNotExist:
+        messages.error(request, "Invalid invite link.")
+        return redirect('courses')
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
+    except Exception as e:
+        messages.error(request, f"An error occurred: {str(e)}")
+        return redirect('courses')
+
+def activity_join_view(request, token):
+    """View for users to join activities using activity tokens"""
+    try:
+        activity_token = ActivityToken.objects.select_related('activity__course', 'created_by').get(token=token)
+        
+        # Check if token is valid
+        if not activity_token.is_valid():
+            messages.error(request, "This activity link has expired or is no longer valid.")
+            return redirect('courses')
+        
+        # If user is not logged in, redirect to register with next parameter
+        if not request.session.get('user_id'):
+            return redirect(f'/register/?next=/activities/join/{token}')
+        
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)
+        activity = activity_token.activity
+        course = activity.course
+        
+        # Check if user can join more courses
+        if not user.can_join_course():
+            total_courses = user.get_owned_courses_count() + user.get_enrolled_courses_count()
+            messages.error(request, f"You can only be in up to 3 courses total. You are currently in {total_courses} courses.")
+            return redirect('courses')
+        
+        # Check if user is already the owner
+        if course.owner.id == user.id:
+            messages.info(request, f"Welcome back! You are the owner of '{course.title}'.")
+            return redirect(f'/courses/{course.id}/?expand_activity={activity.id}')
+        
+        # Check if user is already enrolled
+        existing_enrollment = CourseEnrollment.objects.filter(user=user, course=course).first()
+        if existing_enrollment:
+            messages.info(request, f"Welcome back to '{course.title}'!")
+            return redirect(f'/courses/{course.id}/?expand_activity={activity.id}')
+        
+        # Enroll user as student (default role for activity links)
+        CourseEnrollment.objects.create(
+            user=user,
+            course=course,
+            role='student'
+        )
+        
+        messages.success(request, f"Successfully joined course '{course.title}' and activity '{activity.title}'!")
+        return redirect(f'/courses/{course.id}/?expand_activity={activity.id}')
+        
+    except ActivityToken.DoesNotExist:
+        messages.error(request, "Invalid activity link.")
+        return redirect('courses')
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
+    except Exception as e:
+        messages.error(request, f"An error occurred: {str(e)}")
+        return redirect('courses')
+
 def join_course_view(request):
-    """View for users to join courses using enrollment codes"""
+    """View for users to join courses using enrollment codes (students only)"""
     if not request.session.get('user_id'):
         return redirect('login')
         
@@ -439,7 +563,6 @@ def join_course_view(request):
     
     if request.method == 'POST':
         enrollment_code = request.POST.get('enrollment_code')
-        role = request.POST.get('role', 'student')  # Default to student
         
         if not enrollment_code:
             messages.error(request, "Enrollment code is required.")
@@ -455,7 +578,7 @@ def join_course_view(request):
             course = Course.objects.get(enrollment_code=enrollment_code)
             
             # Check if user is already the owner
-            if course.owner_id == user_id:
+            if course.owner.id == user.id:
                 messages.warning(request, f"You are already the owner of the course '{course.title}'.")
                 return redirect('course_detail', course_id=course.id)
             
@@ -464,13 +587,14 @@ def join_course_view(request):
                 messages.warning(request, f"You are already enrolled in the course '{course.title}'.")
                 return redirect('course_detail', course_id=course.id)
             else:
+                # Always enroll as student when using enrollment code
                 CourseEnrollment.objects.create(
                     user=user,
                     course=course,
-                    role=role
+                    role='student'
                 )
                 
-                messages.success(request, f"Successfully enrolled in course '{course.title}' as {role}!")
+                messages.success(request, f"Successfully enrolled in course '{course.title}' as student!")
             
             return redirect('course_detail', course_id=course.id)
             
@@ -592,24 +716,22 @@ def dashboard_view(request):
 
     if selected_course_id and selected_course_id != 'all': 
         try:
-            course_id_as_int = int(selected_course_id)
-            _fetched_course_obj = courses.filter(id=course_id_as_int).first()
-            logger.info(f"Looking for course ID {course_id_as_int} in available courses")
+            _fetched_course_obj = courses.filter(id=selected_course_id).first()
+            logger.info(f"Looking for course ID {selected_course_id} in available courses")
+            
             if _fetched_course_obj:
-                course_object_for_context = _fetched_course_obj
-                authoritative_id_for_logic_and_template = _fetched_course_obj.id 
                 logger.info(f"Found course: {_fetched_course_obj.title}")
             else:
-                logger.warning(f"Course ID {course_id_as_int} not found in available courses for view_as={view_as}")
+                logger.warning(f"Course ID {selected_course_id} not found in available courses for view_as={view_as}")
                 
-                # Check if course exists in any context (more user-friendly message)
-                course_exists_somewhere = Course.objects.filter(id=course_id_as_int).exists()
-                if course_exists_somewhere:
-                    messages.info(request, f"The selected course is not available in {view_as} view. Showing all available courses instead.")
-                else:
-                    messages.warning(request, f"Course ID '{selected_course_id}' does not exist. Showing all available courses instead.")
+                # Check if the course exists at all (for debugging)
+                course_exists_somewhere = Course.objects.filter(id=selected_course_id).exists()
+                logger.info(f"Course {selected_course_id} exists in database: {course_exists_somewhere}")
                 
-                course_object_for_context = courses.first() 
+                # If the course doesn't exist in the user's available courses, clear the session
+                if not course_exists_somewhere:
+                    request.session.pop('selected_course_id', None)
+                    selected_course_id = None
         except ValueError:
             logger.error(f"Invalid course ID format: {selected_course_id}")
             messages.warning(request, f"Invalid course ID format: '{selected_course_id}'. Defaulting to all courses.")
@@ -970,7 +1092,7 @@ def edit_course_view(request, course_id):
     try:
         course = Course.objects.get(id=course_id)
         
-        if course.owner.id != user_id:
+        if course.owner.id != user.id:
             messages.error(request, "You can only edit your own courses.")
             return redirect('courses')
             
@@ -1012,7 +1134,7 @@ def activities_view(request):
     user = User.objects.get(id=user_id)
     
     # Get all courses user has access to
-    owned_courses = Course.objects.filter(owner_id=user_id)
+    owned_courses = Course.objects.filter(owner=user)
     enrolled_courses = Course.objects.filter(enrollments__user=user)
     all_courses = (owned_courses | enrolled_courses).distinct()
     
@@ -1020,7 +1142,7 @@ def activities_view(request):
     activities_with_roles = []
     
     for course in all_courses:
-        is_owner = course.owner_id == user_id
+        is_owner = course.owner.id == user.id
         enrollment = CourseEnrollment.objects.filter(user=user, course=course).first()
         user_role = 'owner' if is_owner else (enrollment.role if enrollment else None)
         
@@ -1096,7 +1218,12 @@ def profile_view(request):
             
             if response.status_code == 200:
                 user_data = response.json()
+                # Atualizar a sessão com os novos dados
                 request.session['username'] = user_data['username']
+                
+                # Recarregar o objeto user do banco de dados para garantir dados atualizados
+                user = User.objects.get(id=user_id)
+                
                 messages.success(request, "Profile updated successfully!")
                 return redirect('profile')
             else:

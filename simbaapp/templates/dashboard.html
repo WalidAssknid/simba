@@ -762,7 +762,7 @@
     <select id="course-filter" onchange="updateDashboard()">
       <option value="all" {% if not selected_course_id %}selected{% endif %}>All Courses</option>
     {% for c in courses %}
-        <option value="{{ c.id }}" {% if selected_course_id and c.id|stringformat:"i" == selected_course_id|stringformat:"i" %}selected{% endif %}>{{ c.title }}</option>
+        <option value="{{ c.id }}" {% if selected_course_id and c.id == selected_course_id %}selected{% endif %}>{{ c.title }}</option>
     {% endfor %}
   </select>
   </div>

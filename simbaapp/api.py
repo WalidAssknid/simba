@@ -432,7 +432,28 @@ def get_activity_api(request, activity_id: str):
     """
     try:
         activity = Activity.objects.get(id=activity_id)
-        return HTTPStatus.OK, activity
+        
+        activity_data = {
+            'id': str(activity.id),
+            'title': activity.title,
+            'description': activity.description,
+            'expert_mode': activity.expert_mode,
+            'custom_prompt': activity.custom_prompt,
+            'questions': activity.questions or [],
+            'agent_attitude': activity.agent_attitude,
+            'subjects': activity.subjects,
+            'restrict_to_subject': activity.restrict_to_subject,
+            'allow_questions': activity.allow_questions,
+            'allow_emojis': activity.allow_emojis,
+            'trust_document': activity.trust_document,
+            'word_limit': activity.word_limit,
+            'start_date': activity.start_date,
+            'end_date': activity.end_date,
+            'is_visible': activity.is_visible,
+            'allow_redo': activity.allow_redo
+        }
+        
+        return HTTPStatus.OK, activity_data
     except Activity.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
 

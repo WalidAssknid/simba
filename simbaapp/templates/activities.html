@@ -20,7 +20,7 @@
         <button id="showParticipants" class="btn btn-secondary">
             Show Participants
         </button>
-        <a href="#" id="createActivityBtn" class="add-button" title="Create Activity">
+        <a href="#" id="createActivityBtn" class="add-button hidden" title="Create Activity">
             <i class="fas fa-plus"></i>
         </a>
     </div>
@@ -104,6 +104,12 @@
 
 #activityModal .modal-content {
     margin-top: 5%;
+}
+
+#editActivityModal .modal-content {
+    margin-top: 5%;
+    max-width: 700px;
+    width: 95%;
 }
 
 .role-info {
@@ -299,6 +305,53 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const courseSelector = document.getElementById('courseSelector');
     if (courseSelector) {
+        // Function to check if user can create activities in selected course
+        function checkCreatePermission() {
+            const selectedCourseId = courseSelector.value;
+            const createBtn = document.getElementById('createActivityBtn');
+            
+            if (!createBtn) return;
+            
+            if (!selectedCourseId) {
+                createBtn.classList.add('hidden');
+                return;
+            }
+            
+            // Check if user has teacher/owner role in any activity of the selected course
+            const courseActivities = document.querySelectorAll(`.activity-item[data-course-id="${selectedCourseId}"]`);
+            let canCreate = false;
+            
+            courseActivities.forEach(item => {
+                const roleElement = item.querySelector('.role-badge');
+                if (roleElement) {
+                    const role = roleElement.textContent.toLowerCase().trim();
+                    if (role === 'owner' || role === 'teacher') {
+                        canCreate = true;
+                    }
+                }
+            });
+            
+            // If no activities exist for this course, check if user owns any course with this ID
+            if (courseActivities.length === 0) {
+                // Get all courses from the selector options to check ownership
+                const courseOption = courseSelector.querySelector(`option[value="${selectedCourseId}"]`);
+                if (courseOption) {
+                    // Assume user can create if course is in their list (they have some access)
+                    // This will be validated server-side anyway
+                    canCreate = true;
+                }
+            }
+            
+            if (canCreate) {
+                createBtn.classList.remove('hidden');
+            } else {
+                createBtn.classList.add('hidden');
+            }
+        }
+        
+        // Check permission on page load
+        checkCreatePermission();
+        
         courseSelector.addEventListener('change', function() {
             const selectedCourseId = this.value;
             const activityItems = document.querySelectorAll('.activity-item');
@@ -310,6 +363,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     item.style.display = 'none';
                 }
             });
+            
+            // Check create permission when course changes
+            checkCreatePermission();
         });
     }
     

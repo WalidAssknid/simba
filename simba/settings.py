@@ -162,12 +162,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Environment-specific URLs
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 
+import logging
+logger = logging.getLogger(__name__)
+logger.info(f"ENVIRONMENT detected: {ENVIRONMENT}")
+logger.info(f"CHAINLIT_URL_PROD from env: {os.getenv('CHAINLIT_URL_PROD')}")
+
 if ENVIRONMENT == 'production':
     SIMBA_API_URL = os.getenv('SIMBA_API_URL_PROD', 'https://simba-refact.irit.fr/api')
     CHAINLIT_URL = os.getenv('CHAINLIT_URL_PROD', 'https://simba-refact.irit.fr/chainlit')
+    logger.info(f"Production mode - CHAINLIT_URL set to: {CHAINLIT_URL}")
 else:
     SIMBA_API_URL = os.getenv('SIMBA_API_URL', 'http://localhost:8000/api')
     CHAINLIT_URL = os.getenv('CHAINLIT_URL', 'http://localhost:8500')
+    logger.info(f"Development mode - CHAINLIT_URL set to: {CHAINLIT_URL}")
 
 # Add JWT settings if needed later
 # NINJA_JWT = {

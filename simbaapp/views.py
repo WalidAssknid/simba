@@ -132,6 +132,7 @@ def chainlit_view(request):
             session_data = response.json()
             
             chainlit_base_url = settings.CHAINLIT_URL
+            logger.info(f"Chainlit base URL: {chainlit_base_url}")
             chainlit_url = chainlit_base_url
             
             context = {

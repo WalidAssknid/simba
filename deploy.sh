@@ -60,7 +60,7 @@ print_success "Docker and Docker Compose are available"
 
 # Production configuration
 ENVIRONMENT="production"
-COMPOSE_FILE="docker-compose.prod.yml"
+COMPOSE_FILE="docker-compose.yml"
 ENV_FILE=".env"
 HOST_CHECK="simba-refact.irit.fr"
 export ENVIRONMENT=production

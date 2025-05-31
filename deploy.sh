@@ -73,19 +73,8 @@ if [ ! -f $COMPOSE_FILE ]; then
 fi
 
 if [ ! -f $ENV_FILE ]; then
-    print_warning "$ENV_FILE not found. Please create it with production settings."
-    print_warning "Required variables: DEBUG=False, ALLOWED_HOSTS=simba-refact.irit.fr, SECRET_KEY=..."
-    
-    cat > $ENV_FILE << 'EOF'
-# Production Environment - CONFIGURE THESE VALUES
-DEBUG=False
-SECRET_KEY=CHANGE-THIS-SECRET-KEY-IN-PRODUCTION
-ALLOWED_HOSTS=simba-refact.irit.fr
-DATABASE_URL=postgresql://simba_user:CHANGE-DB-PASSWORD@db:5432/simba_db
-POSTGRES_PASSWORD=CHANGE-DB-PASSWORD
-OPENAI_API_KEY=your-openai-api-key-here
-EOF
-    print_warning "Created template $ENV_FILE - PLEASE CONFIGURE IT BEFORE DEPLOYING!"
+    print_error "$ENV_FILE not found. Please create it with production settings."
+    print_error "Required variables: DEBUG=False, ALLOWED_HOSTS=simba-refact.irit.fr, SECRET_KEY=..."
     exit 1
 fi
 

@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 import urllib
@@ -8,6 +8,10 @@ from django.conf import settings
 from .models import User, Course, Activity, CourseEnrollment, Message
 import json
 import logging
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse, HttpResponse
+import uuid
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -127,9 +131,8 @@ def chainlit_view(request):
             response.raise_for_status()
             session_data = response.json()
             
-            # Chainlit URL without any parameters
-            chainlit_base_url = f"https://simba-refact.irit.fr/chainlit"
-            chainlit_url = chainlit_base_url 
+            chainlit_base_url = settings.CHAINLIT_URL
+            chainlit_url = chainlit_base_url
             
             context = {
                 'activity': activity,
@@ -301,7 +304,8 @@ def course_detail_view(request, course_id):
         'user_role_in_course': user_role_in_course,
         'participants': participants,
         'enrolled_courses': all_courses,
-        'active_course': course 
+        'active_course': course,
+        'chainlit_url': settings.CHAINLIT_URL
     })
 
 def create_activity_view(request, course_id):

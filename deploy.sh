@@ -1,18 +1,18 @@
 #!/bin/bash
 
-# SIMBA Deploy Script
-# Automated deployment script for SIMBA project
+# SIMBA Production Deploy Script
+# Production deployment script for SIMBA project
 
 set -e  
 
-echo "🚀 Starting SIMBA deployment..."
+echo "🚀 Starting SIMBA production deployment..."
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m'r
+NC='\033[0m'
 
 PROJECT_NAME="simba-2025"
 BACKUP_DIR="./backups"
@@ -58,42 +58,25 @@ fi
 
 print_success "Docker and Docker Compose are available"
 
-ENVIRONMENT=${1:-"development"}
-case $ENVIRONMENT in
-    "production"|"prod")
-        ENVIRONMENT="production"
-        COMPOSE_FILE="docker-compose.prod.yml"
-        ENV_FILE=".env"
-        HOST_CHECK="simba-refact.irit.fr"
-        ;;
-    "staging")
-        ENVIRONMENT="staging"
-        COMPOSE_FILE="docker-compose.staging.yml"
-        ENV_FILE=".env.staging"
-        HOST_CHECK="localhost"
-        ;;
-    *)
-        ENVIRONMENT="development"
-        COMPOSE_FILE="docker-compose.yml"
-        ENV_FILE=".env"
-        HOST_CHECK="localhost:8000"
-        ;;
-esac
+# Production configuration
+ENVIRONMENT="production"
+COMPOSE_FILE="docker-compose.prod.yml"
+ENV_FILE=".env"
+HOST_CHECK="simba-refact.irit.fr"
+export ENVIRONMENT=production
 
-print_step "Deploying to $ENVIRONMENT environment"
+print_step "Deploying to production environment"
 
 if [ ! -f $COMPOSE_FILE ]; then
     print_error "Compose file $COMPOSE_FILE not found"
     exit 1
 fi
 
-if [ "$ENVIRONMENT" = "production" ]; then
-    if [ ! -f $ENV_FILE ]; then
-        print_warning "$ENV_FILE not found. Please create it with production settings."
-        print_warning "Required variables: DEBUG=False, ALLOWED_HOSTS=simba-refact.irit.fr, SECRET_KEY=..."
-        
-        cat > $ENV_FILE << 'EOF'
-
+if [ ! -f $ENV_FILE ]; then
+    print_warning "$ENV_FILE not found. Please create it with production settings."
+    print_warning "Required variables: DEBUG=False, ALLOWED_HOSTS=simba-refact.irit.fr, SECRET_KEY=..."
+    
+    cat > $ENV_FILE << 'EOF'
 # Production Environment - CONFIGURE THESE VALUES
 DEBUG=False
 SECRET_KEY=CHANGE-THIS-SECRET-KEY-IN-PRODUCTION
@@ -101,30 +84,24 @@ ALLOWED_HOSTS=simba-refact.irit.fr
 DATABASE_URL=postgresql://simba_user:CHANGE-DB-PASSWORD@db:5432/simba_db
 POSTGRES_PASSWORD=CHANGE-DB-PASSWORD
 OPENAI_API_KEY=your-openai-api-key-here
-
 EOF
-        print_warning "Created template $ENV_FILE - PLEASE CONFIGURE IT BEFORE DEPLOYING!"
-        exit 1
-    fi
+    print_warning "Created template $ENV_FILE - PLEASE CONFIGURE IT BEFORE DEPLOYING!"
+    exit 1
 fi
 
-if [ "$ENVIRONMENT" = "production" ]; then
-    if docker ps | grep -q "simba.*db"; then
-        print_step "Creating database backup..."
-        ./scripts/backup.sh || print_warning "Backup failed or no existing database"
-    else
-        print_step "No existing database found, skipping backup"
-    fi
+if docker ps | grep -q "simba.*db"; then
+    print_step "Creating database backup..."
+    ./scripts/backup.sh || print_warning "Backup failed or no existing database"
+else
+    print_step "No existing database found, skipping backup"
 fi
 
 print_step "Stopping existing containers..."
 docker compose -f $COMPOSE_FILE down || true
 print_success "Containers stopped"
 
-if [ "$ENVIRONMENT" = "production" ]; then
-    print_step "Pulling latest Docker images..."
-    docker compose -f $COMPOSE_FILE pull || print_warning "Some images may need to be built locally"
-fi
+print_step "Pulling latest Docker images..."
+docker compose -f $COMPOSE_FILE pull || print_warning "Some images may need to be built locally"
 
 print_step "Building and starting containers..."
 docker compose -f $COMPOSE_FILE up --build -d
@@ -135,26 +112,16 @@ sleep 15
 print_step "Running database migrations..."
 docker compose -f $COMPOSE_FILE exec -T web python manage.py migrate
 
-if [ "$ENVIRONMENT" = "production" ]; then
-    print_step "Collecting static files..."
-    docker compose -f $COMPOSE_FILE exec -T web python manage.py collectstatic --noinput
-    print_success "Static files collected"
-fi
+print_step "Collecting static files..."
+docker compose -f $COMPOSE_FILE exec -T web python manage.py collectstatic --noinput
+print_success "Static files collected"
 
 # Health check
 print_step "Performing health check..."
-if [ "$ENVIRONMENT" = "production" ]; then
-    if curl -f http://localhost:8000 > /dev/null 2>&1; then
-        print_success "Application is responding on port 8000 (nginx proxy)"
-    else
-        print_warning "Application might not be ready yet. Check logs: docker compose -f $COMPOSE_FILE logs"
-    fi
-else    
-    if curl -f http://localhost:8000 > /dev/null 2>&1; then
-        print_success "Application is responding on port 8000"
-    else
-        print_warning "Application might not be ready yet. Check logs: docker compose -f $COMPOSE_FILE logs"
-    fi
+if curl -f http://localhost:8000 > /dev/null 2>&1; then
+    print_success "Application is responding on port 8000 (nginx proxy)"
+else
+    print_warning "Application might not be ready yet. Check logs: docker compose -f $COMPOSE_FILE logs"
 fi
 
 # Show running containers
@@ -164,9 +131,9 @@ docker compose -f $COMPOSE_FILE ps
 # Show version information
 if [ -f version.py ]; then
     VERSION=$(python3 -c "import sys; sys.path.append('.'); from version import get_version; print(get_version())" 2>/dev/null || echo "unknown")
-    print_success "SIMBA v$VERSION deployed successfully to $ENVIRONMENT!"
+    print_success "SIMBA v$VERSION deployed successfully to production!"
 else
-    print_success "SIMBA deployed successfully to $ENVIRONMENT!"
+    print_success "SIMBA deployed successfully to production!"
 fi
 
 # Show useful commands
@@ -178,22 +145,25 @@ echo "  • Restart application: docker compose -f $COMPOSE_FILE restart"
 echo "  • Access shell: docker compose -f $COMPOSE_FILE exec web bash"
 echo "  • View database: docker compose -f $COMPOSE_FILE exec db psql -U simba_user -d simba_db"
 
-if [ "$ENVIRONMENT" = "production" ]; then
-    echo ""
-    echo -e "${YELLOW}🔗 Production URLs:${NC}"
-    echo "  • Main application: https://simba-refact.irit.fr"
-    echo "  • Chainlit: https://simba-refact.irit.fr/chainlit/"
-    echo ""
-    echo -e "${YELLOW}⚙️  Internal Configuration:${NC}"
-    echo "  • Nginx proxy: localhost:8000 → containers"
-    echo "  • Web container: internal port 8000"
-    echo "  • Chainlit container: internal port 8500"
-    echo ""
-    echo -e "${YELLOW}🔒 Security reminders:${NC}"
-    echo "  • Configure SSL certificates in nginx/prod.conf"
-    echo "  • Set strong passwords in $ENV_FILE"
-    echo "  • Ensure external proxy forwards to port 8000"
-    echo "  • Set up automated backups with cron"
-fi
+echo ""
+echo -e "${YELLOW}🔗 Production URLs:${NC}"
+echo "  • Main application: https://simba-refact.irit.fr"
+echo "  • Chainlit: https://simba-refact.irit.fr/chainlit/"
+echo ""
+echo -e "${YELLOW}⚙️  Internal Configuration:${NC}"
+echo "  • Nginx proxy: localhost:8000 → containers"
+echo "  • Web container: internal port 8000"
+echo "  • Chainlit container: internal port 8500"
+echo ""
+echo -e "${YELLOW}🔧 Environment Variables:${NC}"
+echo "  • ENVIRONMENT=production"
+echo "  • SIMBA_API_URL_PROD=https://simba-refact.irit.fr/api"
+echo "  • CHAINLIT_URL_PROD=https://simba-refact.irit.fr/chainlit"
+echo ""
+echo -e "${YELLOW}🔒 Security reminders:${NC}"
+echo "  • Configure SSL certificates in nginx/prod.conf"
+echo "  • Set strong passwords in $ENV_FILE"
+echo "  • Ensure external proxy forwards to port 8000"
+echo "  • Set up automated backups with cron"
 
-log "Deployment completed successfully" 
+log "Production deployment completed successfully" 

@@ -6,12 +6,25 @@ import chainlit as cl
 import logging
 import httpx
 import asyncio
+from chainlit import make_async
+import requests
+import json
+from typing import Dict, Any
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-SIMBA_API_BASE_URL = 'https://simba-refact.irit.fr/api'
+# Django API URLs
+# https://simba-refact.irit.fr/api for production
+# http://localhost:8000/api for development
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+
+if ENVIRONMENT == 'production':
+    SIMBA_API_BASE_URL = os.getenv('SIMBA_API_URL_PROD', 'https://simba-refact.irit.fr/api')
+else:
+    SIMBA_API_BASE_URL = os.getenv('SIMBA_API_URL_DEV', 'http://web:8000/api')
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
 if not django.apps.apps.ready:

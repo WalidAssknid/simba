@@ -247,9 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Wait a moment then load the base URL
         setTimeout(() => {
-            // Construct Chainlit URL based on current location
-            const chainlitUrl = `${window.location.protocol}//${window.location.host}/chainlit`;
-            chainlitFrame.src = chainlitUrl;
+            chainlitFrame.src = '{{ chainlit_url }}';
         }, 200);
     }
     

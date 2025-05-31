@@ -9,6 +9,8 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
+export ENVIRONMENT=development
+
 echo "🛑 Stopping existing containers..."
 docker compose down -v
 
@@ -48,4 +50,8 @@ echo "   make restart        - Restart web service"
 echo ""
 echo "🌍 Access the application:"
 echo "   Web: http://localhost:8000"
-echo "   Chainlit: http://localhost:8500" 
+echo "   Chainlit: http://localhost:8500"
+echo ""
+echo "🔧 Environment: DEVELOPMENT"
+echo "   API URL: http://localhost:8000/api"
+echo "   Chainlit URL: http://localhost:8500" 

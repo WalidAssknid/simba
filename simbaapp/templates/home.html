@@ -1,12 +1,297 @@
-{% extends 'base.html' %}
-{% block title %}SIMBA | Home{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIMBA</title>
+    <link rel="stylesheet" href="{% load static %}{% static 'css/simba.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="shortcut icon" href="{% static 'images/icons/favicon.ico' %}" type="image/x-icon" />
+</head>
+<body class="home-page">
+    <!-- Navigation Header -->
+    <nav class="home-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1>SIMBA</h1>
+            </div>
+            <div class="nav-menu">
+                <a href="#manual" class="nav-link">Manual</a>
+                <a href="#papers" class="nav-link">Papers</a>
+                <a href="#partners" class="nav-link">Partners</a>
+                <a href="#about" class="nav-link">About</a>
+                <a href="{% url 'login' %}" class="btn btn-nav-login">Login</a>
+            </div>
+            <div class="mobile-nav-toggle">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </nav>
 
-{% block content %}
-<div class="home-container">
-    <div class="home-logo">SIMBA</div>
-    <div class="home-subtitle">Work in progress...</div>
-    <div class="home-actions">
-        <a href="{% url 'login' %}" class="btn btn-home-login">LOGIN</a>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">Welcome to SIMBA</h1>
+                <h2 class="hero-subtitle">Creating Activities for Promoting Critical Thinking and Self-reflection</h2>
+                <p class="hero-description">
+                    SIMBA is an educational chatbot designed to help students develop better learning strategies. 
+                    Our platform makes it easy for teachers to create engaging activities that promote critical 
+                    thinking and self-reflection, while giving students personalized support whenever they need it.
+                </p>
+                <div class="hero-actions">
+                    <a href="{% url 'login' %}" class="btn btn-hero-primary">Get Started</a>
+                    <a href="#about" class="btn btn-hero-secondary">Learn More</a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="hero-icon">
+                    <img src="{% load static %}{% static 'images/IRIT_logo.png' %}" alt="IRIT Logo" class="hero-logo">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How SIMBA Works -->
+    <section class="how-it-works">
+        <div class="container">
+            <h2 class="section-title">How Does SIMBA Work?</h2>
+            <div class="steps-container">
+                <div class="step">
+                    <div class="step-image">
+                        <img src="{% load static %}{% static 'images/1.png' %}" alt="Course Management Interface">
+                    </div>
+                    <div class="step-content">
+                        <h3><span class="step-number">1</span>Access and Manage Courses</h3>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-image">
+                        <img src="{% load static %}{% static 'images/2.png' %}" alt="AI Chatbot Interface">
+                    </div>
+                    <div class="step-content">
+                        <h3><span class="step-number">2</span>Engage with our AI Assistant</h3>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-image">
+                        <img src="{% load static %}{% static 'images/3.png' %}" alt="Analytics Dashboard">
+                    </div>
+                    <div class="step-content">
+                        <h3><span class="step-number">3</span>Track Progress and Insights</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Manual Section -->
+    <section id="manual" class="manual-section">
+        <div class="container">
+            <h2 class="section-title">Getting Started with SIMBA</h2>
+            <div class="manual-content">
+                <div class="manual-text">
+                    <h3>Everything You Need to Know</h3>
+                    <p>
+                        Whether you're new to educational technology or an experienced educator, our documentation 
+                        will help you make the most of SIMBA. We've put together step-by-step guides, practical 
+                        examples, and troubleshooting tips to get you up and running quickly.
+                    </p>
+                    <div class="manual-features">
+                        <div class="feature-item">
+                            <i class="fas fa-book"></i>
+                            <span>Complete User Guide</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-cogs"></i>
+                            <span>Setup Instructions</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-question-circle"></i>
+                            <span>FAQ & Troubleshooting</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-lightbulb"></i>
+                            <span>Teaching Tips & Best Practices</span>
+                        </div>
+                    </div>
+                    <div class="manual-actions">
+                        <a href="#" class="btn btn-primary">Download Manual</a>
+                        <a href="#" class="btn btn-secondary">View Online</a>
+                    </div>
+                </div>
+                <div class="manual-visual">
+                    <div class="manual-placeholder">
+                        <i class="fas fa-file-pdf"></i>
+                        <p>User Documentation</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Related Papers Section -->
+    <section id="papers" class="papers-section">
+        <div class="container">
+            <h2 class="section-title">Research Behind SIMBA</h2>
+            <p class="section-description">
+                Our work is grounded in educational research and continues to contribute to the field of AI in education
+            </p>
+            <div class="papers-grid">
+                <div class="paper-card">
+                    <div class="paper-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h3>Exploring the Impact of LLM-Based Scaffolding on
+                        Academic Performance and the Mediating Roles of AI
+                        Literacy and Prior Knowledge</h3>
+                    <p class="paper-authors">Anonymous Authors</p>
+                    <div class="paper-actions">
+                        <a href="{% load static %}{% static 'images/icons/SIMBA_exploring.pdf' %}" class="btn btn-small btn-secondary" download>Download PDF</a>
+                    </div>
+                </div>
+                <div class="paper-card">
+                    <div class="paper-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h3>SIMBA: creating chatbots for students tutoring</h3>
+                    <p class="paper-authors">Gabriel Ferrettini, André C. A. Nascimento, Mar Pérez-Sanagustin,
+                        Isabel Hilliger</p>
+                    <div class="paper-actions">
+                        <a href="{% load static %}{% static 'images/icons/SIMBA_CreatingChatbots.pdf' %}" class="btn btn-small btn-secondary" download>Download PDF</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Partners Section -->
+    <section id="partners" class="partners-section">
+        <div class="container">
+            <h2 class="section-title">Partners</h2>
+            <div class="partners-grid">
+                <div class="partner-logo">
+                    <img src="{% load static %}{% static 'images/IRIT_logo.png' %}" alt="IRIT" class="partner-image">
+                </div>
+                <div class="partner-logo">
+                    <img src="{% load static %}{% static 'images/logo_ufrpe.png' %}" alt="UFRPE" class="partner-image">
+                </div>
+                <div class="partner-logo">
+                    <img src="{% load static %}{% static 'images/millenium_logo.png' %}" alt="Millennium Nucleus" class="partner-image">
+                </div>
+                <div class="partner-logo">
+                    <img src="{% load static %}{% static 'images/anr_logo.png' %}" alt="ANR" class="partner-image">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about-section">
+        <div class="container">
+            <h2 class="section-title">About SIMBA</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <h3>Educational Technology That Actually Helps</h3>
+                    <p>
+                        SIMBA is an educational chatbot designed to support students' learning strategies. 
+                        We developed this platform at IRIT as part of the ANR JCJC LASER project, working 
+                        closely with Chile's Millennium Nucleus of Higher Education (NMEdSup).
+                    </p>
+                    <p>
+                        Our goal is simple: help students and teachers become better learners. We believe that with the right 
+                        support and guidance, every student and teacher can develop the critical thinking and self-reflection 
+                        skills they need to succeed. SIMBA makes this support accessible, personalized, and available 
+                        whenever students need it most.
+                    </p>
+                    <div class="about-stats">
+                        <div class="stat-item">
+                            <div class="stat-number">?+</div>
+                            <div class="stat-label">Educational Institutions</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">?+</div>
+                            <div class="stat-label">Students Supported</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">?+</div>
+                            <div class="stat-label">Learning Conversations</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="about-visual">
+                    <div class="about-icon">
+                        <img src="{% load static %}{% static 'images/IRIT_logo.png' %}" alt="IRIT Logo" class="about-logo">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="home-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <h3>SIMBA</h3>
+                    <p>Creating Activities for Promoting Critical Thinking and Self-reflection</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-column">
+                        <h4>Platform</h4>
+                        <a href="{% url 'login' %}">Login</a>
+                        <a href="{% url 'register' %}">Register</a>
+                        <a href="#manual">Documentation</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Resources</h4>
+                        <a href="#papers">Research Papers</a>
+                        <a href="#use-cases">Use Cases</a>
+                        <a href="#about">About</a>
+                    </div>
+                    <div class="footer-column">
+                        <h4>Contact</h4>
+                        <a href="mailto:simba.mentor.ai@gmail.com">simba.mentor.ai@gmail.com</a>
+                        <div class="social-links">
+                            <a href="#"><i class="fab fa-linkedin"></i></a>
+                            <a href="#"><i class="fab fa-twitter"></i></a>
+                            <a href="#"><i class="fab fa-github"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 SIMBA - IRIT & ANR JCJC LASER Project. All rights reserved.</p>
     </div>
 </div>
-{% endblock %} 
+    </footer>
+
+    <script>
+        // Mobile navigation toggle
+        document.querySelector('.mobile-nav-toggle').addEventListener('click', function() {
+            document.querySelector('.nav-menu').classList.toggle('active');
+        });
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Close mobile menu when clicking on a link
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function() {
+                document.querySelector('.nav-menu').classList.remove('active');
+            });
+        });
+    </script>
+</body>
+</html> 

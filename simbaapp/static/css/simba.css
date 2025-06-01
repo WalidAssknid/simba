@@ -912,7 +912,8 @@ textarea[name="description"] {
   color: var(--text-color);
 }
 
-.form-control, select {
+.form-control,
+select {
   width: 100%;
   padding: 12px;
   border: 1px solid var(--border-color);
@@ -923,7 +924,8 @@ textarea[name="description"] {
   background-color: white;
 }
 
-.form-control:focus, select:focus {
+.form-control:focus,
+select:focus {
   border-color: var(--primary-color);
   outline: none;
   box-shadow: none;
@@ -1583,16 +1585,16 @@ body.auth-page .header {
     transform: none;
     min-width: 120px;
   }
-  
+
   /* Version info mobile adjustments */
   .sidebar-version {
     padding: 12px;
   }
-  
+
   .version-info {
     font-size: 0.7rem;
   }
-  
+
   .version-number {
     font-size: 0.75rem;
   }
@@ -1677,7 +1679,9 @@ body.auth-page .header {
     background-color: white;
   }
 
-  select, .course-selector, .filters select {
+  select,
+  .course-selector,
+  .filters select {
     font-size: 16px;
     padding: 12px 16px;
     border-radius: 6px;
@@ -1734,26 +1738,26 @@ body.auth-page .header {
     gap: 12px;
     margin-bottom: 24px;
   }
-  
+
   .metric-card {
     padding: 16px;
   }
-  
+
   .metric-card h3 {
     font-size: 0.8rem;
   }
-  
+
   .metric-card p {
     font-size: 1.4rem;
   }
-  
+
   .button-group {
     display: flex;
     gap: 10px;
     flex-direction: column;
     width: 100%;
   }
-  
+
   .button-group .btn-generate {
     width: 100%;
     text-align: center;
@@ -1931,30 +1935,30 @@ body.auth-page .header {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
-  
+
   .metric-card {
     padding: 10px;
   }
-  
+
   .metric-card h3 {
     font-size: 0.7rem;
     margin-bottom: 5px;
   }
-  
+
   .metric-card p {
     font-size: 1.2rem;
   }
-  
+
   .two-columns {
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  
+
   .button-group {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .filters {
     gap: 10px;
     flex-direction: column;
@@ -2053,7 +2057,7 @@ body.auth-page .header {
   background: white;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -2505,7 +2509,7 @@ body.auth-page .header {
 }
 
 @supports not (selector(:has(*))) {
-  .form-group input[type="checkbox"] + label {
+  .form-group input[type="checkbox"]+label {
     display: inline-flex;
     align-items: center;
     margin-left: 8px;
@@ -2584,12 +2588,12 @@ body.auth-page .header {
     font-size: 3.5rem;
     margin-bottom: 1.5rem;
   }
-  
+
   .home-subtitle {
     font-size: 1.2rem;
     margin-bottom: 2rem;
   }
-  
+
   .btn-home-login {
     font-size: 1rem;
     padding: 10px 30px;
@@ -2600,7 +2604,7 @@ body.auth-page .header {
   .home-logo {
     font-size: 2.8rem;
   }
-  
+
   .home-subtitle {
     font-size: 1rem;
   }
@@ -2653,7 +2657,7 @@ body.auth-page .header {
   .action-buttons-group {
     gap: 6px;
   }
-  
+
   .action-buttons-group .add-button {
     width: 32px;
     height: 32px;
@@ -2979,6 +2983,26 @@ body.home-page {
     display: none;
   }
 
+  .mobile-nav-toggle {
+    display: none;
+  }
+
+  .nav-container {
+    justify-content: center;
+  }
+
+  .manual-actions {
+    justify-content: center;
+  }
+
+  .about-content {
+    justify-items: center;
+  }
+
+  .footer-links .footer-column {
+    text-align: center;
+  }
+
   /* Home page specific: center navigation brand */
   body.home-page .nav-container {
     justify-content: center;
@@ -3166,12 +3190,12 @@ body.home-page {
     align-items: flex-start !important;
     gap: 40px;
   }
-  
+
   .step-image {
     width: 380px;
     height: 480px;
   }
-  
+
   .section-title {
     font-size: 2.8rem;
   }
@@ -3549,23 +3573,3 @@ body.home-page {
 .hidden {
   display: none !important;
 }
-
-/* Mobile Responsive Styles */
-@media (max-width: 768px) {
-  .mobile-nav-toggle {
-    display: none;
-  }
-  .nav-container {
-    justify-content: center;
-  }
-  .manual-actions {
-    justify-content: center;
-  }
-  .about-content {
-    justify-items: center;
-  }
-  .footer-links .footer-column {
-    text-align: center;
-  }
-}
-

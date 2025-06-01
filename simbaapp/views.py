@@ -721,22 +721,27 @@ def dashboard_view(request):
             
             if _fetched_course_obj:
                 logger.info(f"Found course: {_fetched_course_obj.title}")
+                authoritative_id_for_logic_and_template = selected_course_id
+                course_object_for_context = _fetched_course_obj
             else:
                 logger.warning(f"Course ID {selected_course_id} not found in available courses for view_as={view_as}")
                 
-                # Check if the course exists at all (for debugging)
                 course_exists_somewhere = Course.objects.filter(id=selected_course_id).exists()
                 logger.info(f"Course {selected_course_id} exists in database: {course_exists_somewhere}")
                 
-                # If the course doesn't exist in the user's available courses, clear the session
                 if not course_exists_somewhere:
                     request.session.pop('selected_course_id', None)
                     selected_course_id = None
+                authoritative_id_for_logic_and_template = None
+                course_object_for_context = courses.first()
         except ValueError:
             logger.error(f"Invalid course ID format: {selected_course_id}")
             messages.warning(request, f"Invalid course ID format: '{selected_course_id}'. Defaulting to all courses.")
+            authoritative_id_for_logic_and_template = None
             course_object_for_context = courses.first() 
     else:
+        # No specific course selected, use defaults
+        authoritative_id_for_logic_and_template = None
         course_object_for_context = courses.first()
 
     selected_course_id = authoritative_id_for_logic_and_template
@@ -754,6 +759,7 @@ def dashboard_view(request):
             'selected_course': None,
             'selected_course_id': None,
             'selected_activity': None,
+            'selected_activity_id': None,
             'activities': Activity.objects.none(),
             'students_count': 0,
             'activities_count': 0,
@@ -1033,6 +1039,7 @@ def dashboard_view(request):
         'selected_course': selected_course,
         'selected_course_id': selected_course_id,
         'selected_activity': selected_activity,
+        'selected_activity_id': selected_activity_id,
         'activities': activities,
         'students_count': students.count(),
         'activities_count': activities.count(),

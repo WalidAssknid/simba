@@ -36,7 +36,8 @@ from .schemas import (
     ActivityFileSchema,
     ActivityFilesResponseSchema,
     ChainlitSessionInitSchema,
-    ChainlitSessionResponseSchema
+    ChainlitSessionResponseSchema,
+    ClusterResponseSchema
 )
 from .eventTracking import (
     accountCreated,
@@ -726,7 +727,7 @@ dashboard_router = Router()
 
 
 @dashboard_router.get("/student/{student_id}/", response=StudentDataSchema)
-def get_student_data(request, student_id: str, course_id: str = "all", requesting_user_id: str = None):
+def get_student_data(request, student_id: str, course_id: str = "all", activity_id: str = "all", requesting_user_id: str = None):
     """
     Get comprehensive analytics data for a specific student.
     """
@@ -758,10 +759,8 @@ def get_student_data(request, student_id: str, course_id: str = "all", requestin
                 if not has_any_teacher_role:
                     return {"error": "Permission denied. You need teacher or owner privileges to view other students' data."}
         
-        # Get courses where the student is enrolled as student
         if course_id != "all":
             course = Course.objects.get(id=course_id)
-            # Check if student is enrolled in this course
             student_enrollment = CourseEnrollment.objects.filter(
                 user=student, 
                 course=course, 
@@ -771,21 +770,19 @@ def get_student_data(request, student_id: str, course_id: str = "all", requestin
             if not student_enrollment:
                 return {"error": "Student is not enrolled in this course."}
                 
-            # Get messages from this specific course
-            messages = Message.objects.filter(
+            messages_query = Message.objects.filter(
                 thread__user=student, 
                 thread__activity__course=course,
                 role='user'
-            ).select_related('thread__activity').order_by('timestamp')
+            )
             
-            threads = Thread.objects.filter(
+            threads_query = Thread.objects.filter(
                 user=student,
                 activity__course=course
-            ).order_by('-updated_at')
+            )
             
             courses_for_comparison = [course]
         else:
-            # Get all courses where student is enrolled as student
             student_courses = Course.objects.filter(
                 enrollments__user=student,
                 enrollments__role='student'
@@ -794,18 +791,29 @@ def get_student_data(request, student_id: str, course_id: str = "all", requestin
             if not student_courses.exists():
                 return {"error": "Student is not enrolled in any courses as a student."}
             
-            messages = Message.objects.filter(
+            messages_query = Message.objects.filter(
                 thread__user=student,
                 thread__activity__course__in=student_courses,
                 role='user'
-            ).select_related('thread__activity').order_by('timestamp')
+            )
             
-            threads = Thread.objects.filter(
+            threads_query = Thread.objects.filter(
                 user=student,
                 activity__course__in=student_courses
-            ).order_by('-updated_at')
+            )
             
             courses_for_comparison = student_courses
+        
+        if activity_id != "all":
+            try:
+                activity = Activity.objects.get(id=activity_id)
+                messages_query = messages_query.filter(thread__activity=activity)
+                threads_query = threads_query.filter(activity=activity)
+            except Activity.DoesNotExist:
+                return {"error": "Activity not found"}
+        
+        messages = messages_query.select_related('thread__activity').order_by('timestamp')
+        threads = threads_query.order_by('-updated_at')
         
         activities = set([msg.thread.activity_id for msg in messages])
         activities_count = len(activities)
@@ -820,19 +828,17 @@ def get_student_data(request, student_id: str, course_id: str = "all", requestin
         
         conversation = []
         
-        # Calculate retries based on filtered threads
         activity_attempts = {}
         for thread in threads:
-            activity_id = thread.activity_id
-            if activity_id not in activity_attempts:
-                activity_attempts[activity_id] = []
-            activity_attempts[activity_id].append(thread.attempt_number)
+            activity_id_key = thread.activity_id
+            if activity_id_key not in activity_attempts:
+                activity_attempts[activity_id_key] = []
+            activity_attempts[activity_id_key].append(thread.attempt_number)
         
         retries_count = 0
-        for activity_id, attempts in activity_attempts.items():
+        for activity_id_key, attempts in activity_attempts.items():
             retries_count += max(len(attempts) - 1, 0)
         
-        # Build conversation history from filtered threads
         if threads.count() <= 5:
             for thread in threads:
                 thread_messages = Message.objects.filter(thread=thread).order_by('message_number')
@@ -841,7 +847,7 @@ def get_student_data(request, student_id: str, course_id: str = "all", requestin
                         "role": msg.role, 
                         "content": msg.content, 
                         "timestamp": msg.timestamp.isoformat(),
-                        "thread_id": thread.id,
+                        "thread_id": str(thread.id),
                         "activity_title": thread.activity.title or f"Activity {thread.activity.id}",
                         "message_number": msg.message_number
                     } 
@@ -856,7 +862,7 @@ def get_student_data(request, student_id: str, course_id: str = "all", requestin
                         "role": msg.role, 
                         "content": msg.content, 
                         "timestamp": msg.timestamp.isoformat(),
-                        "thread_id": recent_thread.id,
+                        "thread_id": str(recent_thread.id),
                         "activity_title": recent_thread.activity.title or f"Activity {recent_thread.activity.id}",
                         "message_number": msg.message_number
                     } 
@@ -1161,11 +1167,11 @@ def get_word_frequencies(request, course_id: str = "all", min_word_length: int =
         message_data = []
         for msg in messages:
             message_data.append({
-                'user_id': msg.thread.user_id,
+                'user_id': str(msg.thread.user_id),
                 'username': msg.thread.user.username,
                 'content': msg.content,
                 'role': msg.role,
-                'activity_id': msg.thread.activity_id,
+                'activity_id': str(msg.thread.activity_id),
                 'timestamp': msg.timestamp.isoformat()
             })
         
@@ -1185,6 +1191,59 @@ def get_word_frequencies(request, course_id: str = "all", min_word_length: int =
         return {
             "words": [],
             "students": [],
+            "error": str(e)
+        }
+
+@dashboard_router.get("/student_clusters/", response=ClusterResponseSchema)
+def get_student_clusters(request, course_id: str = "all", n_clusters: int = 3):
+    """Generate student clusters and features for scatter plot visualization."""
+    try:
+        if course_id != "all":
+            course = Course.objects.get(id=course_id)
+            messages = Message.objects.filter(
+                thread__activity__course=course,
+                role='user'
+            ).select_related('thread__user', 'thread__activity')
+        else:
+            messages = Message.objects.filter(
+                role='user'
+            ).select_related('thread__user', 'thread__activity')
+        
+        print(f"DEBUG: Retrieved {messages.count()} user messages for clustering")
+        
+        if messages.count() < 2:
+            return {
+                "clusters": [],
+                "features": [],
+                "error": "Not enough messages for clustering. Need at least 2 user messages."
+            }
+        
+        message_data = []
+        for msg in messages:
+            message_data.append({
+                'user_id': str(msg.thread.user_id),
+                'username': msg.thread.user.username,
+                'content': msg.content,
+                'role': msg.role,
+                'activity_id': str(msg.thread.activity_id),
+                'timestamp': msg.timestamp.isoformat()
+            })
+        
+        result = cluster_students.cluster_students(
+            message_data,
+            n_clusters=n_clusters
+        )
+        
+        print(f"DEBUG: Generated {len(result.get('clusters', []))} clusters with {len(result.get('features', []))} feature points")
+        
+        return result
+    except Exception as e:
+        print(f"ERROR in student_clusters: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "clusters": [],
+            "features": [],
             "error": str(e)
         }
 
@@ -1208,7 +1267,7 @@ def get_raw_messages(request, course_id: str = "all"):
                 'timestamp': msg.timestamp.isoformat(),
                 'username': msg.thread.user.username,
                 'activity_title': msg.thread.activity.title,
-                'thread_id': msg.thread.id,
+                'thread_id': str(msg.thread.id),
                 'message_number': msg.message_number
             })
         

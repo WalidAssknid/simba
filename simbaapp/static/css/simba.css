@@ -2804,10 +2804,12 @@ body.home-page {
   font-weight: 600;
   font-size: 1.1rem;
   transition: all 0.2s ease;
+  text-decoration: none;
 }
 
 .btn-hero-primary:hover {
   background-color: var(--primary-light);
+  color: white;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(214, 64, 0, 0.3);
 }
@@ -2821,6 +2823,7 @@ body.home-page {
   font-weight: 600;
   font-size: 1.1rem;
   transition: all 0.2s ease;
+  text-decoration: none;
 }
 
 .btn-hero-secondary:hover {
@@ -2837,22 +2840,15 @@ body.home-page {
 .hero-icon {
   width: 200px;
   height: 200px;
-  background: white;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 5rem;
-  color: white;
-  box-shadow: 0 20px 40px rgba(214, 64, 0, 0.2);
-  padding: 20px;
+  padding: 0;
 }
 
 .hero-logo {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
+  width: 200px;
+  height: 200px;
   object-fit: contain;
 }
 
@@ -2980,7 +2976,12 @@ body.home-page {
   }
 
   .mobile-nav-toggle {
-    display: block;
+    display: none;
+  }
+
+  /* Home page specific: center navigation brand */
+  body.home-page .nav-container {
+    justify-content: center;
   }
 
   .hero-container {
@@ -3024,6 +3025,11 @@ body.home-page {
     grid-template-columns: 1fr;
   }
 
+  /* Home page specific: center manual actions */
+  body.home-page .manual-actions {
+    justify-content: center;
+  }
+
   .papers-grid {
     grid-template-columns: 1fr;
   }
@@ -3037,6 +3043,25 @@ body.home-page {
     grid-template-columns: 1fr;
     gap: 40px;
     text-align: center;
+  }
+
+  /* Home page specific: force single-column about section and center content */
+  body.home-page .about-section .about-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+    text-align: center;
+    justify-items: center;
+  }
+
+  /* Home page specific: center about text */
+  body.home-page .about-section .about-text {
+    text-align: center;
+  }
+
+  /* Home page specific: center IRIT logo */
+  body.home-page .about-section .about-visual {
+    margin: auto;
   }
 
   .about-stats {
@@ -3053,6 +3078,24 @@ body.home-page {
   .footer-links {
     grid-template-columns: 1fr;
     gap: 30px;
+  }
+
+  /* Home page specific: stack footer columns and center */
+  body.home-page .home-footer .footer-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    text-align: center;
+  }
+
+  body.home-page .home-footer .footer-links {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  body.home-page .home-footer .footer-column {
+    text-align: center;
   }
 
   .social-links {
@@ -3078,11 +3121,24 @@ body.home-page {
     height: 300px;
   }
 
-  .hero-icon,
-  .about-icon {
+  .hero-icon {
     width: 150px;
     height: 150px;
-    font-size: 3.5rem;
+  }
+
+  .hero-logo {
+    width: 150px;
+    height: 150px;
+  }
+
+  .about-icon {
+    width: 120px;
+    height: 120px;
+  }
+
+  .about-logo {
+    width: 120px;
+    height: 120px;
   }
 
   .partners-grid {
@@ -3171,6 +3227,27 @@ body.home-page {
 .manual-actions {
   display: flex;
   gap: 16px;
+}
+
+.manual-actions .btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.manual-actions .btn-primary:hover {
+  background-color: var(--primary-light);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(214, 64, 0, 0.3);
+}
+
+.manual-actions .btn-secondary {
+  display: none;
 }
 
 .manual-visual {
@@ -3369,22 +3446,15 @@ body.home-page {
 .about-icon {
   width: 150px;
   height: 150px;
-  background: white;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 3.5rem;
-  color: white;
-  box-shadow: 0 20px 40px rgba(214, 64, 0, 0.2);
-  padding: 20px;
+  padding: 0;
 }
 
 .about-logo {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
+  width: 150px;
+  height: 150px;
   object-fit: contain;
 }
 
@@ -3478,5 +3548,24 @@ body.home-page {
 /* Hidden utility class */
 .hidden {
   display: none !important;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .mobile-nav-toggle {
+    display: none;
+  }
+  .nav-container {
+    justify-content: center;
+  }
+  .manual-actions {
+    justify-content: center;
+  }
+  .about-content {
+    justify-items: center;
+  }
+  .footer-links .footer-column {
+    text-align: center;
+  }
 }
 

@@ -11,6 +11,8 @@ class User(models.Model):
     password_hash = models.CharField(max_length=255, null=False)
     created_at = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(blank=True, null=True)
+    is_email_verified = models.BooleanField(default=False)
+    email_verified_at = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
         return self.username
@@ -180,6 +182,51 @@ class ChainlitSession(models.Model):
             models.Index(fields=['is_consumed']),
         ]
 
+
+class EmailVerificationToken(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="email_verification_tokens")
+    token = models.CharField(max_length=32, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = uuid.uuid4().hex
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(hours=24)
+        super().save(*args, **kwargs)
+    
+    def is_valid(self):
+        return not self.is_used and timezone.now() < self.expires_at
+    
+    def __str__(self):
+        return f"Email verification token for {self.user.email}"
+
+
+class PasswordResetToken(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="password_reset_tokens")
+    token = models.CharField(max_length=32, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = uuid.uuid4().hex
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(hours=1)
+        super().save(*args, **kwargs)
+    
+    def is_valid(self):
+        return not self.is_used and timezone.now() < self.expires_at
+    
+    def __str__(self):
+        return f"Password reset token for {self.user.email}"
+
+
 class InviteToken(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     ROLE_CHOICES = [
@@ -199,7 +246,6 @@ class InviteToken(models.Model):
         if not self.token:
             self.token = uuid.uuid4().hex
         if not self.expires_at:
-            # Token expires in 1 day (24 hours)
             self.expires_at = timezone.now() + timedelta(days=1)
         super().save(*args, **kwargs)
     
@@ -224,7 +270,6 @@ class ActivityToken(models.Model):
         if not self.token:
             self.token = uuid.uuid4().hex
         if not self.expires_at:
-            # Token expires in 7 days
             self.expires_at = timezone.now() + timedelta(days=7)
         super().save(*args, **kwargs)
     

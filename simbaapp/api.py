@@ -3,7 +3,8 @@ import django
 import django.apps
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils import timezone
-from .models import User, Course, Activity, Thread, Message, CourseEnrollment, ChainlitSession, InviteToken, ActivityToken
+from django.conf import settings
+from .models import User, Course, Activity, Thread, Message, CourseEnrollment, ChainlitSession, InviteToken, ActivityToken, EmailVerificationToken, PasswordResetToken
 from ninja import Swagger, Router, Schema
 from ninja_extra import NinjaExtraAPI
 from ninja_jwt.controller import NinjaJWTDefaultController
@@ -37,7 +38,12 @@ from .schemas import (
     ActivityFilesResponseSchema,
     ChainlitSessionInitSchema,
     ChainlitSessionResponseSchema,
-    ClusterResponseSchema
+    ClusterResponseSchema,
+    CourseEnrollmentSchema,
+    PasswordResetRequestSchema,
+    PasswordResetSchema,
+    EmailVerificationSchema,
+    ResendVerificationSchema,
 )
 from .eventTracking import (
     accountCreated,
@@ -58,6 +64,7 @@ from .eventTracking import (
     openedCourse,
     sentMessage 
 )
+from .email_utils import send_email_verification, send_password_reset_email
 import time
 
 from django.shortcuts import get_object_or_404
@@ -92,11 +99,14 @@ def register_user(request, payload: UserRegisterSchema):
         user = User.objects.create(
             username=payload.username,
             email=payload.email,
-            password_hash=hashed_password
+            password_hash=hashed_password,
+            is_email_verified=False
         )
         accountCreated(user,time.time())
         
-        # Convert UUID to string for response
+        next_url = request.GET.get('next')
+        send_email_verification(user, next_url)
+        
         user_data = {
             "id": str(user.id),
             "username": user.username,
@@ -114,9 +124,11 @@ def login_user(request, payload: SignInSchema):
     try:
         user = User.objects.get(username=payload.username)
         if check_password(payload.password, user.password_hash):
+            if not user.is_email_verified:
+                return HTTPStatus.UNAUTHORIZED, {"message": "Please verify your email address before logging in."}
+            
             loggedIn(user, time.time())
             
-            # Convert UUID to string for response
             user_data = {
                 "id": str(user.id),
                 "username": user.username,
@@ -129,6 +141,108 @@ def login_user(request, payload: SignInSchema):
         return HTTPStatus.NOT_FOUND, {"message": "User does not exist."}
     except Exception as e:
          return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Login failed: {str(e)}"}
+
+@api.post("/auth/verify-email", response={200: dict, 400: ErrorSchema, 404: ErrorSchema})
+def verify_email(request, payload: EmailVerificationSchema):
+    """
+    Verify user email with token.
+    """
+    try:
+        token = EmailVerificationToken.objects.get(token=payload.token)
+        
+        if not token.is_valid():
+            return HTTPStatus.BAD_REQUEST, {"message": "Invalid or expired verification token."}
+        
+        user = token.user
+        user.is_email_verified = True
+        user.email_verified_at = timezone.now()
+        user.save()
+        
+        token.is_used = True
+        token.save()
+        
+        return HTTPStatus.OK, {"message": "Email verified successfully."}
+        
+    except EmailVerificationToken.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Invalid verification token."}
+    except Exception as e:
+        return HTTPStatus.BAD_REQUEST, {"message": f"Email verification failed: {str(e)}"}
+
+@api.post("/auth/resend-verification", response={200: dict, 400: ErrorSchema, 404: ErrorSchema})
+def resend_verification_email(request, payload: ResendVerificationSchema):
+    """
+    Resend email verification for a user.
+    """
+    try:
+        user = User.objects.get(email=payload.email)
+        
+        if user.is_email_verified:
+            return HTTPStatus.BAD_REQUEST, {"message": "Email is already verified."}
+        
+        EmailVerificationToken.objects.filter(user=user, is_used=False).update(is_used=True)
+        
+        next_url = request.GET.get('next')
+        success = send_email_verification(user, next_url)
+        
+        if success:
+            return HTTPStatus.OK, {"message": "Verification email sent."}
+        else:
+            return HTTPStatus.BAD_REQUEST, {"message": "Failed to send verification email."}
+        
+    except User.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "User not found."}
+    except Exception as e:
+        return HTTPStatus.BAD_REQUEST, {"message": f"Failed to resend verification: {str(e)}"}
+
+@api.post("/auth/password-reset-request", response={200: dict, 404: ErrorSchema, 500: ErrorSchema})
+def request_password_reset(request, payload: PasswordResetRequestSchema):
+    """
+    Request password reset email.
+    """
+    try:
+        user = User.objects.get(email=payload.email)
+        
+        PasswordResetToken.objects.filter(user=user, is_used=False).update(is_used=True)
+        
+        success = send_password_reset_email(user)
+        
+        if success:
+            return HTTPStatus.OK, {"message": "Password reset email sent."}
+        else:
+            return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": "Failed to send password reset email."}
+        
+    except User.DoesNotExist:
+        return HTTPStatus.OK, {"message": "If the email exists, a password reset link has been sent."}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to send password reset: {str(e)}"}
+
+@api.post("/auth/password-reset", response={200: dict, 400: ErrorSchema, 404: ErrorSchema})
+def reset_password(request, payload: PasswordResetSchema):
+    """
+    Reset password with token.
+    """
+    try:
+        if payload.new_password != payload.new_password_confirm:
+            return HTTPStatus.BAD_REQUEST, {"message": "Passwords do not match."}
+        
+        token = PasswordResetToken.objects.get(token=payload.token)
+        
+        if not token.is_valid():
+            return HTTPStatus.BAD_REQUEST, {"message": "Invalid or expired reset token."}
+        
+        user = token.user
+        user.password_hash = make_password(payload.new_password)
+        user.save()
+        
+        token.is_used = True
+        token.save()
+        
+        return HTTPStatus.OK, {"message": "Password reset successfully."}
+        
+    except PasswordResetToken.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Invalid reset token."}
+    except Exception as e:
+        return HTTPStatus.BAD_REQUEST, {"message": f"Password reset failed: {str(e)}"}
 
 @api.put("/users/{user_id}", response={200: UserOutSchema, 400: ErrorSchema, 401: ErrorSchema, 404: ErrorSchema, 409: ErrorSchema})
 def update_user_profile(request, user_id: str, payload: UserUpdateSchema):
@@ -162,7 +276,6 @@ def update_user_profile(request, user_id: str, payload: UserUpdateSchema):
         user.save()
         modifiedProfile(user,{"username" : user.username, "email" : user.email},time.time())
         
-        # Convert UUID to string for response
         user_data = {
             "id": str(user.id),
             "username": user.username,
@@ -254,7 +367,6 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
         user = User.objects.get(id=user_id)
         course = Course.objects.get(id=payload.course_id)
 
-        # Check if user has permission to create activities in this course
         is_owner = course.owner_id == user.id
         enrollment = CourseEnrollment.objects.filter(user=user, course=course).first()
         can_create = is_owner or (enrollment and enrollment.role == 'teacher')
@@ -262,7 +374,6 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
         if not can_create:
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner or teachers can create activities."}
 
-        # Prepare activity data for OpenAI assistant
         activity_data = {
             'title': payload.title or f"Activity for {course.title}",
             'description': payload.description or '',
@@ -281,12 +392,10 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
             'end_date': payload.end_date
         }
         
-        # Prepare files for upload
         files_to_upload = []
         if payload.files:
             for file_base64 in payload.files:
                 try:
-                    # Decode file info from base64 (assuming format: "filename:content_type:base64_content")
                     filename, content_type, content = file_base64.split(':', 2)
                     files_to_upload.append({
                         'filename': filename,
@@ -296,7 +405,6 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
                 except ValueError:
                     return HTTPStatus.BAD_REQUEST, {"message": "Invalid file format. Expected 'filename:content_type:base64_content'"}
         
-        # Create OpenAI assistant
         assistant_result = openai_assistant.create_assistant(activity_data, files_to_upload)
         
         if not assistant_result['success']:
@@ -361,11 +469,9 @@ def update_activity_api(request, activity_id: str, payload: ActivityUpdateSchema
         user = User.objects.get(id=user_id)
         activity = Activity.objects.get(id=activity_id)
         
-        # Check if user is the owner of the activity or the course
         if activity.owner_id != user.id and activity.course.owner_id != user.id:
             return HTTPStatus.FORBIDDEN, {"message": "Only the activity owner or course owner can update this activity."}
         
-        # Update activity fields
         if payload.title is not None:
             activity.title = payload.title
         if payload.description is not None:
@@ -389,7 +495,6 @@ def update_activity_api(request, activity_id: str, payload: ActivityUpdateSchema
         activity.is_visible = payload.is_visible
         activity.allow_redo = payload.allow_redo
         
-        # Handle files
         if payload.files:
             activity.files = payload.files
         
@@ -412,7 +517,6 @@ def delete_activity_api(request, activity_id: str, user_id: str):
         user = User.objects.get(id=user_id)
         activity = Activity.objects.get(id=activity_id)
         
-        # Check if user is the owner of the activity or the course
         if activity.owner_id != user.id and activity.course.owner_id != user.id:
             return HTTPStatus.FORBIDDEN, {"message": "Only the activity owner or course owner can delete this activity."}
         
@@ -1697,7 +1801,7 @@ def generate_invite_token(request, course_id: str, role: str):
         
         if existing_token:
             # Return the existing valid token instead of creating a new one
-            invite_url = f"{request.build_absolute_uri('/').rstrip('/')}/courses/invite/{existing_token.token}"
+            invite_url = f"{settings.BASE_URL}/courses/invite/{existing_token.token}"
             return HTTPStatus.CREATED, {
                 "token": existing_token.token,
                 "invite_url": invite_url,
@@ -1713,7 +1817,7 @@ def generate_invite_token(request, course_id: str, role: str):
         )
         
         # Generate the invite URL
-        invite_url = f"{request.build_absolute_uri('/').rstrip('/')}/courses/invite/{invite_token.token}"
+        invite_url = f"{settings.BASE_URL}/courses/invite/{invite_token.token}"
         
         return HTTPStatus.CREATED, {
             "token": invite_token.token,
@@ -1756,7 +1860,7 @@ def generate_activity_token(request, activity_id: str):
         
         if existing_token:
             # Return the existing valid token instead of creating a new one
-            activity_url = f"{request.build_absolute_uri('/').rstrip('/')}/activities/join/{existing_token.token}"
+            activity_url = f"{settings.BASE_URL}/activities/join/{existing_token.token}"
             return HTTPStatus.CREATED, {
                 "token": existing_token.token,
                 "activity_url": activity_url,
@@ -1772,7 +1876,7 @@ def generate_activity_token(request, activity_id: str):
         )
         
         # Generate the activity URL
-        activity_url = f"{request.build_absolute_uri('/').rstrip('/')}/activities/join/{activity_token.token}"
+        activity_url = f"{settings.BASE_URL}/activities/join/{activity_token.token}"
         
         return HTTPStatus.CREATED, {
             "token": activity_token.token,

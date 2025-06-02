@@ -46,10 +46,10 @@
                     </a>
             {% else %}
                 <a href="{% url 'login' %}" class="sidebar-item {% if request.resolver_match.url_name == 'login' %}active{% endif %}">
-                    <i class="fas fa-sign-in-alt"></i> Login
+                    Login
                 </a>
                 <a href="{% url 'register' %}" class="sidebar-item {% if request.resolver_match.url_name == 'register' %}active{% endif %}">
-                    <i class="fas fa-user-plus"></i> Register
+                    Register
                 </a>
             {% endif %}
         </div>

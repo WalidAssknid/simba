@@ -5,13 +5,14 @@ import urllib
 import requests
 from django.urls import reverse
 from django.conf import settings
-from .models import User, Course, Activity, CourseEnrollment, Message, Thread, ChainlitSession, InviteToken, ActivityToken
+from .models import User, Course, Activity, CourseEnrollment, Message, Thread, ChainlitSession, InviteToken, ActivityToken, EmailVerificationToken, PasswordResetToken
 import json
 import logging
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
 import uuid
+from django.utils import timezone
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -106,6 +107,172 @@ def register_view(request):
     next_url = request.GET.get('next')
     context = {'next_url': next_url} if next_url else {}
     return render(request, 'register.html', context)
+
+def verify_email_view(request, token):
+    """
+    Handle email verification via URL
+    """
+    try:
+        verification_token = EmailVerificationToken.objects.get(token=token)
+        
+        if not verification_token.is_valid():
+            messages.error(request, "This verification link has expired. Please request a new one.")
+            return redirect('resend_verification')
+        
+        user = verification_token.user
+        user.is_email_verified = True
+        user.email_verified_at = timezone.now()
+        user.save()
+        
+        verification_token.is_used = True
+        verification_token.save()
+        
+        messages.success(request, "Your email has been verified successfully! You can now log in.")
+        
+        # Check for next parameter to redirect after verification
+        next_url = request.GET.get('next')
+        if next_url:
+            # Log the user in automatically and redirect
+            request.session['user_id'] = str(user.id)
+            request.session['username'] = user.username
+            return redirect(next_url)
+            
+        return redirect('login')
+        
+    except EmailVerificationToken.DoesNotExist:
+        messages.error(request, "Invalid verification link.")
+        return redirect('login')
+    except Exception as e:
+        logger.error(f"Email verification error: {str(e)}")
+        messages.error(request, "An error occurred during email verification.")
+        return redirect('login')
+
+def resend_verification_view(request):
+    """
+    Resend email verification
+    """
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        
+        api_url = request.build_absolute_uri(reverse('api-1.0.0:resend_verification_email'))
+        
+        try:
+            response = requests.post(api_url, json={'email': email})
+            response_data = response.json()
+            
+            if response.status_code == 200:
+                messages.success(request, "Verification email sent! Please check your inbox.")
+            else:
+                messages.error(request, response_data.get('message', 'Failed to send verification email.'))
+                
+        except requests.exceptions.RequestException as e:
+            messages.error(request, "Failed to send verification email. Please try again.")
+        except Exception as e:
+            messages.error(request, f"An unexpected error occurred: {str(e)}")
+    
+    return render(request, 'resend_verification.html')
+
+def password_reset_request_view(request):
+    """
+    Request password reset
+    """
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        
+        api_url = request.build_absolute_uri(reverse('api-1.0.0:request_password_reset'))
+        
+        try:
+            response = requests.post(api_url, json={'email': email})
+            response_data = response.json()
+            
+            if response.status_code == 200:
+                messages.success(request, "If your email is registered, you will receive a password reset link.")
+                return redirect('login')
+            else:
+                messages.error(request, response_data.get('message', 'Failed to send password reset email.'))
+                
+        except requests.exceptions.RequestException as e:
+            messages.error(request, "Failed to send password reset email. Please try again.")
+        except Exception as e:
+            messages.error(request, f"An unexpected error occurred: {str(e)}")
+    
+    return render(request, 'password_reset_request.html')
+
+def password_reset_view(request, token):
+    """
+    Reset password with token
+    """
+    try:
+        reset_token = PasswordResetToken.objects.get(token=token)
+        
+        if not reset_token.is_valid():
+            messages.error(request, "This password reset link has expired. Please request a new one.")
+            return redirect('password_reset_request')
+        
+        if request.method == 'POST':
+            new_password = request.POST.get('new_password')
+            new_password_confirm = request.POST.get('new_password_confirm')
+            
+            if new_password != new_password_confirm:
+                messages.error(request, "Passwords do not match.")
+                return render(request, 'password_reset.html', {'token': token})
+            
+            api_url = request.build_absolute_uri(reverse('api-1.0.0:reset_password'))
+            
+            try:
+                response = requests.post(api_url, json={
+                    'token': token,
+                    'new_password': new_password,
+                    'new_password_confirm': new_password_confirm
+                })
+                response_data = response.json()
+                
+                if response.status_code == 200:
+                    messages.success(request, "Your password has been reset successfully! You can now log in.")
+                    return redirect('login')
+                else:
+                    messages.error(request, response_data.get('message', 'Failed to reset password.'))
+                    
+            except requests.exceptions.RequestException as e:
+                messages.error(request, "Failed to reset password. Please try again.")
+            except Exception as e:
+                messages.error(request, f"An unexpected error occurred: {str(e)}")
+        
+        return render(request, 'password_reset.html', {'token': token})
+        
+    except PasswordResetToken.DoesNotExist:
+        messages.error(request, "Invalid password reset link.")
+        return redirect('password_reset_request')
+    except Exception as e:
+        logger.error(f"Password reset error: {str(e)}")
+        messages.error(request, "An error occurred during password reset.")
+        return redirect('password_reset_request')
+
+def email_verification_status_view(request):
+    """
+    Show email verification status page
+    """
+    if not request.session.get('user_id'):
+        return redirect('login')
+    
+    user_id = request.session.get('user_id')
+    try:
+        user = User.objects.get(id=user_id)
+        
+        if user.is_email_verified:
+            # User is verified, redirect to intended destination
+            next_url = request.GET.get('next', '/courses/')
+            return redirect(next_url)
+        
+        context = {
+            'user': user,
+            'next_url': request.GET.get('next', '/courses/')
+        }
+        return render(request, 'email_verification_status.html', context)
+        
+    except User.DoesNotExist:
+        request.session.flush()
+        return redirect('login')
 
 def chainlit_view(request):
     logger.info(f"Asked for the chainlit view")
@@ -454,6 +621,11 @@ def invite_join_view(request, token):
         
         user_id = request.session.get('user_id')
         user = User.objects.get(id=user_id)
+        
+        # Check if email is verified
+        if not user.is_email_verified:
+            return redirect(f'/email-verification-status/?next=/courses/invite/{token}')
+        
         course = invite_token.course
         
         # Check if user can join more courses
@@ -508,6 +680,11 @@ def activity_join_view(request, token):
         
         user_id = request.session.get('user_id')
         user = User.objects.get(id=user_id)
+        
+        # Check if email is verified
+        if not user.is_email_verified:
+            return redirect(f'/email-verification-status/?next=/activities/join/{token}')
+        
         activity = activity_token.activity
         course = activity.course
         

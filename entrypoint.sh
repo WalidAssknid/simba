@@ -13,6 +13,7 @@ import django
 django.setup()
 from django.contrib.auth.hashers import make_password
 from simbaapp.models import User, Course, Activity, CourseEnrollment
+from django.utils import timezone
 
 # Check if user already exists
 if not User.objects.filter(username='prof').exists():
@@ -23,12 +24,21 @@ if not User.objects.filter(username='prof').exists():
     teacher = User.objects.create(
         username='prof',
         email='prof@gmail.com',
-        password_hash=password_hash
+        password_hash=password_hash,
+        is_email_verified=True,
+        email_verified_at=timezone.now()
     )
-    print('Default teacher user created successfully')
+    print('Default teacher user created successfully (email verified)')
 else:
     teacher = User.objects.get(username='prof')
-    print('Default teacher user already exists')
+    # Ensure existing teacher is verified
+    if not teacher.is_email_verified:
+        teacher.is_email_verified = True
+        teacher.email_verified_at = timezone.now()
+        teacher.save()
+        print('Default teacher user verified')
+    else:
+        print('Default teacher user already exists and verified')
 
 # Check if default student exists
 if not User.objects.filter(username='student').exists():
@@ -39,12 +49,21 @@ if not User.objects.filter(username='student').exists():
     student = User.objects.create(
         username='student',
         email='student@gmail.com',
-        password_hash=password_hash
+        password_hash=password_hash,
+        is_email_verified=True,
+        email_verified_at=timezone.now()
     )
-    print('Default student user created successfully')
+    print('Default student user created successfully (email verified)')
 else:
     student = User.objects.get(username='student')
-    print('Default student user already exists')
+    # Ensure existing student is verified
+    if not student.is_email_verified:
+        student.is_email_verified = True
+        student.email_verified_at = timezone.now()
+        student.save()
+        print('Default student user verified')
+    else:
+        print('Default student user already exists and verified')
 
 # Create default course by teacher if it doesn't exist
 if not Course.objects.filter(title='Thermodynamics Course').exists():

@@ -30,6 +30,20 @@ class UserUpdateSchema(Schema):
     new_password: Optional[str] = None
     new_password_confirm: Optional[str] = None
 
+class PasswordResetRequestSchema(Schema):
+    email: EmailStr
+
+class PasswordResetSchema(Schema):
+    token: str
+    new_password: str
+    new_password_confirm: str
+
+class EmailVerificationSchema(Schema):
+    token: str
+
+class ResendVerificationSchema(Schema):
+    email: EmailStr
+
 # --- Chainlit Session Schemas ---
 
 class ChainlitSessionInitSchema(Schema):

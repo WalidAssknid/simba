@@ -60,7 +60,7 @@ print_success "Docker and Docker Compose are available"
 
 # Production configuration
 ENVIRONMENT="production"
-COMPOSE_FILE="docker-compose.yml"
+COMPOSE_FILE="docker-compose.prod.yml"
 ENV_FILE=".env"
 HOST_CHECK="simba-refact.irit.fr"
 
@@ -99,6 +99,29 @@ sleep 15
 
 print_step "Running database migrations..."
 ENVIRONMENT=production docker compose -f $COMPOSE_FILE exec -T web python manage.py migrate
+
+print_step "Setting all users as email verified for production..."
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE exec -T web python -c "
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
+import django
+django.setup()
+from django.utils import timezone
+from simbaapp.models import User
+
+# Mark all users as email verified
+users_updated = User.objects.filter(is_email_verified=False).update(
+    is_email_verified=True,
+    email_verified_at=timezone.now()
+)
+
+print(f'✅ Marked {users_updated} users as email verified')
+
+# Show user status
+total_users = User.objects.count()
+verified_users = User.objects.filter(is_email_verified=True).count()
+print(f'📊 Total users: {total_users}, Verified: {verified_users}')
+"
 
 print_step "Collecting static files..."
 ENVIRONMENT=production docker compose -f $COMPOSE_FILE exec -T web python manage.py collectstatic --noinput

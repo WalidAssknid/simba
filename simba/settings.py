@@ -181,3 +181,15 @@ else:
 #     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
 #     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 # }
+
+# Email configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL')
+EMAIL_HOST_PASSWORD = os.getenv('EMAILAPPPWD')
+DEFAULT_FROM_EMAIL = os.getenv('EMAIL')
+
+# Base URL for email links
+BASE_URL = os.getenv('BASE_URL', 'http://localhost:8000' if ENVIRONMENT == 'development' else 'https://simba-refact.irit.fr')

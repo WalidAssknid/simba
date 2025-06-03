@@ -1360,9 +1360,9 @@ def get_raw_messages(request, course_id: str = "all"):
             course = Course.objects.get(id=course_id)
             messages_query = Message.objects.filter(
                 thread__activity__course=course
-            ).select_related('thread__user', 'thread__activity').order_by('-timestamp')
+            ).select_related('thread__user', 'thread__activity', 'thread__activity__course').order_by('-timestamp')
         else:
-            messages_query = Message.objects.all().select_related('thread__user', 'thread__activity').order_by('-timestamp')
+            messages_query = Message.objects.all().select_related('thread__user', 'thread__activity', 'thread__activity__course').order_by('-timestamp')
         
         messages = []
         for msg in messages_query:
@@ -1372,6 +1372,7 @@ def get_raw_messages(request, course_id: str = "all"):
                 'timestamp': msg.timestamp.isoformat(),
                 'username': msg.thread.user.username,
                 'activity_title': msg.thread.activity.title,
+                'course_title': msg.thread.activity.course.title,
                 'thread_id': str(msg.thread.id),
                 'message_number': msg.message_number
             })

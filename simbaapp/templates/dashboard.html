@@ -1024,7 +1024,8 @@
   <thead>
     <tr>
       <th>User</th>
-            <th>Activity</th>
+      <th>Course</th>
+      <th>Activity</th>
       <th>Role</th>
       <th>Timestamp</th>
       <th>Content</th>
@@ -1034,14 +1035,15 @@
           {% for msg in raw_messages %}
       <tr>
         <td>{{ msg.thread.user.username }}</td>
-            <td>{{ msg.thread.activity.title }}</td>
+        <td>{{ msg.thread.activity.course.title }}</td>
+        <td>{{ msg.thread.activity.title }}</td>
         <td>{{ msg.role }}</td>
         <td>{{ msg.timestamp }}</td>
         <td>{{ msg.content|truncatechars:100 }}</td>
       </tr>
     {% empty %}
           <tr>
-            <td colspan="5">No messages available</td>
+            <td colspan="6">No messages available</td>
           </tr>
     {% endfor %}
   </tbody>
@@ -2292,11 +2294,12 @@
           return;
         }
         
-        const headers = ['Role', 'Content', 'Timestamp', 'Activity', 'Thread ID', 'Message Number', 'Username'];
+        const headers = ['Role', 'Content', 'Timestamp', 'Course', 'Activity', 'Thread ID', 'Message Number', 'Username'];
         const rows = data.messages.map(msg => [
           `"${msg.role || ''}"`,
           `"${(msg.content || '').replace(/"/g, '""')}"`,
           `"${msg.timestamp || new Date().toISOString()}"`,
+          `"${msg.course_title || 'Unknown Course'}"`,
           `"${msg.activity_title || 'Unknown Activity'}"`,
           `"${msg.thread_id || ''}"`,
           `"${msg.message_number || ''}"`,
@@ -2318,18 +2321,19 @@
       
     function exportTableData() {
       try {
-        const headers = ['Role', 'Content', 'Timestamp', 'Activity', 'Thread ID', 'Message Number', 'Username'];
+        const headers = ['Role', 'Content', 'Timestamp', 'Course', 'Activity', 'Thread ID', 'Message Number', 'Username'];
         
         const processedRows = rows.map(row => {
           const cells = Array.from(row.querySelectorAll('td'));
           
           return [
-            `"${cells[2].textContent.replace(/"/g, '""')}"`,
-            `"${cells[4].textContent.replace(/"/g, '""')}"`,
-            `"${cells[3].textContent.replace(/"/g, '""')}"`,
-            `"${cells[1].textContent.replace(/"/g, '""')}"`,
+            `"${cells[3].textContent.replace(/"/g, '""')}"`, 
+            `"${cells[5].textContent.replace(/"/g, '""')}"`,
+            `"${cells[4].textContent.replace(/"/g, '""')}"`, 
+            `"${cells[1].textContent.replace(/"/g, '""')}"`, 
+            `"${cells[2].textContent.replace(/"/g, '""')}"`, 
             `""`,
-            `""`,
+            `""`, 
             `"${cells[0].textContent.replace(/"/g, '""')}"`,
           ];
         });

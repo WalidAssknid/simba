@@ -68,6 +68,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'simba.middleware.LanguageMiddleware',
+    'simba.middleware.ErrorEmailMiddleware',
 ]
 
 # Allow iframe embedding
@@ -193,3 +194,67 @@ DEFAULT_FROM_EMAIL = os.getenv('EMAIL')
 
 # Base URL for email links
 BASE_URL = os.getenv('BASE_URL', 'http://localhost:8000' if ENVIRONMENT == 'development' else 'https://simba-refact.irit.fr')
+
+# Error email configuration
+ADMINS = [
+    ('SIMBA Admin', os.getenv('EMAIL')),
+]
+MANAGERS = ADMINS
+
+# Send error emails only in production or when DEBUG is False
+SEND_BROKEN_LINK_EMAILS = not DEBUG
+SERVER_EMAIL = os.getenv('EMAIL')
+
+# Logging configuration for error emails
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'mail_admins': {
+            'level': 'ERROR',
+            'class': 'django.utils.log.AdminEmailHandler',
+            'formatter': 'verbose',
+            'include_html': True,
+        },
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'django_errors.log',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'mail_admins'] if not DEBUG else ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['mail_admins'] if not DEBUG else ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'simbaapp': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

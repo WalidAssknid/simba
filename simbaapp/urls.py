@@ -34,4 +34,7 @@ urlpatterns = [
     path('admin-dashboard/users/<uuid:user_id_to_delete>/delete/', views.admin_delete_user, name='admin_delete_user'),
     path('admin-dashboard/courses/<uuid:course_id>/delete/', views.admin_delete_course, name='admin_delete_course'),
     path('admin-dashboard/activities/<uuid:activity_id>/delete/', views.admin_delete_activity, name='admin_delete_activity'),
+    
+    # Test error endpoint (remove in production)
+    path('test-error/', views.test_error_view, name='test_error'),
 ]

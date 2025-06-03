@@ -10,7 +10,7 @@ import json
 import logging
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 import uuid
 from django.utils import timezone
 
@@ -1728,3 +1728,18 @@ def admin_delete_activity(request, activity_id):
         messages.error(request, f"Error deleting activity: {str(e)}")
     
     return redirect('admin_activities')
+
+# Test endpoint to verify error email functionality (remove in production)
+def test_error_view(request):
+    """
+    Test view to trigger a 500 error for testing email notifications.
+    This should be removed or secured in production.
+    """
+    if not settings.DEBUG:
+        # Only allow in debug mode or for admin users
+        user = User.objects.filter(id=request.session.get('user_id')).first()
+        if not user or not user.is_admin:
+            return HttpResponseForbidden("Access denied")
+    
+    # Deliberately raise an exception to test error email
+    raise Exception("Test error triggered to verify email notification system is working correctly.")

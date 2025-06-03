@@ -381,6 +381,13 @@ main.container {
   margin-right: 12px;
 }
 
+.sidebar-item.admin-only {
+  text-align: center;
+  justify-content: center;
+  display: flex;
+  align-items: center;
+}
+
 .sidebar-section {
   margin-top: 24px;
   padding: 0 16px;

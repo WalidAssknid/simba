@@ -245,25 +245,84 @@
     border-radius: 12px;
     background: linear-gradient(to right, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.6) 100%);
     backdrop-filter: blur(5px);
+    cursor: grab;
+  }
+  
+  .word-cloud:active {
+    cursor: grabbing;
+  }
+  
+  .word-cloud svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
   }
   
   .word {
-    position: absolute;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: text-shadow 0.1s ease, letter-spacing 0.1s ease, filter 0.1s ease; /* Faster, more specific transition */
     text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
     font-family: 'Arial', sans-serif;
-    white-space: nowrap;
     user-select: none;
-    z-index: 1;
     letter-spacing: 0.5px;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transform-origin: center center;
+    transform-box: fill-box;
+    transform: rotate(var(--word-rotation, 0deg)); 
   }
   
   .word:hover {
-    transform: scale(1.15) !important;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.15);
-    z-index: 10 !important;
-    letter-spacing: 1px;
+    /* No scale, only subtle shadow and spacing changes */
+    transform: rotate(var(--word-rotation, 0deg)); /* Keep initial rotation */
+    text-shadow: 2px 2px 3px rgba(0,0,0,0.2);
+    letter-spacing: 0.75px;
+    filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.2));
+  }
+  
+  .zoom-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    z-index: 10;
+  }
+  
+  .zoom-btn {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    transition: all 0.2s;
+    backdrop-filter: blur(5px);
+  }
+  
+  .zoom-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  .zoom-info {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #666;
+    z-index: 10;
+    backdrop-filter: blur(5px);
   }
   
   .word-details {
@@ -532,6 +591,25 @@
     .word-cloud-container {
       height: 300px;
       margin-bottom: 20px;
+    }
+    
+    .zoom-controls {
+      top: 5px;
+      right: 5px;
+      gap: 3px;
+    }
+    
+    .zoom-btn {
+      width: 35px;
+      height: 35px;
+      font-size: 16px;
+    }
+    
+    .zoom-info {
+      bottom: 5px;
+      left: 5px;
+      padding: 6px 10px;
+      font-size: 11px;
     }
     
     .word-details {
@@ -969,7 +1047,19 @@
     
     <div id="word-cloud-spinner" class="spinner"></div>
     <div id="word-cloud-container" class="word-cloud-container">
-      <div id="word-cloud" class="word-cloud"></div>
+      <div id="word-cloud" class="word-cloud">
+        <svg id="word-cloud-svg">
+          <g id="word-cloud-group"></g>
+        </svg>
+      </div>
+      <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoomIn()" title="Zoom In">+</button>
+        <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+        <button class="zoom-btn" onclick="resetZoom()" title="Reset View">⌂</button>
+      </div>
+      <div class="zoom-info">
+        <span id="zoom-level">100%</span> | Drag to pan
+      </div>
     </div>
   </div>
   
@@ -1142,6 +1232,7 @@
     } else if (activeTabName === 'student-engagement') {
       setTimeout(() => {
         loadWordCloud();
+        initializeWordCloudControls();
       }, 100);
     } else if (activeTabName === 'student-stats') {
       if (selectedStudentId && currentViewAs === 'teacher') {
@@ -1354,6 +1445,7 @@
         updateConversationStats();
       } else if (tabId === 'student-engagement') {
         loadWordCloud();
+        initializeWordCloudControls();
       } else if (tabId === 'student-stats' && '{{ view_as }}' === 'student') {
         // Load student data when switching to student-stats tab in student view
         setTimeout(() => {
@@ -2375,12 +2467,130 @@
   }
   
   let wordCloudData = null;
+  let currentZoom = 1;
+  let currentTranslate = { x: 0, y: 0 };
+  let isDragging = false;
+  let dragStart = { x: 0, y: 0 };
+  let lastTranslate = { x: 0, y: 0 };
   
   const vibrantColors = [
     '#FF5F7E', '#36B5FF', '#5D5FEF', '#00CFB4', '#FF9F45',
     '#6979F8', '#FF7D51', '#00C2A8', '#FF65A3', '#AF52DE',
     '#47E6B1', '#FFC55C', '#7474BF', '#19D3F3', '#FD5B8F'
   ];
+  
+  function initializeWordCloudControls() {
+    const svg = document.getElementById('word-cloud-svg');
+    const container = document.getElementById('word-cloud');
+    
+    if (!svg || !container) return;
+    
+    container.addEventListener('mousedown', function(e) {
+      isDragging = true;
+      dragStart.x = e.clientX;
+      dragStart.y = e.clientY;
+      lastTranslate.x = currentTranslate.x;
+      lastTranslate.y = currentTranslate.y;
+      container.style.cursor = 'grabbing';
+    });
+    
+    document.addEventListener('mousemove', function(e) {
+      if (!isDragging) return;
+      
+      const deltaX = e.clientX - dragStart.x;
+      const deltaY = e.clientY - dragStart.y;
+      
+      currentTranslate.x = lastTranslate.x + deltaX;
+      currentTranslate.y = lastTranslate.y + deltaY;
+      
+      updateTransform();
+    });
+    
+    document.addEventListener('mouseup', function() {
+      isDragging = false;
+      const container = document.getElementById('word-cloud');
+      if (container) container.style.cursor = 'grab';
+    });
+    
+    container.addEventListener('touchstart', function(e) {
+      if (e.touches.length === 1) {
+        isDragging = true;
+        dragStart.x = e.touches[0].clientX;
+        dragStart.y = e.touches[0].clientY;
+        lastTranslate.x = currentTranslate.x;
+        lastTranslate.y = currentTranslate.y;
+      }
+    });
+    
+    container.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      if (!isDragging || e.touches.length !== 1) return;
+      
+      const deltaX = e.touches[0].clientX - dragStart.x;
+      const deltaY = e.touches[0].clientY - dragStart.y;
+      
+      currentTranslate.x = lastTranslate.x + deltaX;
+      currentTranslate.y = lastTranslate.y + deltaY;
+      
+      updateTransform();
+    });
+    
+    container.addEventListener('touchend', function() {
+      isDragging = false;
+    });
+  }
+  
+  function updateTransform() {
+    const group = document.getElementById('word-cloud-group');
+    if (group) {
+      group.setAttribute('transform', `translate(${currentTranslate.x}, ${currentTranslate.y}) scale(${currentZoom})`);
+      updateZoomInfo();
+    }
+  }
+  
+  function updateZoomInfo() {
+    const zoomLevel = document.getElementById('zoom-level');
+    if (zoomLevel) {
+      zoomLevel.textContent = `${Math.round(currentZoom * 100)}%`;
+    }
+  }
+  
+  function zoomIn() {
+    const container = document.getElementById('word-cloud');
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    zoomToPoint(centerX, centerY, 1.5);
+  }
+  
+  function zoomOut() {
+    const container = document.getElementById('word-cloud');
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    zoomToPoint(centerX, centerY, 0.67);
+  }
+  
+  function resetZoom() {
+    currentZoom = 1;
+    currentTranslate.x = 0;
+    currentTranslate.y = 0;
+    updateTransform();
+  }
+  
+  function zoomToPoint(pointX, pointY, zoomFactor) {
+    const newZoom = Math.max(0.1, Math.min(10, currentZoom * zoomFactor));
+    
+    const worldX = (pointX - currentTranslate.x) / currentZoom;
+    const worldY = (pointY - currentTranslate.y) / currentZoom;
+    
+    currentZoom = newZoom;
+    
+    currentTranslate.x = pointX - worldX * currentZoom;
+    currentTranslate.y = pointY - worldY * currentZoom;
+    
+    updateTransform();
+  }
   
   function loadWordCloud() {
     let courseId = document.getElementById('course-filter').value;
@@ -2394,10 +2604,28 @@
     const spinner = document.getElementById('word-cloud-spinner');
     const wordCloudContainer = document.getElementById('word-cloud');
     
-    spinner.style.display = 'block';
-    wordCloudContainer.innerHTML = '';
+    if (!wordCloudContainer) {
+      console.error('Word cloud container not found');
+      return;
+    }
     
-    document.getElementById('word-details').innerHTML = '<p>Loading word data...</p>';
+    const svg = document.getElementById('word-cloud-svg');
+    const group = document.getElementById('word-cloud-group');
+    if (!svg || !group) {
+      console.error('Word cloud SVG structure not found, reinitializing...');
+      wordCloudContainer.innerHTML = `
+        <svg id="word-cloud-svg">
+          <g id="word-cloud-group"></g>
+        </svg>
+      `;
+    }
+    
+    spinner.style.display = 'block';
+    
+    const wordDetails = document.getElementById('word-details');
+    if (wordDetails) {
+      wordDetails.innerHTML = '<p>Loading word data...</p>';
+    }
     
     fetch(`/api/dashboard/word_frequencies/?course_id=${courseId}&min_word_length=${minWordLength}&max_words=${maxWords}`)
       .then(response => response.json())
@@ -2408,18 +2636,46 @@
         console.log("Word cloud data received:", data);
         
         if (data.error) {
-          wordCloudContainer.innerHTML = `<p class="error">Error generating word cloud: ${data.error}</p>`;
+          const group = document.getElementById('word-cloud-group');
+          if (group) {
+            group.innerHTML = '';
+            const svg = document.getElementById('word-cloud-svg');
+            if (svg) {
+              svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">Error: ${data.error}</text>`;
+            }
+          }
           console.error("Error in word cloud data:", data.error);
           return;
         }
         
         if (!data.words || data.words.length === 0) {
-          wordCloudContainer.innerHTML = '<p>No word data available. Please ensure there are enough student messages.</p>';
+          const group = document.getElementById('word-cloud-group');
+          if (group) {
+            group.innerHTML = '';
+            const svg = document.getElementById('word-cloud-svg');
+            if (svg) {
+              svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">No word data available. Please ensure there are enough student messages.</text>';
+            }
+          }
           console.log("No word data available");
           return;
         }
         
-        visualizeWordCloud(data.words);
+        try {
+          visualizeWordCloud(data.words);
+        } catch (error) {
+          console.error('Error visualizing word cloud:', error);
+          const group = document.getElementById('word-cloud-group');
+          const svg = document.getElementById('word-cloud-svg');
+          if (svg) {
+            if (group) group.innerHTML = '';
+            const errorMessage = error.message ? String(error.message).replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'Unknown error';
+            svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#cc0000" font-size="12px" style="font-family: sans-serif;">
+                              <tspan x="50%" dy="-0.6em">Error visualizing word cloud:</tspan>
+                              <tspan x="50%" dy="1.2em">${errorMessage}</tspan>
+                           </text>`;
+          }
+        }
         
         if (clusterData) {
           updateScatterPlot();
@@ -2429,7 +2685,14 @@
       })
       .catch(error => {
         spinner.style.display = 'none';
-        wordCloudContainer.innerHTML = `<p class="error">Error loading word cloud: ${error}</p>`;
+        const group = document.getElementById('word-cloud-group');
+        if (group) {
+          group.innerHTML = '';
+          const svg = document.getElementById('word-cloud-svg');
+          if (svg) {
+            svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">Error loading word cloud: ${error}</text>`;
+          }
+        }
         console.error('Error fetching word frequencies:', error);
       });
   }
@@ -2453,11 +2716,19 @@
   }
   
   function visualizeWordCloud(words) {
-    const container = document.getElementById('word-cloud');
+    const container = document.getElementById('word-cloud-group');
+    if (!container) {
+      console.error('Word cloud group element not found');
+      return;
+    }
+    
     container.innerHTML = '';
     
     if (!words || words.length === 0) {
-      container.innerHTML = '<p>No words available for visualization.</p>';
+      const svg = document.getElementById('word-cloud-svg');
+      if (svg) {
+        svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">No words available for visualization.</text>';
+      }
       return;
     }
     
@@ -2465,172 +2736,170 @@
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
     
-    const normalizedRange = maxValue - minValue;
-    const effectiveMinValue = normalizedRange > 5 ? minValue : Math.max(1, minValue - 2);
-    const effectiveMaxValue = normalizedRange > 5 ? maxValue : minValue + 5;
+    const containerElement = document.getElementById('word-cloud');
+    if (!containerElement) {
+      console.error('Word cloud container element not found');
+      return;
+    }
     
-    const containerWidth = container.clientWidth || 800;
-    const containerHeight = container.clientHeight || 400;
+    const containerWidth = containerElement.clientWidth || 800;
+    const containerHeight = containerElement.clientHeight || 400;
+    
+    const svg = document.getElementById('word-cloud-svg');
+    if (!svg) {
+      console.error('Word cloud SVG element not found');
+      return;
+    }
+    
+    svg.setAttribute('viewBox', `0 0 ${containerWidth} ${containerHeight}`);
     
     const sortedWords = [...words].sort((a, b) => b.value - a.value);
-    
-    const isMobile = containerWidth < 500;
-    const minFontSize = isMobile ? 10 : 12;
-    const maxFontSize = isMobile ? 24 : 36;
     const placedWords = [];
     
+    const minFontSize = 12;
+    const maxFontSize = Math.min(containerWidth / 8, 60);
+    
+    const centerX = containerWidth / 2;
+    const centerY = containerHeight / 2;
+    
     sortedWords.forEach((word, index) => {
-      const normalizedValue = (word.value - effectiveMinValue) / (effectiveMaxValue - effectiveMinValue);
-      const fontSize = minFontSize + (normalizedValue * (maxFontSize - minFontSize));
+      const normalizedValue = maxValue > minValue ? (word.value - minValue) / (maxValue - minValue) : 0.5;
+      const fontWeightValue = Math.pow(normalizedValue, 1.5);
+      const fontSize = minFontSize + (fontWeightValue * (maxFontSize - minFontSize));
       
       const colorIndex = Math.floor(normalizedValue * (vibrantColors.length - 1));
       const color = vibrantColors[colorIndex];
-
-      const wordElement = document.createElement('div');
-      wordElement.className = 'word';
-      wordElement.textContent = word.text;
-      wordElement.style.fontSize = `${fontSize}px`;
-      wordElement.style.color = color;
-      wordElement.style.fontWeight = normalizedValue > 0.7 ? 'bold' : normalizedValue > 0.4 ? '600' : 'normal';
-      wordElement.style.cursor = 'pointer';
-      wordElement.style.userSelect = 'none';
-      wordElement.style.transition = 'all 0.3s ease';
       
-      if (Math.random() > 0.7) {
-        const rotation = Math.random() * 20 - 10;
-        wordElement.style.transform = `rotate(${rotation}deg)`;
+      const tempText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tempText.textContent = word.text;
+      tempText.setAttribute('font-size', fontSize);
+      tempText.setAttribute('font-family', 'Arial, sans-serif');
+      tempText.setAttribute('font-weight', normalizedValue > 0.7 ? 'bold' : normalizedValue > 0.4 ? '600' : 'normal');
+      tempText.style.visibility = 'hidden';
+      container.appendChild(tempText);
+      
+      const bbox = tempText.getBBox();
+      const wordWidth = bbox.width;
+      const wordHeight = bbox.height;
+      
+      container.removeChild(tempText);
+      
+      let position;
+      if (index === 0) {
+        position = { x: centerX, y: centerY };
+      } else {
+        position = findBestPosition(centerX, centerY, wordWidth, wordHeight, placedWords);
       }
       
-      container.appendChild(wordElement);
-      const rect = wordElement.getBoundingClientRect();
-      const wordWidth = rect.width;
-      const wordHeight = rect.height;
+      const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      textElement.textContent = word.text;
+      textElement.setAttribute('x', position.x);
+      textElement.setAttribute('y', position.y);
+      textElement.setAttribute('font-size', fontSize);
+      textElement.setAttribute('font-family', 'Arial, sans-serif');
+      textElement.setAttribute('font-weight', normalizedValue > 0.7 ? 'bold' : normalizedValue > 0.4 ? '600' : 'normal');
+      textElement.setAttribute('fill', color);
+      textElement.setAttribute('text-anchor', 'middle');
+      textElement.setAttribute('dominant-baseline', 'central');
+      textElement.classList.add('word');
       
-      let position = findNonOverlappingPosition(
-        wordWidth, 
-        wordHeight, 
-        containerWidth, 
-        containerHeight, 
-        placedWords,
-        index
-      );
+      const rotationAngle = (Math.random() > 0.8) ? (Math.random() * 15 - 7.5) : 0;
+      textElement.style.setProperty('--word-rotation', `${rotationAngle}deg`);
       
-      wordElement.style.left = `${position.x}px`;
-      wordElement.style.top = `${position.y}px`;
+      textElement.addEventListener('click', function(e) {
+        e.stopPropagation();
+        showWordDetails(word);
+      });
+      
+      container.appendChild(textElement);
       
       placedWords.push({
-        x: position.x,
-        y: position.y,
+        x: position.x - wordWidth / 2,
+        y: position.y - wordHeight / 2,
         width: wordWidth,
         height: wordHeight,
-        element: wordElement
-      });
-      
-      wordElement.addEventListener('click', () => showWordDetails(word));
-      
-      wordElement.addEventListener('mouseenter', () => {
-        const originalTransform = wordElement.style.transform;
-        wordElement.dataset.originalTransform = originalTransform;
-        wordElement.style.transform = 'scale(1.15)';
-        wordElement.style.zIndex = '10';
-      });
-      
-      wordElement.addEventListener('mouseleave', () => {
-        wordElement.style.transform = wordElement.dataset.originalTransform || '';
-        wordElement.style.zIndex = '1';
+        centerX: position.x,
+        centerY: position.y,
+        element: textElement
       });
     });
     
-    if (words.length > 0) {
+    if (sortedWords.length > 0) {
       showWordDetails(sortedWords[0]);
     }
+    
+    resetZoom();
+    initializeWordCloudControls();
   }
   
-  function findNonOverlappingPosition(wordWidth, wordHeight, containerWidth, containerHeight, placedWords, wordIndex) {
-    const padding = 8;
-    const maxAttempts = 100;
+  function findBestPosition(centerX, centerY, wordWidth, wordHeight, placedWords) {
+    const basePadding = 12;
+    const sizeFactor = Math.max(wordWidth, wordHeight) / 100;
+    const padding = basePadding + (sizeFactor * 8);
     
-    const mobilePadding = containerWidth < 500 ? 15 : padding;
-    const actualPadding = mobilePadding;
+    const maxRadius = Math.min(600, Math.max(centerX, centerY));
+    const radiusStep = 3;
+    const angleStep = 0.5;
     
-    if (wordIndex < 3) {
-      const centerX = (containerWidth - wordWidth) / 2;
-      const centerY = (containerHeight - wordHeight) / 2;
+    let radius = 30;
+    let angle = 0;
+    
+    while (radius < maxRadius) {
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
       
-      if (!checkCollision(centerX, centerY, wordWidth, wordHeight, placedWords, actualPadding)) {
-        return { x: centerX, y: centerY };
-      }
-      
-      const maxRadius = Math.min(containerWidth, containerHeight) / (containerWidth < 500 ? 3 : 2);
-      
-      for (let radius = 50; radius < maxRadius; radius += (containerWidth < 500 ? 20 : 30)) {
-        for (let angle = 0; angle < 360; angle += 45) {
-          const x = centerX + Math.cos(angle * Math.PI / 180) * radius;
-          const y = centerY + Math.sin(angle * Math.PI / 180) * radius;
-          
-          if (x >= 0 && y >= 0 && x + wordWidth <= containerWidth && y + wordHeight <= containerHeight) {
-            if (!checkCollision(x, y, wordWidth, wordHeight, placedWords, actualPadding)) {
-              return { x, y };
-            }
-          }
-        }
-      }
-    }
-    
-    const gridSize = containerWidth < 500 ? 10 : 20;
-    const attempts = [];
-    
-    for (let x = 0; x <= containerWidth - wordWidth; x += gridSize) {
-      for (let y = 0; y <= containerHeight - wordHeight; y += gridSize) {
-        if (!checkCollision(x, y, wordWidth, wordHeight, placedWords, actualPadding)) {
-          const centerX = containerWidth / 2;
-          const centerY = containerHeight / 2;
-          const distance = Math.sqrt(Math.pow(x + wordWidth/2 - centerX, 2) + Math.pow(y + wordHeight/2 - centerY, 2));
-          
-          attempts.push({ x, y, distance });
-        }
-      }
-    }
-    
-    attempts.sort((a, b) => a.distance - b.distance);
-    
-    if (attempts.length > 0) {
-      return { x: attempts[0].x, y: attempts[0].y };
-    }
-    
-    let attempts_count = 0;
-    while (attempts_count < maxAttempts) {
-      const x = Math.random() * Math.max(0, containerWidth - wordWidth);
-      const y = Math.random() * Math.max(0, containerHeight - wordHeight);
-      
-      if (!checkCollision(x, y, wordWidth, wordHeight, placedWords, actualPadding)) {
+      if (!hasCollision(x, y, wordWidth, wordHeight, placedWords, padding)) {
         return { x, y };
       }
-      attempts_count++;
+      
+      angle += angleStep;
+      radius += radiusStep * (angle / (2 * Math.PI));
+      
+      if (angle >= 2 * Math.PI) {
+        angle = 0;
+        radius += radiusStep * 2;
+      }
     }
     
-    const safeX = Math.min(wordIndex * (containerWidth < 500 ? 5 : 10), Math.max(0, containerWidth - wordWidth));
-    const safeY = Math.min(wordIndex * (containerWidth < 500 ? 3 : 5), Math.max(0, containerHeight - wordHeight));
-    
-    return { x: safeX, y: safeY };
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const randomAngle = Math.random() * 2 * Math.PI;
+      const randomRadius = 100 + Math.random() * 200;
+      const x = centerX + Math.cos(randomAngle) * randomRadius;
+      const y = centerY + Math.sin(randomAngle) * randomRadius;
+      
+      if (!hasCollision(x, y, wordWidth, wordHeight, placedWords, padding)) {
+        return { x, y };
+      }
+    }
+
+    const fallbackAngle = Math.random() * 2 * Math.PI;
+    const fallbackRadius = 300 + Math.random() * 100;
+    return {
+      x: centerX + Math.cos(fallbackAngle) * fallbackRadius,
+      y: centerY + Math.sin(fallbackAngle) * fallbackRadius
+    };
   }
   
-  function checkCollision(x, y, width, height, placedWords, padding) {
-    const containerWidth = document.getElementById('word-cloud').clientWidth || 800;
-    const containerHeight = document.getElementById('word-cloud').clientHeight || 400;
-    
-    if (x < 0 || y < 0 || x + width > containerWidth || y + height > containerHeight) {
-      return true;
-    }
+  function hasCollision(x, y, width, height, placedWords, padding) {
+    const left = x - width / 2 - padding;
+    const right = x + width / 2 + padding;
+    const top = y - height / 2 - padding;
+    const bottom = y + height / 2 + padding;
     
     for (let placed of placedWords) {
-      if (x < placed.x + placed.width + padding &&
-          x + width + padding > placed.x &&
-          y < placed.y + placed.height + padding &&
-          y + height + padding > placed.y) {
+      const placedLeft = placed.x - padding;
+      const placedRight = placed.x + placed.width + padding;
+      const placedTop = placed.y - padding;
+      const placedBottom = placed.y + placed.height + padding;
+      
+      if (right > placedLeft && 
+          left < placedRight && 
+          bottom > placedTop && 
+          top < placedBottom) {
         return true;
       }
     }
+    
     return false;
   }
   

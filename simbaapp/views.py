@@ -1241,13 +1241,13 @@ def dashboard_view(request):
         'has_teacher_role': has_teacher_role,
         'has_student_role': has_student_role,
         'has_owner_role': has_owner_role,
-        # Additional role details for better understanding
         'owned_courses_count': owned_courses.count(),
         'teacher_enrollments_count': teacher_enrollments.count(),
         'student_enrollments_count': student_enrollments.count(),
         'is_course_owner': owned_courses.exists(),
         'is_enrolled_teacher': teacher_enrollments.exists(),
         'is_enrolled_student': student_enrollments.exists(),
+        'chainlit_url': settings.CHAINLIT_URL
     }
     
     context['activity_names_json'] = json.dumps(activity_names)
@@ -1357,7 +1357,8 @@ def activities_view(request):
         'courses': all_courses,
         'enrolled_courses': all_courses,
         'user': user,
-        'can_create_activity': can_create_activity
+        'can_create_activity': can_create_activity,
+        'chainlit_url': settings.CHAINLIT_URL
     }
     
     return render(request, 'activities.html', context)

@@ -57,6 +57,110 @@
     {% endwith %}
 {% endif %}
 
+<!-- Activities and Chainlit Container -->
+<div class="content-container">
+    <!-- Activities list container -->
+    <div id="activities-container">
+        <div class="activities-list">
+            {% for activity_info in activities_with_roles %}
+                {% with activity=activity_info.activity course=activity_info.course %}
+                <div class="activity-item" data-course-id="{{ course.id }}" data-activity-id="{{ activity.id }}" data-allow-redo="{{ activity.allow_redo|yesno:'true,false' }}">
+                <div class="activity-options">
+                        {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
+                    <button class="activity-menu-toggle">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    {% endif %}
+                    <div class="activity-menu">
+                            {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
+                        <a href="#" class="activity-menu-item" data-action="edit" data-activity-id="{{ activity.id }}">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="#" class="activity-menu-item" data-action="chat" data-activity-id="{{ activity.id }}">
+                            <i class="fas fa-comment"></i> Chat with Activity
+                        </a>
+                        <a href="#" class="activity-menu-item" data-action="link" data-activity-id="{{ activity.id }}">
+                            <i class="fas fa-link"></i> Get Activity Link
+                        </a>
+                        <a href="#" class="activity-menu-item delete-activity" data-action="delete" data-activity-id="{{ activity.id }}">
+                            <i class="fas fa-trash"></i> Delete
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
+                <div class="activity-visibility-toggle" data-activity-id="{{ activity.id }}" data-is-visible="{{ activity.is_visible|yesno:'true,false' }}" title="{% if activity.is_visible %}Hide from students{% else %}Show to students{% endif %}">
+                    <i class="fas fa-eye{% if not activity.is_visible %}-slash{% endif %}"></i>
+                </div>
+                {% endif %}
+                <div class="activity-content">
+                    <h3 class="activity-title">{{ activity.title }}</h3>
+                        <p class="activity-course">{{ course.title }}</p>
+                        <div class="role-info">
+                            <span class="role-badge badge-{{ activity_info.user_role }}">
+                                {% if activity_info.is_owner %}
+                                    Owner
+                                {% else %}
+                                    {{ activity_info.user_role|capfirst }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endwith %}
+            {% empty %}
+            <div class="empty-state">
+                <h3>No activities found</h3>
+                <p>
+                    {% if can_create_activity %}
+                        Click the <i class="fas fa-plus"></i> button to create a new activity!
+                    {% else %}
+                        You don't have any activities yet. Ask your teacher to create one!
+                    {% endif %}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Chainlit Container -->
+    <div id="chainlit-container" class="chainlit-container">
+        <div class="chainlit-header">
+            <div class="header-left">
+                <div class="back-link">
+                    <a href="#" id="back-to-activities">
+                        <i class="fas fa-arrow-left"></i> <span class="back-text">Back to Activities</span>
+                    </a>
+                </div>
+            </div>
+            <div class="header-center">
+                <h3 id="activity-title-header"></h3>
+            </div>
+            <div class="header-right">
+                <div class="redo-controls" style="display: none;">
+                    <button class="btn btn-secondary redo-activity-btn" id="chainlit-redo-btn">
+                        <i class="fas fa-redo"></i> <span class="redo-text">Re-do Activity</span>
+                    </button>
+                    <div class="attempt-dropdown" id="chainlit-attempt-dropdown" style="display: none;">
+                        <select class="form-control attempt-selector" id="chainlit-attempt-selector">
+                            <option value="new">Start New Attempt</option>
+                        </select>
+                        <button class="btn btn-primary start-attempt-btn" id="chainlit-start-btn">
+                            Start
+                        </button>
+                        <button class="btn btn-secondary cancel-attempt-btn" id="chainlit-cancel-btn">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="chainlit-frame-container">
+            <iframe id="chainlit-frame" frameborder="0"></iframe>
+        </div>
+    </div>
+</div>
+
 <style>
 .participants-list {
     margin-top: 20px;
@@ -160,67 +264,6 @@
 }
 </style>
 
-<div class="activities-list">
-    {% for activity_info in activities_with_roles %}
-        {% with activity=activity_info.activity course=activity_info.course %}
-        <div class="activity-item" data-course-id="{{ course.id }}" data-activity-id="{{ activity.id }}">
-        <div class="activity-options">
-                {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
-            <button class="activity-menu-toggle">
-                <i class="fas fa-ellipsis-v"></i>
-            </button>
-            {% endif %}
-            <div class="activity-menu">
-                    {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
-                <a href="#" class="activity-menu-item" data-action="edit" data-activity-id="{{ activity.id }}">
-                    <i class="fas fa-edit"></i> Edit
-                </a>
-                <a href="#" class="activity-menu-item" data-action="chat" data-activity-id="{{ activity.id }}">
-                    <i class="fas fa-comment"></i> Chat with Activity
-                </a>
-                <a href="#" class="activity-menu-item" data-action="link" data-activity-id="{{ activity.id }}">
-                    <i class="fas fa-link"></i> Get Activity Link
-                </a>
-                <a href="#" class="activity-menu-item delete-activity" data-action="delete" data-activity-id="{{ activity.id }}">
-                    <i class="fas fa-trash"></i> Delete
-                </a>
-                {% endif %}
-            </div>
-        </div>
-        {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
-        <div class="activity-visibility-toggle" data-activity-id="{{ activity.id }}" data-is-visible="{{ activity.is_visible|yesno:'true,false' }}" title="{% if activity.is_visible %}Hide from students{% else %}Show to students{% endif %}">
-            <i class="fas fa-eye{% if not activity.is_visible %}-slash{% endif %}"></i>
-        </div>
-        {% endif %}
-        <div class="activity-content">
-            <h3 class="activity-title">{{ activity.title }}</h3>
-                <p class="activity-course">{{ course.title }}</p>
-                <div class="role-info">
-                    <span class="role-badge badge-{{ activity_info.user_role }}">
-                        {% if activity_info.is_owner %}
-                            Owner
-                        {% else %}
-                            {{ activity_info.user_role|capfirst }}
-                        {% endif %}
-                    </span>
-                </div>
-            </div>
-        </div>
-        {% endwith %}
-    {% empty %}
-    <div class="empty-state">
-        <h3>No activities found</h3>
-        <p>
-            {% if can_create_activity %}
-                Click the <i class="fas fa-plus"></i> button to create a new activity!
-            {% else %}
-                You don't have any activities yet. Ask your teacher to create one!
-            {% endif %}
-        </p>
-    </div>
-    {% endfor %}
-</div>
-
 <!-- Activity Link Modal -->
 <div id="activityLinkModal" class="modal">
     <div class="modal-content">
@@ -240,6 +283,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const questionsHidden = document.getElementById('questions-hidden');
     if (questionsHidden) {
         questionsHidden.value = JSON.stringify([]);
+    }
+    
+    const activitiesContainer = document.getElementById('activities-container');
+    const chainlitContainer = document.getElementById('chainlit-container');
+    const activityTitleHeader = document.getElementById('activity-title-header');
+    const chainlitFrame = document.getElementById('chainlit-frame');
+    const backToActivitiesBtn = document.getElementById('back-to-activities');
+    
+    // Function to force complete iframe reload (clears Chainlit session)
+    function forceChainlitReload() {
+        console.log('Reloading Chainlit iframe');
+        
+        // First clear the iframe
+        chainlitFrame.src = 'about:blank';
+        
+        // Wait a moment then load the base URL
+        setTimeout(() => {
+            chainlitFrame.src = '{{ chainlit_url }}';
+        }, 200);
     }
     
     // Function to create session and navigate to Chainlit
@@ -276,13 +338,120 @@ document.addEventListener('DOMContentLoaded', function() {
             const sessionData = await response.json();
             console.log('Session created successfully:', sessionData);
             
-            // Redirect to chat page (which will load Chainlit)
-            window.location.href = '/chat/';
+            // Load Chainlit iframe with base URL (no parameters)
+            forceChainlitReload();
             
         } catch (error) {
             console.error('Error creating session:', error);
             alert(`Failed to start chat session: ${error.message}`);
         }
+    }
+    
+    // Back to activities button
+    backToActivitiesBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        chainlitContainer.classList.remove('active');
+        activitiesContainer.classList.remove('hidden');
+        document.body.classList.remove('chainlit-active');
+        
+        const redoControls = document.querySelector('.redo-controls');
+        if (redoControls) {
+            redoControls.style.display = 'none';
+        }
+        
+        setTimeout(() => {
+            chainlitFrame.src = '';
+        }, 300);
+    });
+    
+    // Redo functionality
+    const chainlitRedoBtn = document.getElementById('chainlit-redo-btn');
+    const chainlitAttemptDropdown = document.getElementById('chainlit-attempt-dropdown');
+    const chainlitAttemptSelector = document.getElementById('chainlit-attempt-selector');
+    const chainlitStartBtn = document.getElementById('chainlit-start-btn');
+    const chainlitCancelBtn = document.getElementById('chainlit-cancel-btn');
+    
+    if (chainlitRedoBtn) {
+        chainlitRedoBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (!window.currentActivity) return;
+            
+            const activityId = window.currentActivity.id;
+            const userId = '{{ request.session.user_id }}';
+            
+            fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
+                .then(response => response.json())
+                .then(data => {
+                    chainlitAttemptSelector.innerHTML = '<option value="new">Start New Attempt</option>';
+                    
+                    const attempts = data.attempts || [];
+                    attempts.forEach(attempt => {
+                        const option = document.createElement('option');
+                        option.value = attempt.thread_id;
+                        option.textContent = `Attempt ${attempt.attempt_number} (${new Date(attempt.created_at).toLocaleDateString()})`;
+                        chainlitAttemptSelector.appendChild(option);
+                    });
+                    
+                    chainlitRedoBtn.style.display = 'none';
+                    chainlitAttemptDropdown.style.display = 'flex';
+                })
+                .catch(error => {
+                    console.error('Error loading attempts:', error);
+                    alert('Failed to load previous attempts');
+                });
+        });
+    }
+    
+    if (chainlitStartBtn) {
+        chainlitStartBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (!window.currentActivity) return;
+            
+            const activityId = window.currentActivity.id;
+            const userId = '{{ request.session.user_id }}';
+            const selectedValue = chainlitAttemptSelector.value;
+            
+            if (selectedValue === 'new') {
+                fetch(`/api/threads/new-attempt?activity_id=${activityId}&user_id=${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.message || 'Failed to create new attempt');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(newThread => {
+                    startChainlitSession(activityId, newThread.id);
+                    chainlitAttemptDropdown.style.display = 'none';
+                    chainlitRedoBtn.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error creating new attempt:', error);
+                    alert(`Failed to create new attempt: ${error.message}`);
+                });
+            } else {
+                startChainlitSession(activityId, selectedValue);
+                chainlitAttemptDropdown.style.display = 'none';
+                chainlitRedoBtn.style.display = 'block';
+            }
+        });
+    }
+    
+    if (chainlitCancelBtn) {
+        chainlitCancelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            chainlitAttemptDropdown.style.display = 'none';
+            chainlitRedoBtn.style.display = 'block';
+        });
     }
     
     document.querySelectorAll('.activity-item').forEach(item => {
@@ -292,12 +461,63 @@ document.addEventListener('DOMContentLoaded', function() {
                 const courseId = this.dataset.courseId;
                 const roleElement = this.querySelector('.role-badge');
                 const userRole = roleElement ? roleElement.textContent.toLowerCase().trim() : 'student';
+                const activityTitle = this.querySelector('.activity-title').textContent;
+                
+                console.log('Activity clicked:', activityId, activityTitle, 'Role:', userRole);
                 
                 if (userRole === 'owner' || userRole === 'teacher') {
+                    // Default click behavior for teachers/owners
                     window.location.href = `/dashboard/?activity_id=${activityId}&active_tab=conversation-stats`;
                 } else {
-                    // Students should go to course_detail and auto-expand the activity
-                    window.location.href = `/courses/${courseId}/?expand_activity=${activityId}`;
+                    // Students - open Chainlit interface directly
+                    activityTitleHeader.textContent = activityTitle;
+                    
+                    window.currentActivity = {
+                        id: activityId,
+                        title: activityTitle,
+                        allowRedo: this.dataset.allowRedo === 'true'
+                    };
+                    
+                    // Show redo controls if activity allows redo
+                    const redoControls = document.querySelector('.redo-controls');
+                    if (redoControls && window.currentActivity.allowRedo) {
+                        redoControls.style.display = 'flex';
+                    }
+                    
+                    // Get the latest thread for this user and activity
+                    const userId = '{{ request.session.user_id }}';
+                    fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            const attempts = data.attempts || [];
+                            if (attempts && attempts.length > 0) {
+                                const latestThread = attempts[0];
+                                startChainlitSession(activityId, latestThread.thread_id);
+                            } else {
+                                fetch(`/api/threads/new-attempt?activity_id=${activityId}&user_id=${userId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                })
+                                .then(response => response.json())
+                                .then(newThread => {
+                                    startChainlitSession(activityId, newThread.id);
+                                })
+                                .catch(error => {
+                                    console.error('Error creating first attempt:', error);
+                                    startChainlitSession(activityId);
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error loading attempts:', error);
+                            startChainlitSession(activityId);
+                        });
+                    
+                    activitiesContainer.classList.add('hidden');
+                    chainlitContainer.classList.add('active');
+                    document.body.classList.add('chainlit-active');
                 }
             }
         });
@@ -577,7 +797,62 @@ document.addEventListener('DOMContentLoaded', function() {
                         alert('Failed to load activity details for editing.');
                     });
             } else if (action === 'chat') {
-                startChainlitSession(activityId);
+                const activityItem = document.querySelector(`.activity-item[data-activity-id="${activityId}"]`);
+                const activityTitle = activityItem ? activityItem.querySelector('.activity-title').textContent : 'Activity';
+                
+                console.log('Chat with activity clicked:', activityId, activityTitle);
+                
+                // Set activity title in chainlit view
+                activityTitleHeader.textContent = activityTitle;
+                
+                // Store current activity data
+                window.currentActivity = {
+                    id: activityId,
+                    title: activityTitle,
+                    allowRedo: false
+                };
+                
+                // Get the latest thread for this user and activity
+                const userId = '{{ request.session.user_id }}';
+                fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const attempts = data.attempts || [];
+                        if (attempts && attempts.length > 0) {
+                            const latestThread = attempts[0];
+                            console.log('Loading existing attempt:', latestThread.thread_id);
+                            startChainlitSession(activityId, latestThread.thread_id);
+                        } else {
+                            console.log('No previous attempts, creating first attempt');
+                            fetch(`/api/threads/new-attempt?activity_id=${activityId}&user_id=${userId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                            })
+                            .then(response => response.json())
+                            .then(newThread => {
+                                console.log('Loading new first attempt:', newThread.id);
+                                startChainlitSession(activityId, newThread.id);
+                            })
+                            .catch(error => {
+                                console.error('Error creating first attempt:', error);
+                                startChainlitSession(activityId);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading attempts:', error);
+                        startChainlitSession(activityId);
+                    });
+                
+                // Show Chainlit container and hide activities
+                activitiesContainer.classList.add('hidden');
+                chainlitContainer.classList.add('active');
+                document.body.classList.add('chainlit-active');
+                
+                // Close any open menus
+                closeAllMenus();
             } else if (action === 'link') {
                 // Generate activity token and show the link
                 fetch(`/api/activities/${activityId}/activity-tokens`, {

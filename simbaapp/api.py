@@ -4,8 +4,9 @@ import django.apps
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils import timezone
 from django.conf import settings
-from .models import User, Course, Activity, Thread, Message, CourseEnrollment, ChainlitSession, InviteToken, ActivityToken, EmailVerificationToken, PasswordResetToken
-from ninja import Swagger, Router, Schema
+from django.db import models
+from .models import User, Course, Activity, Thread, Message, CourseEnrollment, ChainlitSession, InviteToken, ActivityToken, EmailVerificationToken, PasswordResetToken, Event
+from ninja import Swagger, Router
 from ninja_extra import NinjaExtraAPI
 from ninja_jwt.controller import NinjaJWTDefaultController
 from typing import List
@@ -1892,3 +1893,466 @@ def generate_activity_token(request, activity_id: str):
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
     except Exception as e:
         return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": f"Failed to generate activity token: {str(e)}"}
+
+# --- ADMIN SECTION ---
+admin_router = Router()
+
+@admin_router.get("/check-access", response={200: dict, 403: ErrorSchema})
+def check_admin_access(request, user_id: str):
+    """Check if user has admin access"""
+    try:
+        user = User.objects.get(id=user_id)
+        if not user.is_admin:
+            return HTTPStatus.FORBIDDEN, {"message": "Admin access required"}
+        return HTTPStatus.OK, {"is_admin": True}
+    except User.DoesNotExist:
+        return HTTPStatus.FORBIDDEN, {"message": "Invalid user"}
+
+@admin_router.get("/stats", response={200: dict, 403: ErrorSchema})
+def get_admin_stats(request, user_id: str):
+    """Get overall system statistics"""
+    try:
+        user = User.objects.get(id=user_id)
+        if not user.is_admin:
+            return HTTPStatus.FORBIDDEN, {"message": "Admin access required"}
+        
+        from django.db.models import Count, Q
+        from datetime import datetime, timedelta
+        
+        # Basic stats
+        total_users = User.objects.count()
+        total_courses = Course.objects.count()
+        total_activities = Activity.objects.count()
+        total_messages = Message.objects.count()
+        
+        # Active users (logged in within last 24 hours)
+        active_threshold = timezone.now() - timedelta(hours=24)
+        active_users = User.objects.filter(last_login__gte=active_threshold).count()
+        
+        # Recent events (last 7 days)
+        week_ago = timezone.now() - timedelta(days=7)
+        recent_events = Event.objects.filter(timestamp__gte=week_ago).count()
+        
+        # User activity by hour (last 24 hours)
+        from django.db.models import DateTimeField
+        from django.db.models.functions import TruncHour
+        hourly_activity = Event.objects.filter(
+            timestamp__gte=active_threshold
+        ).annotate(
+            hour=TruncHour('timestamp')
+        ).values('hour').annotate(
+            count=Count('id')
+        ).order_by('hour')
+        
+        return HTTPStatus.OK, {
+            "total_users": total_users,
+            "total_courses": total_courses,
+            "total_activities": total_activities,
+            "total_messages": total_messages,
+            "active_users": active_users,
+            "recent_events": recent_events,
+            "hourly_activity": list(hourly_activity)
+        }
+    except User.DoesNotExist:
+        return HTTPStatus.FORBIDDEN, {"message": "Invalid user"}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": str(e)}
+
+@admin_router.get("/users", response={200: dict, 403: ErrorSchema})
+def get_all_users(request, user_id: str):
+    """Get all users with detailed information"""
+    try:
+        user = User.objects.get(id=user_id)
+        if not user.is_admin:
+            return HTTPStatus.FORBIDDEN, {"message": "Admin access required"}
+        
+        users = User.objects.all().order_by('-created_at')
+        user_data = []
+        
+        for u in users:
+            courses_owned = Course.objects.filter(owner=u).count()
+            courses_enrolled = CourseEnrollment.objects.filter(user=u).count()
+            activities_created = Activity.objects.filter(owner=u).count()
+            
+            user_data.append({
+                "id": str(u.id),
+                "username": u.username,
+                "email": u.email,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+                "last_login": u.last_login.isoformat() if u.last_login else None,
+                "is_email_verified": u.is_email_verified,
+                "is_admin": u.is_admin,
+                "courses_owned": courses_owned,
+                "courses_enrolled": courses_enrolled,
+                "activities_created": activities_created
+            })
+        
+        return HTTPStatus.OK, {"users": user_data}
+    except User.DoesNotExist:
+        return HTTPStatus.FORBIDDEN, {"message": "Invalid user"}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": str(e)}
+
+@admin_router.post("/users", response={201: dict, 400: ErrorSchema, 403: ErrorSchema, 500: ErrorSchema})
+def admin_create_user(request, user_id: str, username: str, email: str, password: str, is_admin: bool = False):
+    """Admin create new user"""
+    try:
+        admin = User.objects.get(id=user_id)
+        if not admin.is_admin:
+            return HTTPStatus.FORBIDDEN, {"message": "Admin access required"}
+        
+        if User.objects.filter(username=username).exists():
+            return HTTPStatus.BAD_REQUEST, {"message": "Username already exists"}
+        
+        if User.objects.filter(email=email).exists():
+            return HTTPStatus.BAD_REQUEST, {"message": "Email already exists"}
+        
+        user = User.objects.create(
+            username=username,
+            email=email,
+            password_hash=make_password(password),
+            is_email_verified=True,  # Admin-created users are pre-verified
+            email_verified_at=timezone.now(),
+            is_admin=is_admin
+        )
+        
+        accountCreated(user, time.time())
+        
+        return HTTPStatus.CREATED, {
+            "id": str(user.id),
+            "username": user.username,
+            "email": user.email,
+            "is_admin": user.is_admin
+        }
+    except User.DoesNotExist:
+        return HTTPStatus.FORBIDDEN, {"message": "Invalid admin user"}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": str(e)}
+
+@admin_router.put("/users/{target_user_id}", response={200: dict, 400: ErrorSchema, 403: ErrorSchema, 404: ErrorSchema, 500: ErrorSchema})
+def admin_update_user(request, user_id: str, target_user_id: str, username: str = None, email: str = None, 
+                     password: str = None, is_email_verified: bool = None, is_admin: bool = None):
+    """Admin update user"""
+    try:
+        admin = User.objects.get(id=user_id)
+        if not admin.is_admin:
+            return HTTPStatus.FORBIDDEN, {"message": "Admin access required"}
+        
+        target_user = User.objects.get(id=target_user_id)
+        
+        if username and username != target_user.username:
+            if User.objects.filter(username=username).exists():
+                return HTTPStatus.BAD_REQUEST, {"message": "Username already exists"}
+            target_user.username = username
+        
+        if email and email != target_user.email:
+            if User.objects.filter(email=email).exists():
+                return HTTPStatus.BAD_REQUEST, {"message": "Email already exists"}
+            target_user.email = email
+        
+        if password:
+            target_user.password_hash = make_password(password)
+        
+        if is_email_verified is not None:
+            target_user.is_email_verified = is_email_verified
+            if is_email_verified and not target_user.email_verified_at:
+                target_user.email_verified_at = timezone.now()
+        
+        if is_admin is not None:
+            target_user.is_admin = is_admin
+        
+        target_user.save()
+        
+        modifiedProfile(target_user, {
+            "username": target_user.username,
+            "email": target_user.email,
+            "is_admin": target_user.is_admin
+        }, time.time())
+        
+        return HTTPStatus.OK, {
+            "id": str(target_user.id),
+            "username": target_user.username,
+            "email": target_user.email,
+            "is_admin": target_user.is_admin
+        }
+    except User.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "User not found"}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": str(e)}
+
+@admin_router.get("/recent-events", response={200: dict, 403: ErrorSchema})
+def get_recent_events(request, user_id: str, limit: int = 100):
+    """Get recent system events"""
+    try:
+        admin = User.objects.get(id=user_id)
+        if not admin.is_admin:
+            return HTTPStatus.FORBIDDEN, {"message": "Admin access required"}
+        
+        events = Event.objects.all().select_related('user').order_by('-timestamp')[:limit]
+        
+        event_data = []
+        for e in events:
+            event_data.append({
+                "id": str(e.id),
+                "user": e.user.username if e.user else "System",
+                "user_id": str(e.user.id) if e.user else None,
+                "verb": e.get_verb_display(),
+                "object": e.get_object_display(),
+                "context": e.context,
+                "timestamp": e.timestamp.isoformat()
+            })
+        
+        return HTTPStatus.OK, {"events": event_data}
+    except User.DoesNotExist:
+        return HTTPStatus.FORBIDDEN, {"message": "Invalid admin user"}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": str(e)}
+
+@admin_router.get("/usage-analytics", response={200: dict, 403: ErrorSchema, 500: ErrorSchema})
+def get_usage_analytics(request, user_id: str):
+    """Get detailed usage analytics"""
+    try:
+        admin = User.objects.get(id=user_id)
+        if not admin.is_admin:
+            return HTTPStatus.FORBIDDEN, {"message": "Admin access required"}
+        
+        from django.db.models import Count, Avg, Sum
+        from datetime import datetime, timedelta
+        
+        # Message statistics
+        message_stats = Message.objects.aggregate(
+            total_messages=Count('id')
+        )
+        
+        # Activity by day of week
+        from django.db.models.functions import ExtractWeekDay
+        weekly_activity = Event.objects.annotate(
+            weekday=ExtractWeekDay('timestamp')
+        ).values('weekday').annotate(
+            count=Count('id')
+        ).order_by('weekday')
+        
+        # Most active users
+        most_active = Event.objects.values('user__username').annotate(
+            event_count=Count('id')
+        ).order_by('-event_count')[:10]
+        
+        # Average session duration (approximation based on events)
+        user_sessions = {}
+        events = Event.objects.filter(
+            timestamp__gte=timezone.now() - timedelta(days=7)
+        ).order_by('user', 'timestamp')
+        
+        for event in events:
+            if event.user:
+                user_id_str = str(event.user.id)
+                if user_id_str not in user_sessions:
+                    user_sessions[user_id_str] = []
+                user_sessions[user_id_str].append(event.timestamp)
+        
+        # Calculate average session duration
+        session_durations = []
+        for user_events in user_sessions.values():
+            if len(user_events) > 1:
+                duration = (user_events[-1] - user_events[0]).total_seconds() / 60  # in minutes
+                if duration < 180:  # Cap at 3 hours for a single session
+                    session_durations.append(duration)
+        
+        avg_session_duration = sum(session_durations) / len(session_durations) if session_durations else 0
+        
+        return HTTPStatus.OK, {
+            "message_stats": message_stats,
+            "weekly_activity": list(weekly_activity),
+            "most_active_users": list(most_active),
+            "avg_session_duration_minutes": round(avg_session_duration, 2),
+            "total_sessions_analyzed": len(session_durations)
+        }
+    except User.DoesNotExist:
+        return HTTPStatus.FORBIDDEN, {"message": "Invalid admin user"}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": str(e)}
+
+@admin_router.delete("/users/{target_user_id}", response={204: None, 403: ErrorSchema, 404: ErrorSchema, 500: ErrorSchema})
+def admin_delete_user(request, user_id: str, target_user_id: str):
+    """Admin delete user"""
+    try:
+        admin = User.objects.get(id=user_id)
+        if not admin.is_admin:
+            return HTTPStatus.FORBIDDEN, {"message": "Admin access required"}
+        
+        target_user = User.objects.get(id=target_user_id)
+        
+        # Don't allow deleting yourself
+        if str(admin.id) == str(target_user.id):
+            return HTTPStatus.BAD_REQUEST, {"message": "Cannot delete your own admin account"}
+        
+        target_user.delete()
+        return HTTPStatus.NO_CONTENT, None
+    except User.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "User not found"}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": str(e)}
+
+@admin_router.get("/courses", response={200: dict, 403: ErrorSchema, 500: ErrorSchema})
+def admin_get_all_courses(request, user_id: str):
+    """Get all courses with detailed information"""
+    try:
+        admin = User.objects.get(id=user_id)
+        if not admin.is_admin:
+            return HTTPStatus.FORBIDDEN, {"message": "Admin access required"}
+        
+        courses = Course.objects.all().select_related('owner').order_by('-created_at')
+        course_data = []
+        
+        for c in courses:
+            enrollment_count = CourseEnrollment.objects.filter(course=c).count()
+            activity_count = Activity.objects.filter(course=c).count()
+            
+            course_data.append({
+                "id": str(c.id),
+                "title": c.title,
+                "description": c.description,
+                "enrollment_code": c.enrollment_code,
+                "owner_id": str(c.owner.id),
+                "owner_username": c.owner.username,
+                "created_at": c.created_at.isoformat() if c.created_at else None,
+                "enrollment_count": enrollment_count,
+                "activity_count": activity_count
+            })
+        
+        return HTTPStatus.OK, {"courses": course_data}
+    except User.DoesNotExist:
+        return HTTPStatus.FORBIDDEN, {"message": "Invalid admin user"}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": str(e)}
+
+@admin_router.delete("/courses/{course_id}", response={204: None, 403: ErrorSchema, 404: ErrorSchema, 500: ErrorSchema})
+def admin_delete_course(request, user_id: str, course_id: str):
+    """Admin delete course"""
+    try:
+        admin = User.objects.get(id=user_id)
+        if not admin.is_admin:
+            return HTTPStatus.FORBIDDEN, {"message": "Admin access required"}
+        
+        course = Course.objects.get(id=course_id)
+        course.delete()
+        deletedCourse(admin, course_id, time.time())
+        
+        return HTTPStatus.NO_CONTENT, None
+    except User.DoesNotExist:
+        return HTTPStatus.FORBIDDEN, {"message": "Invalid admin user"}
+    except Course.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Course not found"}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": str(e)}
+
+@admin_router.get("/online-users", response={200: dict, 403: ErrorSchema, 500: ErrorSchema})
+def get_online_users(request, user_id: str):
+    """Get currently online users based on recent activity"""
+    try:
+        admin = User.objects.get(id=user_id)
+        if not admin.is_admin:
+            return HTTPStatus.FORBIDDEN, {"message": "Admin access required"}
+        
+        from datetime import datetime, timedelta
+        
+        # Consider users active if they have events in the last 5 minutes
+        cutoff_time = timezone.now() - timedelta(minutes=5)
+        
+        recent_events = Event.objects.filter(
+            timestamp__gte=cutoff_time
+        ).select_related('user').order_by('-timestamp')
+        
+        # Group by user to get latest activity
+        user_activity = {}
+        for event in recent_events:
+            if event.user and str(event.user.id) not in user_activity:
+                user_activity[str(event.user.id)] = {
+                    "username": event.user.username,
+                    "last_action": event.get_verb_display(),
+                    "last_object": event.get_object_display(),
+                    "timestamp": event.timestamp.isoformat()
+                }
+        
+        online_users = list(user_activity.values())
+        
+        return HTTPStatus.OK, {
+            "online_users": online_users,
+            "count": len(online_users),
+            "cutoff_minutes": 5
+        }
+    except User.DoesNotExist:
+        return HTTPStatus.FORBIDDEN, {"message": "Invalid admin user"}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": str(e)}
+
+@admin_router.get("/activities", response={200: dict, 403: ErrorSchema, 500: ErrorSchema})
+def admin_get_all_activities(request, user_id: str):
+    """Get all activities with detailed information"""
+    try:
+        admin = User.objects.get(id=user_id)
+        if not admin.is_admin:
+            return HTTPStatus.FORBIDDEN, {"message": "Admin access required"}
+        
+        activities = Activity.objects.all().select_related('owner', 'course').order_by('-created_at')
+        activity_data = []
+        
+        for a in activities:
+            thread_count = Thread.objects.filter(activity=a).count()
+            
+            activity_data.append({
+                "id": str(a.id),
+                "title": a.title,
+                "description": a.description,
+                "course_id": str(a.course.id),
+                "course_title": a.course.title,
+                "owner_id": str(a.owner.id),
+                "owner_username": a.owner.username,
+                "is_visible": a.is_visible,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+                "start_date": a.start_date.isoformat() if a.start_date else None,
+                "end_date": a.end_date.isoformat() if a.end_date else None,
+                "thread_count": thread_count
+            })
+        
+        return HTTPStatus.OK, {"activities": activity_data}
+    except User.DoesNotExist:
+        return HTTPStatus.FORBIDDEN, {"message": "Invalid admin user"}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": str(e)}
+
+@admin_router.delete("/activities/{activity_id}", response={204: None, 403: ErrorSchema, 404: ErrorSchema, 500: ErrorSchema})
+def admin_delete_activity(request, user_id: str, activity_id: str):
+    """Admin delete activity"""
+    try:
+        admin = User.objects.get(id=user_id)
+        if not admin.is_admin:
+            return HTTPStatus.FORBIDDEN, {"message": "Admin access required"}
+        
+        activity = Activity.objects.get(id=activity_id)
+        
+        # Clean up OpenAI resources if they exist
+        try:
+            from simbaapp.openai_assistant import OpenAIAssistant
+            if activity.openai_assistant_id:
+                openai_assistant = OpenAIAssistant()
+                openai_assistant.delete_assistant(activity.openai_assistant_id)
+                if activity.vector_store_id:
+                    openai_assistant.delete_vector_store(activity.vector_store_id)
+        except Exception as cleanup_error:
+            # Log the error but don't fail the deletion
+            print(f"Warning: Failed to clean up OpenAI resources for activity {activity_id}: {cleanup_error}")
+        
+        activity.delete()
+        deletedActivity(admin, activity_id, time.time())
+        
+        return HTTPStatus.NO_CONTENT, None
+    except User.DoesNotExist:
+        return HTTPStatus.FORBIDDEN, {"message": "Invalid admin user"}
+    except Activity.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "Activity not found"}
+    except Exception as e:
+        return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": str(e)}
+
+# Register admin router
+api.add_router("/admin", admin_router)

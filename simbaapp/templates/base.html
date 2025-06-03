@@ -44,6 +44,14 @@
                     <a href="{% url 'dashboard' %}" class="sidebar-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                         Dashboard
                     </a>
+                    
+                    {% comment %} Show admin dashboard link only for admin users {% endcomment %}
+                    {% if request.session.user_id %}
+                        {% comment %} Check if user is admin - we'll do this via JS for now {% endcomment %}
+                        <a href="{% url 'admin_dashboard' %}" class="sidebar-item admin-only {% if 'admin' in request.resolver_match.url_name %}active{% endif %}" id="adminDashboardLink" style="display: none;">
+                            <i class="fas fa-shield-alt"></i> Admin Dashboard
+                        </a>
+                    {% endif %}
             {% else %}
                 <a href="{% url 'login' %}" class="sidebar-item {% if request.resolver_match.url_name == 'login' %}active{% endif %}">
                     Login

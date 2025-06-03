@@ -1,0 +1,521 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Real-time Analytics - Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-analytics {
+    padding: 2rem 0;
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.admin-header h1 {
+    color: #d64000;
+    margin: 0;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb a {
+    color: #d64000;
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.analytics-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.analytics-card h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin-bottom: 1rem;
+}
+
+.loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: #7f8c8d;
+}
+
+.update-indicator {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #2ecc71;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    display: none;
+}
+
+.metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.metric-item {
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #d64000;
+    margin-bottom: 0.25rem;
+}
+
+.metric-label {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.real-time-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.real-time-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.real-time-header h2 {
+    color: #2c3e50;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.live-indicator {
+    width: 8px;
+    height: 8px;
+    background: #e74c3c;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.refresh-btn {
+    background: #d64000;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.refresh-btn:hover {
+    background: #ac3300;
+}
+
+.events-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.event-item {
+    padding: 0.75rem;
+    border-bottom: 1px solid #ecf0f1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.event-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.event-action {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.event-user {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.event-time {
+    color: #95a5a6;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.usage-chart {
+    width: 100%;
+    height: 300px;
+}
+
+@media (max-width: 768px) {
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .real-time-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .metrics-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-analytics">
+    <div class="breadcrumb">
+        <a href="{% url 'admin_dashboard' %}"><i class="fas fa-shield-alt"></i> Admin Dashboard</a>
+        <i class="fas fa-chevron-right"></i>
+        <span>Real-time Analytics</span>
+    </div>
+
+    <div class="admin-header">
+        <h1><i class="fas fa-chart-line"></i> Real-time Analytics</h1>
+    </div>
+
+    <!-- Analytics Charts Grid -->
+    <div class="analytics-grid">
+        <!-- Usage Analytics Chart -->
+        <div class="analytics-card">
+            <h3><i class="fas fa-chart-bar"></i> System Usage</h3>
+            <div class="chart-container">
+                <canvas id="usageChart" class="usage-chart"></canvas>
+                <div class="update-indicator" id="usageUpdateIndicator">Updated</div>
+                <div class="loading-spinner" id="usageLoading">
+                    <i class="fas fa-spinner fa-spin"></i> Loading usage data...
+                </div>
+            </div>
+            <div class="metrics-row" id="usageMetrics">
+                <!-- Metrics will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- User Activity Chart -->
+        <div class="analytics-card">
+            <h3><i class="fas fa-users"></i> User Activity (24h)</h3>
+            <div class="chart-container">
+                <canvas id="activityChart" class="usage-chart"></canvas>
+                <div class="update-indicator" id="activityUpdateIndicator">Updated</div>
+                <div class="loading-spinner" id="activityLoading">
+                    <i class="fas fa-spinner fa-spin"></i> Loading activity data...
+                </div>
+            </div>
+            <div class="metrics-row" id="activityMetrics">
+                <!-- Metrics will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Real-time Events Section -->
+    <div class="real-time-section">
+        <div class="real-time-header">
+            <h2>
+                <span class="live-indicator"></span>
+                Live System Events
+            </h2>
+            <button class="refresh-btn" onclick="loadRecentEvents()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+        
+        <div class="events-list" id="eventsContainer">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i> Loading recent events...
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+let usageChart = null;
+let activityChart = null;
+
+// Show admin link
+document.addEventListener('DOMContentLoaded', function() {
+    const adminLink = document.getElementById('adminDashboardLink');
+    if (adminLink) {
+        adminLink.style.display = 'block';
+    }
+    
+    // Initialize analytics
+    initializeCharts();
+    loadUsageAnalytics();
+    loadActivityData();
+    loadRecentEvents();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+        loadUsageAnalytics();
+        loadActivityData();
+        loadRecentEvents();
+    }, 30000);
+});
+
+function initializeCharts() {
+    // Usage Chart
+    const usageCtx = document.getElementById('usageChart').getContext('2d');
+    usageChart = new Chart(usageCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Messages', 'Activities', 'Courses', 'Users'],
+            datasets: [{
+                data: [0, 0, 0, 0],
+                backgroundColor: [
+                    '#3498db',
+                    '#2ecc71',
+                    '#f39c12',
+                    '#e74c3c'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Activity Chart
+    const activityCtx = document.getElementById('activityChart').getContext('2d');
+    activityChart = new Chart(activityCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Events per Hour',
+                data: [],
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                borderWidth: 2,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function loadUsageAnalytics() {
+    const userId = '{{ user.id }}';
+    
+    Promise.all([
+        fetch(`/api/admin/stats?user_id=${userId}`),
+        fetch(`/api/admin/usage-analytics?user_id=${userId}`)
+    ])
+    .then(responses => Promise.all(responses.map(r => r.json())))
+    .then(([statsData, usageData]) => {
+        // Hide loading spinner
+        document.getElementById('usageLoading').style.display = 'none';
+        
+        // Update chart
+        if (usageChart && statsData) {
+            usageChart.data.datasets[0].data = [
+                statsData.total_messages || 0,
+                statsData.total_activities || 0,
+                statsData.total_courses || 0,
+                statsData.total_users || 0
+            ];
+            usageChart.update();
+        }
+        
+        // Update metrics
+        const metricsContainer = document.getElementById('usageMetrics');
+        if (usageData && usageData.message_stats) {
+            metricsContainer.innerHTML = `
+                <div class="metric-item">
+                    <div class="metric-value">${usageData.message_stats.total_messages || 0}</div>
+                    <div class="metric-label">Total Messages</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">${Math.round(usageData.avg_session_duration_minutes || 0)}</div>
+                    <div class="metric-label">Avg Session (min)</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">${usageData.total_sessions_analyzed || 0}</div>
+                    <div class="metric-label">Sessions Analyzed</div>
+                </div>
+            `;
+        }
+        
+        // Show update indicator
+        showUpdateIndicator('usageUpdateIndicator');
+    })
+    .catch(error => {
+        console.error('Error loading usage analytics:', error);
+        document.getElementById('usageLoading').innerHTML = 
+            '<i class="fas fa-exclamation-circle"></i> Error loading data';
+    });
+}
+
+function loadActivityData() {
+    const userId = '{{ user.id }}';
+    
+    fetch(`/api/admin/stats?user_id=${userId}`)
+        .then(response => response.json())
+        .then(data => {
+            // Hide loading spinner
+            document.getElementById('activityLoading').style.display = 'none';
+            
+            if (activityChart && data.hourly_activity) {
+                // Process hourly activity data
+                const labels = [];
+                const chartData = [];
+                
+                data.hourly_activity.forEach(item => {
+                    const hour = new Date(item.hour).getHours();
+                    labels.push(`${hour}:00`);
+                    chartData.push(item.count);
+                });
+                
+                activityChart.data.labels = labels;
+                activityChart.data.datasets[0].data = chartData;
+                activityChart.update();
+            }
+            
+            // Update activity metrics
+            const metricsContainer = document.getElementById('activityMetrics');
+            metricsContainer.innerHTML = `
+                <div class="metric-item">
+                    <div class="metric-value">${data.active_users || 0}</div>
+                    <div class="metric-label">Active Users (24h)</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">${data.recent_events || 0}</div>
+                    <div class="metric-label">Recent Events (7d)</div>
+                </div>
+            `;
+            
+            // Show update indicator
+            showUpdateIndicator('activityUpdateIndicator');
+        })
+        .catch(error => {
+            console.error('Error loading activity data:', error);
+            document.getElementById('activityLoading').innerHTML = 
+                '<i class="fas fa-exclamation-circle"></i> Error loading data';
+        });
+}
+
+function loadRecentEvents() {
+    const userId = '{{ user.id }}';
+    
+    fetch(`/api/admin/recent-events?user_id=${userId}&limit=20`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('eventsContainer');
+            
+            if (data.events && data.events.length > 0) {
+                container.innerHTML = data.events.map(event => `
+                    <div class="event-item">
+                        <div class="event-info">
+                            <div class="event-action">
+                                <strong>${event.user}</strong> ${event.verb.toLowerCase()} ${event.object.toLowerCase()}
+                            </div>
+                            <div class="event-user">
+                                ${event.context ? JSON.stringify(event.context).substring(0, 50) + '...' : 'No additional context'}
+                            </div>
+                        </div>
+                        <div class="event-time">
+                            ${new Date(event.timestamp).toLocaleString()}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<div class="loading-spinner">No recent events</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading recent events:', error);
+            document.getElementById('eventsContainer').innerHTML = 
+                '<div class="loading-spinner"><i class="fas fa-exclamation-circle"></i> Error loading events</div>';
+        });
+}
+
+function showUpdateIndicator(indicatorId) {
+    const indicator = document.getElementById(indicatorId);
+    indicator.style.display = 'block';
+    setTimeout(() => {
+        indicator.style.display = 'none';
+    }, 2000);
+}
+</script>
+{% endblock %} 

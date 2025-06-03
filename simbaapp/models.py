@@ -13,6 +13,7 @@ class User(models.Model):
     last_login = models.DateTimeField(blank=True, null=True)
     is_email_verified = models.BooleanField(default=False)
     email_verified_at = models.DateTimeField(blank=True, null=True)
+    is_admin = models.BooleanField(default=False)
 
     def __str__(self):
         return self.username

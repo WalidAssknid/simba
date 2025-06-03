@@ -1,0 +1,400 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}User Management - Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-users {
+    padding: 2rem 0;
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.admin-header h1 {
+    color: #d64000;
+    margin: 0;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb a {
+    color: #d64000;
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.create-user-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.create-user-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"] {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="email"]:focus,
+.form-group input[type="password"]:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.create-btn {
+    background: #d64000;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.create-btn:hover {
+    background: #ac3300;
+}
+
+.users-table-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.users-table th,
+.users-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.users-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.users-table tr:hover {
+    background: #f8f9fa;
+}
+
+.user-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.user-badge.admin {
+    background: #e74c3c;
+    color: white;
+}
+
+.user-badge.verified {
+    background: #2ecc71;
+    color: white;
+}
+
+.user-badge.unverified {
+    background: #f39c12;
+    color: white;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: all 0.2s;
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+    color: white;
+}
+
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: #7f8c8d;
+}
+
+.no-users {
+    text-align: center;
+    padding: 2rem;
+    color: #7f8c8d;
+}
+
+@media (max-width: 768px) {
+    .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .create-user-form {
+        grid-template-columns: 1fr;
+    }
+    
+    .users-table-container {
+        overflow-x: auto;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-users">
+    <div class="breadcrumb">
+        <a href="{% url 'admin_dashboard' %}"><i class="fas fa-shield-alt"></i> Admin Dashboard</a>
+        <i class="fas fa-chevron-right"></i>
+        <span>User Management</span>
+    </div>
+
+    <div class="admin-header">
+        <h1><i class="fas fa-users"></i> User Management</h1>
+    </div>
+
+    <!-- Create User Section -->
+    <div class="create-user-section">
+        <h2><i class="fas fa-user-plus"></i> Create New User</h2>
+        <form method="post" class="create-user-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <div class="form-group">
+                <button type="submit" class="create-btn">
+                    <i class="fas fa-plus"></i> Create User
+                </button>
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="is_admin" name="is_admin">
+                <label for="is_admin">Grant admin privileges</label>
+            </div>
+        </form>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-filter-container" style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <input type="text" id="userSearch" placeholder="Search users by username or email..." style="flex: 1; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem;">
+            <button onclick="clearUserSearch()" style="background: #d64000; color: white; border: none; padding: 0.75rem 1rem; border-radius: 6px; cursor: pointer;">
+                <i class="fas fa-times"></i> Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="users-table-container">
+        {% if users %}
+        <table class="users-table" id="usersTable">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Status</th>
+                    <th>Statistics</th>
+                    <th>Created</th>
+                    <th>Last Login</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user_data in users %}
+                <tr>
+                    <td>
+                        <div>
+                            <strong>{{ user_data.username }}</strong>
+                            {% if user_data.is_admin %}
+                                <span class="user-badge admin">Admin</span>
+                            {% endif %}
+                        </div>
+                        <div style="font-size: 0.8rem; color: #7f8c8d;">
+                            {{ user_data.email }}
+                        </div>
+                    </td>
+                    <td>
+                        {% if user_data.is_email_verified %}
+                            <span class="user-badge verified">Verified</span>
+                        {% else %}
+                            <span class="user-badge unverified">Unverified</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="stats-row">
+                            <div><strong>{{ user_data.courses_owned }}</strong><br>Courses</div>
+                            <div><strong>{{ user_data.courses_enrolled }}</strong><br>Enrolled</div>
+                            <div><strong>{{ user_data.activities_created }}</strong><br>Activities</div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if user_data.created_at %}
+                            {{ user_data.created_at|slice:":10" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user_data.last_login %}
+                            {{ user_data.last_login|slice:":10" }}
+                        {% else %}
+                            Never
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            {% if not user_data.is_admin or user_data.id != user.id %}
+                                <a href="{% url 'admin_delete_user' user_data.id %}" 
+                                   class="btn btn-danger"
+                                   onclick="return confirm('Are you sure you want to delete user {{ user_data.username }}? This action cannot be undone.');">
+                                    <i class="fas fa-trash"></i> Delete
+                                </a>
+                            {% else %}
+                                <span style="color: #7f8c8d; font-size: 0.8rem;">
+                                    <i class="fas fa-shield-alt"></i> Protected
+                                </span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-users">
+            <i class="fas fa-users" style="font-size: 3rem; color: #bdc3c7; margin-bottom: 1rem;"></i>
+            <p>No users found in the system.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Show admin link
+document.addEventListener('DOMContentLoaded', function() {
+    const adminLink = document.getElementById('adminDashboardLink');
+    if (adminLink) {
+        adminLink.style.display = 'block';
+    }
+    
+    // Initialize search functionality
+    const searchInput = document.getElementById('userSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', filterUsers);
+    }
+});
+
+function filterUsers() {
+    const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('#usersTable tbody tr');
+    
+    rows.forEach(row => {
+        const username = row.querySelector('strong').textContent.toLowerCase();
+        const email = row.querySelector('div[style*="color: #7f8c8d"]').textContent.toLowerCase();
+        
+        const matches = username.includes(searchTerm) || email.includes(searchTerm);
+        row.style.display = matches ? '' : 'none';
+    });
+}
+
+function clearUserSearch() {
+    document.getElementById('userSearch').value = '';
+    filterUsers();
+}
+</script>
+{% endblock %} 

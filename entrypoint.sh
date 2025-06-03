@@ -26,19 +26,21 @@ if not User.objects.filter(username='prof').exists():
         email='prof@gmail.com',
         password_hash=password_hash,
         is_email_verified=True,
-        email_verified_at=timezone.now()
+        email_verified_at=timezone.now(),
+        is_admin=True
     )
-    print('Default teacher user created successfully (email verified)')
+    print('Default teacher user created successfully (email verified, admin privileges)')
 else:
     teacher = User.objects.get(username='prof')
-    # Ensure existing teacher is verified
-    if not teacher.is_email_verified:
+    # Ensure existing teacher is verified and admin
+    if not teacher.is_email_verified or not teacher.is_admin:
         teacher.is_email_verified = True
         teacher.email_verified_at = timezone.now()
+        teacher.is_admin = True
         teacher.save()
-        print('Default teacher user verified')
+        print('Default teacher user verified and granted admin privileges')
     else:
-        print('Default teacher user already exists and verified')
+        print('Default teacher user already exists, verified, and has admin privileges')
 
 # Check if default student exists
 if not User.objects.filter(username='student').exists():

@@ -24,4 +24,14 @@ urlpatterns = [
     path('dashboard/', views.dashboard_view, name='dashboard'),
     path('chainlit/', views.chainlit_view, name='chainlit'),
     path('api/', api.urls),
+    
+    # Admin URLs
+    path('admin-dashboard/', views.admin_dashboard_view, name='admin_dashboard'),
+    path('admin-dashboard/users/', views.admin_users_view, name='admin_users'),
+    path('admin-dashboard/courses/', views.admin_courses_view, name='admin_courses'),
+    path('admin-dashboard/activities/', views.admin_activities_view, name='admin_activities'),
+    path('admin-dashboard/analytics/', views.admin_analytics_view, name='admin_analytics'),
+    path('admin-dashboard/users/<uuid:user_id_to_delete>/delete/', views.admin_delete_user, name='admin_delete_user'),
+    path('admin-dashboard/courses/<uuid:course_id>/delete/', views.admin_delete_course, name='admin_delete_course'),
+    path('admin-dashboard/activities/<uuid:activity_id>/delete/', views.admin_delete_activity, name='admin_delete_activity'),
 ]

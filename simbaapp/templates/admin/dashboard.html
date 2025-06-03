@@ -1,0 +1,349 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Admin Dashboard - SIMBA{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-dashboard {
+    padding: 2rem 0;
+}
+
+.admin-header {
+    margin-bottom: 2rem;
+}
+
+.admin-header h1 {
+    color: #d64000;
+    margin-bottom: 0.5rem;
+}
+
+.admin-header p {
+    color: #7f8c8d;
+    font-size: 1.1rem;
+}
+
+.admin-nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.admin-nav-item {
+    background: linear-gradient(135deg, #d64000 0%, #ac3300 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-decoration: none;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.admin-nav-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    color: white;
+    text-decoration: none;
+}
+
+.admin-nav-item i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.admin-nav-item h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.admin-nav-item p {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-left: 4px solid #d64000;
+}
+
+.stat-card h3 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #d64000;
+    margin-bottom: 0.5rem;
+}
+
+.stat-description {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.real-time-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.real-time-section h2 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.online-indicator {
+    width: 8px;
+    height: 8px;
+    background: #2ecc71;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.online-users-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.online-user {
+    background: #ecf0f1;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    color: #2c3e50;
+}
+
+.alert-warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .admin-nav {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <div class="admin-header">
+        <h1><i class="fas fa-shield-alt"></i> Admin Dashboard</h1>
+        <p>System overview and management tools</p>
+    </div>
+
+    <!-- Navigation Cards -->
+    <div class="admin-nav">
+        <a href="{% url 'admin_users' %}" class="admin-nav-item">
+            <i class="fas fa-users"></i>
+            <h3>User Management</h3>
+            <p>Manage system users</p>
+        </a>
+        
+        <a href="{% url 'admin_courses' %}" class="admin-nav-item">
+            <i class="fas fa-graduation-cap"></i>
+            <h3>Course Management</h3>
+            <p>Oversee all courses</p>
+        </a>
+        
+        <a href="{% url 'admin_activities' %}" class="admin-nav-item">
+            <i class="fas fa-tasks"></i>
+            <h3>Activity Management</h3>
+            <p>Manage all activities</p>
+        </a>
+        
+        <a href="{% url 'admin_analytics' %}" class="admin-nav-item">
+            <i class="fas fa-chart-line"></i>
+            <h3>Real-time Analytics</h3>
+            <p>System usage insights</p>
+        </a>
+    </div>
+
+    <!-- Statistics Grid -->
+    {% if stats %}
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Total Users</h3>
+            <div class="stat-value">{{ stats.total_users|default:0 }}</div>
+            <div class="stat-description">Registered users in the system</div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Total Courses</h3>
+            <div class="stat-value">{{ stats.total_courses|default:0 }}</div>
+            <div class="stat-description">Created courses</div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Total Activities</h3>
+            <div class="stat-value">{{ stats.total_activities|default:0 }}</div>
+            <div class="stat-description">Learning activities</div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Total Messages</h3>
+            <div class="stat-value">{{ stats.total_messages|default:0 }}</div>
+            <div class="stat-description">Chat interactions</div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Active Users (24h)</h3>
+            <div class="stat-value">{{ stats.active_users|default:0 }}</div>
+            <div class="stat-description">Users active in last 24 hours</div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Recent Events (7d)</h3>
+            <div class="stat-value">{{ stats.recent_events|default:0 }}</div>
+            <div class="stat-description">System events in last 7 days</div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert-warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        Statistics could not be loaded. Please check the system status.
+    </div>
+    {% endif %}
+
+    <!-- Real-time Data Section -->
+    <div class="real-time-section">
+        <h2>
+            <span class="online-indicator"></span>
+            Real-time System Status
+        </h2>
+        
+        <div id="onlineUsersContainer">
+            <p><i class="fas fa-spinner fa-spin"></i> Loading online users...</p>
+        </div>
+        
+        <div id="recentEventsContainer" style="margin-top: 1.5rem;">
+            <h3>Recent System Events</h3>
+            <p><i class="fas fa-spinner fa-spin"></i> Loading recent events...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Check if user is admin and show admin link
+document.addEventListener('DOMContentLoaded', function() {
+    const userId = '{{ user.id }}';
+    const adminLink = document.getElementById('adminDashboardLink');
+    
+    // Show admin link for current user
+    if (adminLink) {
+        adminLink.style.display = 'block';
+    }
+    
+    // Load real-time data
+    loadOnlineUsers();
+    loadRecentEvents();
+    
+    // Refresh every 30 seconds
+    setInterval(() => {
+        loadOnlineUsers();
+        loadRecentEvents();
+    }, 30000);
+});
+
+function loadOnlineUsers() {
+    const userId = '{{ user.id }}';
+    fetch(`/api/admin/online-users?user_id=${userId}`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('onlineUsersContainer');
+            if (data.online_users && data.online_users.length > 0) {
+                container.innerHTML = `
+                    <h3>Online Users (${data.count})</h3>
+                    <div class="online-users-list">
+                        ${data.online_users.map(user => `
+                            <div class="online-user" title="Last action: ${user.last_action} ${user.last_object}">
+                                ${user.username}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                container.innerHTML = '<h3>Online Users (0)</h3><p>No users currently active</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading online users:', error);
+            document.getElementById('onlineUsersContainer').innerHTML = 
+                '<h3>Online Users</h3><p><i class="fas fa-exclamation-circle"></i> Error loading data</p>';
+        });
+}
+
+function loadRecentEvents() {
+    const userId = '{{ user.id }}';
+    fetch(`/api/admin/recent-events?user_id=${userId}&limit=10`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('recentEventsContainer');
+            if (data.events && data.events.length > 0) {
+                container.innerHTML = `
+                    <h3>Recent System Events</h3>
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        ${data.events.map(event => `
+                            <div style="padding: 0.5rem; border-bottom: 1px solid #ecf0f1; font-size: 0.9rem;">
+                                <strong>${event.user}</strong> ${event.verb.toLowerCase()} ${event.object.toLowerCase()}
+                                <span style="color: #7f8c8d; float: right;">
+                                    ${new Date(event.timestamp).toLocaleString()}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                container.innerHTML = '<h3>Recent System Events</h3><p>No recent events</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading recent events:', error);
+            document.getElementById('recentEventsContainer').innerHTML = 
+                '<h3>Recent System Events</h3><p><i class="fas fa-exclamation-circle"></i> Error loading data</p>';
+        });
+}
+</script>
+{% endblock %} 

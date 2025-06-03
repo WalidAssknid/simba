@@ -1433,3 +1433,298 @@ def profile_view(request):
         'user': user,
         'enrolled_courses': all_courses
     })
+
+def admin_dashboard_view(request):
+    """Admin dashboard view - only accessible to admin users"""
+    if not request.session.get('user_id'):
+        return redirect('login')
+    
+    user_id = request.session.get('user_id')
+    
+    try:
+        user = User.objects.get(id=user_id)
+        if not user.is_admin:
+            messages.error(request, "Admin access required.")
+            return redirect('courses')
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
+    
+    # Get basic stats for the dashboard
+    try:
+        api_url = request.build_absolute_uri(f'/api/admin/stats?user_id={user_id}')
+        response = requests.get(api_url)
+        
+        if response.status_code == 200:
+            stats = response.json()
+        else:
+            stats = {}
+            messages.error(request, "Failed to load admin statistics.")
+            
+    except Exception as e:
+        stats = {}
+        messages.error(request, f"Error loading admin statistics: {str(e)}")
+    
+    context = {
+        'user': user,
+        'stats': stats,
+    }
+    
+    return render(request, 'admin/dashboard.html', context)
+
+def admin_users_view(request):
+    """Admin users management view"""
+    if not request.session.get('user_id'):
+        return redirect('login')
+    
+    user_id = request.session.get('user_id')
+    
+    try:
+        user = User.objects.get(id=user_id)
+        if not user.is_admin:
+            messages.error(request, "Admin access required.")
+            return redirect('courses')
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
+    
+    # Handle user creation
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        is_admin = request.POST.get('is_admin') == 'on'
+        
+        try:
+            api_url = request.build_absolute_uri(f'/api/admin/users?user_id={user_id}')
+            response = requests.post(api_url, json={
+                'username': username,
+                'email': email,
+                'password': password,
+                'is_admin': is_admin
+            })
+            
+            if response.status_code == 201:
+                messages.success(request, f"User '{username}' created successfully.")
+            else:
+                error_data = response.json()
+                messages.error(request, f"Failed to create user: {error_data.get('message', 'Unknown error')}")
+                
+        except Exception as e:
+            messages.error(request, f"Error creating user: {str(e)}")
+    
+    # Get all users
+    try:
+        api_url = request.build_absolute_uri(f'/api/admin/users?user_id={user_id}')
+        response = requests.get(api_url)
+        
+        if response.status_code == 200:
+            users_data = response.json()
+            users = users_data.get('users', [])
+        else:
+            users = []
+            messages.error(request, "Failed to load users.")
+            
+    except Exception as e:
+        users = []
+        messages.error(request, f"Error loading users: {str(e)}")
+    
+    context = {
+        'user': user,
+        'users': users,
+    }
+    
+    return render(request, 'admin/users.html', context)
+
+def admin_courses_view(request):
+    """Admin courses management view"""
+    if not request.session.get('user_id'):
+        return redirect('login')
+    
+    user_id = request.session.get('user_id')
+    
+    try:
+        user = User.objects.get(id=user_id)
+        if not user.is_admin:
+            messages.error(request, "Admin access required.")
+            return redirect('courses')
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
+    
+    # Get all courses
+    try:
+        api_url = request.build_absolute_uri(f'/api/admin/courses?user_id={user_id}')
+        response = requests.get(api_url)
+        
+        if response.status_code == 200:
+            courses_data = response.json()
+            courses = courses_data.get('courses', [])
+        else:
+            courses = []
+            messages.error(request, "Failed to load courses.")
+            
+    except Exception as e:
+        courses = []
+        messages.error(request, f"Error loading courses: {str(e)}")
+    
+    context = {
+        'user': user,
+        'courses': courses,
+    }
+    
+    return render(request, 'admin/courses.html', context)
+
+def admin_activities_view(request):
+    """Admin activities management view"""
+    if not request.session.get('user_id'):
+        return redirect('login')
+    
+    user_id = request.session.get('user_id')
+    
+    try:
+        user = User.objects.get(id=user_id)
+        if not user.is_admin:
+            messages.error(request, "Admin access required.")
+            return redirect('courses')
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
+    
+    # Get all activities
+    try:
+        api_url = request.build_absolute_uri(f'/api/admin/activities?user_id={user_id}')
+        response = requests.get(api_url)
+        
+        if response.status_code == 200:
+            activities_data = response.json()
+            activities = activities_data.get('activities', [])
+        else:
+            activities = []
+            messages.error(request, "Failed to load activities.")
+            
+    except Exception as e:
+        activities = []
+        messages.error(request, f"Error loading activities: {str(e)}")
+    
+    context = {
+        'user': user,
+        'activities': activities,
+    }
+    
+    return render(request, 'admin/activities.html', context)
+
+def admin_analytics_view(request):
+    """Admin analytics view with real-time data"""
+    if not request.session.get('user_id'):
+        return redirect('login')
+    
+    user_id = request.session.get('user_id')
+    
+    try:
+        user = User.objects.get(id=user_id)
+        if not user.is_admin:
+            messages.error(request, "Admin access required.")
+            return redirect('courses')
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
+    
+    context = {
+        'user': user,
+    }
+    
+    return render(request, 'admin/analytics.html', context)
+
+def admin_delete_user(request, user_id_to_delete):
+    """Delete a user (admin only)"""
+    if not request.session.get('user_id'):
+        return redirect('login')
+    
+    user_id = request.session.get('user_id')
+    
+    try:
+        user = User.objects.get(id=user_id)
+        if not user.is_admin:
+            messages.error(request, "Admin access required.")
+            return redirect('courses')
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
+    
+    try:
+        api_url = request.build_absolute_uri(f'/api/admin/users/{user_id_to_delete}?user_id={user_id}')
+        response = requests.delete(api_url)
+        
+        if response.status_code == 204:
+            messages.success(request, "User deleted successfully.")
+        else:
+            error_data = response.json() if response.content else {}
+            messages.error(request, f"Failed to delete user: {error_data.get('message', 'Unknown error')}")
+            
+    except Exception as e:
+        messages.error(request, f"Error deleting user: {str(e)}")
+    
+    return redirect('admin_users')
+
+def admin_delete_course(request, course_id):
+    """Delete a course (admin only)"""
+    if not request.session.get('user_id'):
+        return redirect('login')
+    
+    user_id = request.session.get('user_id')
+    
+    try:
+        user = User.objects.get(id=user_id)
+        if not user.is_admin:
+            messages.error(request, "Admin access required.")
+            return redirect('courses')
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
+    
+    try:
+        api_url = request.build_absolute_uri(f'/api/admin/courses/{course_id}?user_id={user_id}')
+        response = requests.delete(api_url)
+        
+        if response.status_code == 204:
+            messages.success(request, "Course deleted successfully.")
+        else:
+            error_data = response.json() if response.content else {}
+            messages.error(request, f"Failed to delete course: {error_data.get('message', 'Unknown error')}")
+            
+    except Exception as e:
+        messages.error(request, f"Error deleting course: {str(e)}")
+    
+    return redirect('admin_courses')
+
+def admin_delete_activity(request, activity_id):
+    """Delete an activity (admin only)"""
+    if not request.session.get('user_id'):
+        return redirect('login')
+    
+    user_id = request.session.get('user_id')
+    
+    try:
+        user = User.objects.get(id=user_id)
+        if not user.is_admin:
+            messages.error(request, "Admin access required.")
+            return redirect('courses')
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+        return redirect('login')
+    
+    try:
+        api_url = request.build_absolute_uri(f'/api/admin/activities/{activity_id}?user_id={user_id}')
+        response = requests.delete(api_url)
+        
+        if response.status_code == 204:
+            messages.success(request, "Activity deleted successfully.")
+        else:
+            error_data = response.json() if response.content else {}
+            messages.error(request, f"Failed to delete activity: {error_data.get('message', 'Unknown error')}")
+            
+    except Exception as e:
+        messages.error(request, f"Error deleting activity: {str(e)}")
+    
+    return redirect('admin_activities')

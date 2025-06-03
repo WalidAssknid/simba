@@ -41,6 +41,9 @@ def login_view(request):
             request.session['user_id'] = user_data['id']
             request.session['username'] = user_data['username']
             
+            # Add one-time login success message
+            request.session['show_login_success'] = True
+            
             return redirect('courses')
             
         except requests.exceptions.RequestException as e:
@@ -84,6 +87,10 @@ def register_view(request):
                 request.session['user_id'] = response_data['id']
                 request.session['username'] = response_data['username']
                 
+                # Add permanent warning about email verification
+                request.session['email_verification_warning'] = True
+                request.session['user_email'] = email
+                
                 # Check for next parameter to redirect after registration
                 next_url = request.GET.get('next') or request.POST.get('next')
                 if next_url:
@@ -126,6 +133,11 @@ def verify_email_view(request, token):
         
         verification_token.is_used = True
         verification_token.save()
+        
+        # Remove email verification warning from session if user is logged in
+        if request.session.get('user_id') == str(user.id):
+            request.session.pop('email_verification_warning', None)
+            request.session.pop('user_email', None)
         
         messages.success(request, "Your email has been verified successfully! You can now log in.")
         
@@ -339,6 +351,10 @@ def courses_view(request):
     
     user_id = request.session.get('user_id')
     user = User.objects.get(id=user_id)
+    
+    # Show login success message only once
+    if request.session.pop('show_login_success', False):
+        messages.success(request, f"Welcome back, {user.username}!")
     
     # Get courses where user is owner (teacher)
     owned_courses = Course.objects.filter(owner=user).order_by('-created_at')

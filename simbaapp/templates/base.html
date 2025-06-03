@@ -120,6 +120,15 @@
             {% endfor %}
         {% endif %}
         
+        {% comment %} Email verification warning - persistent until email is verified {% endcomment %}
+        {% if request.session.email_verification_warning and request.session.user_id and not request.resolver_match.url_name == 'login' and not request.resolver_match.url_name == 'register' and not request.resolver_match.url_name == 'home' %}
+            <div class="alert alert-warning email-verification-warning persistent-alert">
+                <i class="fas fa-exclamation-triangle" style="margin-right: 8px; color: #d64000;"></i>
+                <strong style="color: #ac3300;">Email Verification Required: </strong>Please verify your email address to confirm your account. Otherwise, you will not be able to log in again.
+                <a href="{% url 'resend_verification' %}" style="color: #ac3300; text-decoration: underline; margin-left: 10px;">Resend verification email</a>
+            </div>
+        {% endif %}
+        
         {% block content %}{% endblock %}
     </main>
     
@@ -128,8 +137,7 @@
     {# Script for menus and interactions #}
     <script>
         document.addEventListener('DOMContentLoaded', (event) => {
-            // Fade out alerts
-            const alerts = document.querySelectorAll('.alert');
+            const alerts = document.querySelectorAll('.alert:not(.persistent-alert)');
             alerts.forEach(alert => {
                 setTimeout(() => {
                     alert.classList.add('fade-out');

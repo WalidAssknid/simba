@@ -2754,7 +2754,7 @@ body.home-page {
 /* Hero Section */
 .hero-section {
   padding: 120px 0 80px 0;
-  background: linear-gradient(135deg, #ffffff 0%, #fff5f2 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #fff0eb 100%);
 }
 
 .hero-container {
@@ -3204,7 +3204,7 @@ body.home-page {
 /* Manual Section */
 .manual-section {
   padding: 80px 0;
-  background-color: white;
+  background: linear-gradient(135deg, #ffffff 0%, #fff0eb 100%);
 }
 
 .manual-content {
@@ -3302,7 +3302,7 @@ body.home-page {
 /* Papers Section */
 .papers-section {
   padding: 80px 0;
-  background-color: var(--background-light);
+  background-color: white;
 }
 
 .papers-section .section-description {
@@ -3383,10 +3383,11 @@ body.home-page {
 
 .partners-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 40px;
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
+  justify-items: center;
 }
 
 .partner-logo {
@@ -3413,7 +3414,7 @@ body.home-page {
 /* About Section */
 .about-section {
   padding: 80px 0;
-  background-color: var(--background-light);
+  background: linear-gradient(135deg, #ffffff 0%, #fff0eb 100%);
 }
 
 .about-content {
@@ -3572,4 +3573,342 @@ body.home-page {
 /* Hidden utility class */
 .hidden {
   display: none !important;
+}
+
+/* ===== New Sections Styles ===== */
+
+/* SIMBA Info Sections */
+.simba-info-section {
+  margin: 30px 0;
+  padding: 20px 0;
+}
+
+.simba-info-section h4 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 20px;
+}
+
+.simba-features {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.simba-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid var(--primary-color);
+}
+
+.feature-emoji {
+  font-size: 1.5rem;
+  min-width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feature-content {
+  flex: 1;
+  line-height: 1.6;
+}
+
+.feature-content strong {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.simba-audience ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.simba-audience li {
+  padding: 12px 0;
+  border-bottom: 1px solid #e9ecef;
+  position: relative;
+  padding-left: 20px;
+}
+
+.simba-audience li:before {
+  content: "•";
+  color: var(--primary-color);
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+}
+
+.simba-audience li:last-child {
+  border-bottom: none;
+}
+
+/* Team Section */
+.team-section {
+  background: linear-gradient(135deg, #ffffff 0%, #fff0eb 100%);
+  padding: 60px 0;
+}
+
+.team-content p {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+  color: var(--text-color);
+}
+
+/* Contributors Section */
+.contributors-section {
+  padding: 60px 0;
+  background-color: white;
+}
+
+.contributors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.contributor-card {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.contributor-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  border-color: var(--primary-color);
+}
+
+.contributor-photo {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.contributor-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #e9ecef;
+  transition: border-color 0.3s ease;
+}
+
+.contributor-card:hover .contributor-image {
+  border-color: var(--primary-color);
+}
+
+.contributor-info h4 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 8px;
+}
+
+.contributor-info p {
+  color: #666;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* Citation Section */
+.citation-section {
+  background-color: white;
+  padding: 60px 0;
+}
+
+.citation-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.citation-box {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 30px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.citation-box p {
+  margin: 0;
+  color: var(--text-color);
+}
+
+.citation-box a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.citation-box a:hover {
+  text-decoration: underline;
+}
+
+/* Contact Section */
+.contact-section {
+  padding: 60px 0;
+  background-color: white;
+}
+
+.contact-content {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 30px;
+}
+
+.contact-info p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.contact-info strong {
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.contact-info a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.contact-info a:hover {
+  text-decoration: underline;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .simba-features {
+    gap: 12px;
+  }
+  
+  .simba-feature {
+    padding: 12px;
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+  
+  .feature-emoji {
+    min-width: auto;
+  }
+  
+  .simba-info-section h4 {
+    font-size: 1.2rem;
+  }
+  
+  .contributors-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .contributor-card {
+    padding: 20px;
+  }
+  
+  .team-content p {
+    font-size: 1rem;
+    padding: 0 20px;
+  }
+  
+  .citation-box {
+    padding: 20px;
+    font-size: 0.9rem;
+  }
+  
+  .contact-info {
+    gap: 12px;
+  }
+  
+  .contact-info p {
+    font-size: 1rem;
+  }
+
+  .partners-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    max-width: 100%;
+  }
+
+  .partner-logo {
+    height: 120px;
+    padding: 15px;
+  }
+
+  .partner-image {
+    max-width: 100px;
+    max-height: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .contributors-grid {
+    margin-top: 20px;
+  }
+  
+  .contributor-card {
+    padding: 16px;
+  }
+  
+  .contributor-info h4 {
+    font-size: 1.1rem;
+  }
+  
+  .contributor-info p {
+    font-size: 0.9rem;
+  }
+  
+  .team-section,
+  .contributors-section,
+  .citation-section,
+  .contact-section {
+    padding: 40px 0;
+  }
+  
+  .citation-box {
+    padding: 16px;
+    font-size: 0.85rem;
+  }
+  
+  .simba-feature {
+    padding: 16px;
+  }
+
+  .partners-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .partner-logo {
+    height: 100px;
+    padding: 10px;
+  }
+
+  .partner-image {
+    max-width: 80px;
+    max-height: 80px;
+  }
 }

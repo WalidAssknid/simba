@@ -33,11 +33,17 @@
         <div class="hero-container">
             <div class="hero-content">
                 <h1 class="hero-title">Welcome to SIMBA</h1>
-                <h2 class="hero-subtitle">Creating Activities for Promoting Critical Thinking and Self-reflection</h2>
+                <h2 class="hero-subtitle">The AI That Makes Students Think</h2>
                 <p class="hero-description">
-                    SIMBA is an educational chatbot designed to help students develop better learning strategies. 
-                    Our platform makes it easy for teachers to create engaging activities that promote critical 
-                    thinking and self-reflection.
+                    SIMBA is a web-based educational platform that empowers teachers to design, deploy, 
+                    and analyze pedagogically-grounded chatbots powered by large language models. 
+                    While generative AI is becoming increasingly available, educators often lack the tools to
+                    transform it into purposeful, trackable, and effective learning experiences. 
+                    SIMBA was co-developed with instructors to fill this gap and meet real classroom needs, 
+                    aligning LLMs with structured teaching practices that support students development of critical 
+                    thinking and self-reflection through guided dialogue and actionable insights.
+                    
+                    No coding required — just thoughtful pedagogy translated into interactive dialogues.
                 </p>
                 <div class="hero-actions">
                     <a href="{% url 'login' %}" class="btn btn-hero-primary">Get Started</a>
@@ -97,22 +103,54 @@
                         will help you make the most of SIMBA. We've put together step-by-step guides, practical 
                         examples, and troubleshooting tips to get you up and running quickly.
                     </p>
+                    
+                    <!-- What Makes SIMBA Different Section -->
+                    <div class="simba-info-section">
+                        <h4>What Makes SIMBA Different?</h4>
+                        <div class="simba-features">
+                            <div class="simba-feature">
+                                <span class="feature-emoji">🧠</span>
+                                <div class="feature-content">
+                                    <strong>Pedagogy-first:</strong> Chatbot creation is rooted in instructional strategies defined by the teachers.
+                                </div>
+                            </div>
+                            <div class="simba-feature">
+                                <span class="feature-emoji">👩‍🏫</span>
+                                <div class="feature-content">
+                                    <strong>Teacher-driven:</strong> Built with and for educators; no AI expertise needed.
+                                </div>
+                            </div>
+                            <div class="simba-feature">
+                                <span class="feature-emoji">📊</span>
+                                <div class="feature-content">
+                                    <strong>Learning Analytics-Ready:</strong> Interactions become evidence for reflection, research, and refinement.
+                                </div>
+                            </div>
+                            <div class="simba-feature">
+                                <span class="feature-emoji">🔁</span>
+                                <div class="feature-content">
+                                    <strong>Evidence-based and Informed:</strong> The tool evolves based on classroom realities and ongoing research using Design Based Research Methodologies.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Who is SIMBA For Section -->
+                    <div class="simba-info-section">
+                        <h4>Who is SIMBA for?</h4>
+                        <div class="simba-audience">
+                            <ul>
+                                <li>University instructors, school teachers, and instructional designers.</li>
+                                <li>Education researchers exploring AI-supported teaching.</li>
+                                <li>Innovative institutions piloting future-ready learning tools.</li>
+                            </ul>
+                        </div>
+                    </div>
+
                     <div class="manual-features">
                         <div class="feature-item">
                             <i class="fas fa-book"></i>
-                            <span>Complete User Guide</span>
-                        </div>
-                        <div class="feature-item">
-                            <i class="fas fa-cogs"></i>
-                            <span>Setup Instructions</span>
-                        </div>
-                        <div class="feature-item">
-                            <i class="fas fa-question-circle"></i>
-                            <span>FAQ & Troubleshooting</span>
-                        </div>
-                        <div class="feature-item">
-                            <i class="fas fa-lightbulb"></i>
-                            <span>Teaching Tips & Best Practices</span>
+                            <span>User Guide</span>
                         </div>
                     </div>
                     <div class="manual-actions">
@@ -180,6 +218,110 @@
                 </div>
                 <div class="partner-logo">
                     <img src="{% load static %}{% static 'images/anr_logo.png' %}" alt="ANR" class="partner-image">
+                </div>
+                <div class="partner-logo">
+                    <img src="{% load static %}{% static 'images/logo_UT.png' %}" alt="Université de Toulouse" class="partner-image">
+                </div>
+                <div class="partner-logo">
+                    <img src="{% load static %}{% static 'images/logo_catolica.png' %}" alt="Pontificia Universidad Católica de Chile" class="partner-image">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Team Section -->
+    <section id="team" class="team-section">
+        <div class="container">
+            <h2 class="section-title">Team</h2>
+            <div class="team-content">
+                <p>
+                    SIMBA was developed and implemented through a series of collaborative research projects involving researchers from Chile, Brazil, and France. This version of the tool was developed by IRIT with support from the ANR JCJC LASER project (France), Chile's Millennium Nucleus of Higher Education (NMEdSup), and the STIC-AmSud LAFE project.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contributors Section -->
+    <section id="contributors" class="contributors-section">
+        <div class="container">
+            <h2 class="section-title">Contributors</h2>
+            <div class="contributors-grid">
+                <div class="contributor-card">
+                    <div class="contributor-photo">
+                        <img src="{% load static %}{% static 'images/mar.png' %}" alt="Mar Pérez-Sanagustín" class="contributor-image">
+                    </div>
+                    <div class="contributor-info">
+                        <h4>Mar Pérez-Sanagustín</h4>
+                        <p>Associate Professor at UT, IRIT</p>
+                    </div>
+                </div>
+                <div class="contributor-card">
+                    <div class="contributor-photo">
+                        <img src="{% load static %}{% static 'images/isabel.png' %}" alt="Isabel Hilliger Carrasco" class="contributor-image">
+                    </div>
+                    <div class="contributor-info">
+                        <h4>Isabel Hilliger Carrasco</h4>
+                        <p>Associate Professor at PUC</p>
+                    </div>
+                </div>
+                <div class="contributor-card">
+                    <div class="contributor-photo">
+                        <img src="{% load static %}{% static 'images/gabriel.jpg' %}" alt="Gabriel Ferretini" class="contributor-image">
+                    </div>
+                    <div class="contributor-info">
+                        <h4>Gabriel Ferretini</h4>
+                        <p>Post-Doc researcher at IRIT</p>
+                    </div>
+                </div>
+                <div class="contributor-card">
+                    <div class="contributor-photo">
+                        <img src="{% load static %}{% static 'images/jean.jpg' %}" alt="Jean François Parmentier" class="contributor-image">
+                    </div>
+                    <div class="contributor-info">
+                        <h4>Jean François Parmentier</h4>
+                        <p>PhD, Lecturer at IPSA</p>
+                    </div>
+                </div>
+                <div class="contributor-card">
+                    <div class="contributor-photo">
+                        <img src="{% load static %}{% static 'images/andre.jpeg' %}" alt="André Câmara Alves do Nascimento" class="contributor-image">
+                    </div>
+                    <div class="contributor-info">
+                        <h4>André Câmara Alves do Nascimento</h4>
+                        <p>Professor at UFRPE University</p>
+                    </div>
+                </div>
+                <div class="contributor-card">
+                    <div class="contributor-photo">
+                        <img src="{% load static %}{% static 'images/lenon.jpeg' %}" alt="Lenon Anthony" class="contributor-image">
+                    </div>
+                    <div class="contributor-info">
+                        <h4>Lenon Anthony</h4>
+                        <p>Internship from UFRPE University at IRIT</p>
+                    </div>
+                </div>
+                <div class="contributor-card">
+                    <div class="contributor-photo">
+                        <img src="{% load static %}{% static 'images/esteban.jpeg' %}" alt="Estevan Villalobos" class="contributor-image">
+                    </div>
+                    <div class="contributor-info">
+                        <h4>Estevan Villalobos</h4>
+                        <p>PhD Student from IRIT</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How to Cite Section -->
+    <section id="citation" class="citation-section">
+        <div class="container">
+            <h2 class="section-title">How to cite SIMBA</h2>
+            <div class="citation-content">
+                <div class="citation-box">
+                    <p>
+                        Hilliger, I., Pérez-Sanagustín, M., Camara, A., Villalobos, De Souza, L., Parmentier, J.F., Ferretini, G. 2025. "SIMBA 2025: Teaching with AI That Make Students Think", Available at: <a href="https://github.com/Simba-mentor-ai" target="_blank">https://github.com/Simba-mentor-ai</a>
+                    </p>
                 </div>
             </div>
         </div>
@@ -251,6 +393,8 @@
                     <div class="footer-column">
                         <h4>Contact</h4>
                         <a href="mailto:simba.mentor.ai@gmail.com">simba.mentor.ai@gmail.com</a>
+                        <a href="mailto:mar.perez-sanagustin@irit.fr">mar.perez-sanagustin@irit.fr</a>
+                        <a href="mailto:ihillige@uc.cl">ihillige@uc.cl</a>
                         <div class="social-links">
                             <a href="#"><i class="fab fa-linkedin"></i></a>
                             <a href="#"><i class="fab fa-twitter"></i></a>

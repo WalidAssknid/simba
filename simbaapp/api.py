@@ -1353,7 +1353,7 @@ def get_student_clusters(request, course_id: str = "all", n_clusters: int = 3):
         }
 
 @dashboard_router.get("/raw_messages/", response=RawMessagesSchema)
-def get_raw_messages(request, course_id: str = "all"):
+def get_raw_messages(request, course_id: str = "all", activity_id: str = "all"):
     """Get raw message data for export, with complete message content instead of truncated content."""
     try:
         if course_id != "all":
@@ -1363,6 +1363,10 @@ def get_raw_messages(request, course_id: str = "all"):
             ).select_related('thread__user', 'thread__activity', 'thread__activity__course').order_by('-timestamp')
         else:
             messages_query = Message.objects.all().select_related('thread__user', 'thread__activity', 'thread__activity__course').order_by('-timestamp')
+        
+        if activity_id != "all":
+            activity = Activity.objects.get(id=activity_id)
+            messages_query = messages_query.filter(thread__activity=activity)
         
         messages = []
         for msg in messages_query:

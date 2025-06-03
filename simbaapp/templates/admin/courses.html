@@ -152,8 +152,11 @@
     text-decoration: none;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.25rem;
     transition: all 0.2s;
+    min-width: 50px;
+    text-align: center;
 }
 
 .btn-danger {
@@ -310,13 +313,14 @@
                     </td>
                     <td>
                         <div class="action-buttons">
-                            <a href="/courses/{{ course.id }}/" class="btn btn-info" target="_blank">
-                                <i class="fas fa-eye"></i> View
-                            </a>
+                            <button onclick="downloadCourseCSV('{{ course.id }}', '{{ course.title|escapejs }}')" 
+                                    class="btn btn-info">
+                                <i class="fas fa-download"></i> Download CSV
+                            </button>
                             <a href="{% url 'admin_delete_course' course.id %}" 
                                class="btn btn-danger"
                                onclick="return confirm('Are you sure you want to delete course \'{{ course.title }}\'? This action cannot be undone and will delete all associated activities and data.');">
-                                <i class="fas fa-trash"></i> Delete
+                                <i class="fas fa-trash"></i>
                             </a>
                         </div>
                     </td>
@@ -370,6 +374,64 @@ function filterCourses() {
 function clearSearch() {
     document.getElementById('courseSearch').value = '';
     filterCourses();
+}
+
+function downloadCourseCSV(courseId, courseTitle) {
+    const cleanCourseTitle = courseTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    
+    // Show loading state
+    const button = event.target.closest('button');
+    const originalContent = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+    button.disabled = true;
+    
+    // Use the same API endpoint as dashboard
+    fetch(`/api/dashboard/raw_messages/?course_id=${courseId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (!data.messages || data.messages.length === 0) {
+                alert('No conversation data available for this course.');
+                return;
+            }
+            
+            // Create CSV content with same structure as dashboard
+            const headers = ['Role', 'Content', 'Timestamp', 'Course', 'Activity', 'Thread ID', 'Message Number', 'Username'];
+            const rows = data.messages.map(msg => [
+                `"${msg.role || ''}"`,
+                `"${(msg.content || '').replace(/"/g, '""')}"`,
+                `"${msg.timestamp || new Date().toISOString()}"`,
+                `"${msg.course_title || 'Unknown Course'}"`,
+                `"${msg.activity_title || 'Unknown Activity'}"`,
+                `"${msg.thread_id || ''}"`,
+                `"${msg.message_number || ''}"`,
+                `"${msg.username || ''}"`,
+            ]);
+            
+            const csvContent = [
+                headers.join(','),
+                ...rows.map(row => row.join(','))
+            ].join('\n');
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `course_conversations_${cleanCourseTitle}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        })
+        .catch(error => {
+            console.error('Error downloading course CSV:', error);
+            alert('Failed to download course conversation data. Please try again.');
+        })
+        .finally(() => {
+            // Restore button state
+            button.innerHTML = originalContent;
+            button.disabled = false;
+        });
 }
 </script>
 {% endblock %} 

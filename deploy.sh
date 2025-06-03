@@ -77,22 +77,26 @@ if [ ! -f $ENV_FILE ]; then
     exit 1
 fi
 
+print_step "Creating database backup (if exists)..."
 if docker ps | grep -q "simba.*db"; then
-    print_step "Creating database backup..."
     ./scripts/backup.sh || print_warning "Backup failed or no existing database"
 else
     print_step "No existing database found, skipping backup"
 fi
 
-print_step "Stopping existing containers..."
-ENVIRONMENT=production docker compose -f $COMPOSE_FILE down || true
-print_success "Containers stopped"
+print_step "Stopping web and chainlit containers (preserving database)..."
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE stop web chainlit || true
+print_success "Web and chainlit containers stopped, database preserved"
 
-print_step "Pulling latest Docker images..."
+print_step "Removing old web and chainlit containers..."
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE rm -f web chainlit || true
+
+print_step "Pulling latest base images..."
 ENVIRONMENT=production docker compose -f $COMPOSE_FILE pull || print_warning "Some images may need to be built locally"
 
-print_step "Building and starting containers..."
-ENVIRONMENT=production docker compose -f $COMPOSE_FILE up --build -d
+print_step "Building and starting containers (no cache for web/chainlit)..."
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE build --no-cache web chainlit
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE up -d
 
 print_step "Waiting for services to be ready..."
 sleep 15

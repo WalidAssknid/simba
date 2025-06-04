@@ -1,10 +1,12 @@
+{% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIMBA</title>
-    <link rel="stylesheet" href="{% load static %}{% static 'css/simba.css' %}">
+    <link rel="stylesheet" href="{% static 'css/simba.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="shortcut icon" href="{% static 'images/icons/favicon.ico' %}" type="image/x-icon" />
 </head>
@@ -32,7 +34,7 @@
     <section class="hero-section">
         <div class="hero-container">
             <div class="hero-content">
-                <h1 class="hero-title">Welcome to SIMBA</h1>
+                <h1 class="hero-title">{% trans "Welcome to SIMBA" %}</h1>
                 <h2 class="hero-subtitle">The AI That Makes Students Think</h2>
                 <p class="hero-description">
                     SIMBA is a web and mobile based educational platform that empowers teachers to design, deploy,

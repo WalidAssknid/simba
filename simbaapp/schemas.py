@@ -44,6 +44,12 @@ class EmailVerificationSchema(Schema):
 class ResendVerificationSchema(Schema):
     email: EmailStr
 
+class AdminCreateUserSchema(Schema):
+    username: str
+    email: EmailStr
+    password: str
+    is_admin: bool = False
+
 # --- Chainlit Session Schemas ---
 
 class ChainlitSessionInitSchema(Schema):

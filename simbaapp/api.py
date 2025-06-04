@@ -45,6 +45,7 @@ from .schemas import (
     PasswordResetSchema,
     EmailVerificationSchema,
     ResendVerificationSchema,
+    AdminCreateUserSchema,
 )
 from .eventTracking import (
     accountCreated,
@@ -1999,26 +2000,26 @@ def get_all_users(request, user_id: str):
         return HTTPStatus.INTERNAL_SERVER_ERROR, {"message": str(e)}
 
 @admin_router.post("/users", response={201: dict, 400: ErrorSchema, 403: ErrorSchema, 500: ErrorSchema})
-def admin_create_user(request, user_id: str, username: str, email: str, password: str, is_admin: bool = False):
+def admin_create_user(request, user_id: str, payload: AdminCreateUserSchema):
     """Admin create new user"""
     try:
         admin = User.objects.get(id=user_id)
         if not admin.is_admin:
             return HTTPStatus.FORBIDDEN, {"message": "Admin access required"}
         
-        if User.objects.filter(username=username).exists():
+        if User.objects.filter(username=payload.username).exists():
             return HTTPStatus.BAD_REQUEST, {"message": "Username already exists"}
         
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email=payload.email).exists():
             return HTTPStatus.BAD_REQUEST, {"message": "Email already exists"}
         
         user = User.objects.create(
-            username=username,
-            email=email,
-            password_hash=make_password(password),
+            username=payload.username,
+            email=payload.email,
+            password_hash=make_password(payload.password),
             is_email_verified=True,  # Admin-created users are pre-verified
             email_verified_at=timezone.now(),
-            is_admin=is_admin
+            is_admin=payload.is_admin
         )
         
         accountCreated(user, time.time())

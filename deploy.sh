@@ -84,18 +84,24 @@ else
     print_step "No existing database found, skipping backup"
 fi
 
-print_step "Stopping web and chainlit containers (preserving database)..."
-ENVIRONMENT=production docker compose -f $COMPOSE_FILE stop web chainlit || true
-print_success "Web and chainlit containers stopped, database preserved"
+print_step "Stopping all containers (preserving database volume)..."
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE stop || true
+print_success "All containers stopped, database volume preserved"
 
-print_step "Removing old web and chainlit containers..."
+print_step "Removing containers and clearing web volume to ensure fresh deployment..."
 ENVIRONMENT=production docker compose -f $COMPOSE_FILE rm -f web chainlit || true
+
+# Remove only the web volume to clear old application files, but preserve db volume
+print_step "Removing web volume to ensure template changes are applied..."
+docker volume rm "${PWD##*/}_web" 2>/dev/null || print_warning "Web volume not found or already removed"
 
 print_step "Pulling latest base images..."
 ENVIRONMENT=production docker compose -f $COMPOSE_FILE pull || print_warning "Some images may need to be built locally"
 
-print_step "Building and starting containers (no cache for web/chainlit)..."
+print_step "Building containers with no cache to ensure all changes are included..."
 ENVIRONMENT=production docker compose -f $COMPOSE_FILE build --no-cache web chainlit
+
+print_step "Starting containers..."
 ENVIRONMENT=production docker compose -f $COMPOSE_FILE up -d
 
 print_step "Waiting for services to be ready..."
@@ -130,6 +136,17 @@ print(f'📊 Total users: {total_users}, Verified: {verified_users}')
 print_step "Collecting static files..."
 ENVIRONMENT=production docker compose -f $COMPOSE_FILE exec -T web python manage.py collectstatic --noinput
 print_success "Static files collected"
+
+print_step "Clearing Django template cache (if any)..."
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE exec -T web python -c "
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
+import django
+django.setup()
+from django.core.cache import cache
+cache.clear()
+print('✅ Django cache cleared')
+" || print_warning "Cache clearing failed (cache might not be configured)"
 
 # Health check
 print_step "Performing health check..."

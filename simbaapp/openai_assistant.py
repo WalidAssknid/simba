@@ -15,6 +15,11 @@ def _build_instructions(activity_data: Dict[str, Any], has_files: bool = False) 
     """Build the instructions for the OpenAI assistant based on activity data"""
     
     course_title = activity_data.get('course_title', 'this course')
+    
+    # Get activity-specific information
+    activity_title = activity_data.get('title', '')
+    activity_description = activity_data.get('description', '')
+    
     adj1 = activity_data.get('agent_attitude', 'friendly')
     expert_mode = activity_data.get('expert_mode', False)
     allow_emojis = activity_data.get('allow_emojis', True)
@@ -78,6 +83,17 @@ def _build_instructions(activity_data: Dict[str, Any], has_files: bool = False) 
     def limits_gen_str(limit):
         return f"Your answers should be {limit} words maximum." if limit and limit != 0 else ""
 
+    def activity_context_gen_str(title, description):
+        """Generate activity-specific context for the prompt"""
+        context_str = ""
+        if title and description:
+            context_str = f"This specific activity is titled '{title}' and focuses on: {description}.\n\n"
+        elif title:
+            context_str = f"This specific activity is titled '{title}'.\n\n"
+        elif description:
+            context_str = f"This activity focuses on: {description}.\n\n"
+        return context_str
+
     emojis_str = emoji_gen(allow_emojis)
     questions_str = questions_gen_str(questions)
     subjects_str = subjects_gen_str(subjects, restrict_to_subject)
@@ -87,10 +103,11 @@ def _build_instructions(activity_data: Dict[str, Any], has_files: bool = False) 
     documents_str = docs_gen_str(trust_document, has_files)
     files_str = files_gen_str(has_files)
     limits_str = limits_gen_str(word_limit)
+    activity_context_str = activity_context_gen_str(activity_title, activity_description)
 
     full_template = f"""You are a {adj1} {teaching_adj_str} tutor for the course '{course_title}'.
 
-Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.
+{activity_context_str}Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.
 Respond in a {adj1}, concise and proactive way{emojis_str}
 
 Help the student answer the following questions:

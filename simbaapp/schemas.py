@@ -98,6 +98,7 @@ class ActivityCreateSchema(Schema):
     end_date: Optional[datetime] = None
     is_visible: bool = True
     allow_redo: bool = True
+    ai_model: str = 'gpt'
     files: List[str] = Field(default_factory=list)  
 
 class ActivityUpdateSchema(Schema):
@@ -117,6 +118,7 @@ class ActivityUpdateSchema(Schema):
     end_date: Optional[datetime] = None
     is_visible: bool = True
     allow_redo: bool = True
+    ai_model: str = 'gpt'
     files: List[str] = Field(default_factory=list) 
 
 class ThreadGetOrCreateSchema(Schema):
@@ -170,6 +172,7 @@ class ActivityDetailSchema(ModelSchema):
     end_date: Optional[datetime]
     is_visible: bool
     allow_redo: bool
+    ai_model: str
 
     class Meta:
         model = Activity
@@ -190,7 +193,8 @@ class ActivityDetailSchema(ModelSchema):
             "start_date",
             "end_date",
             "is_visible",
-            "allow_redo"
+            "allow_redo",
+            "ai_model"
         ]
 
 class ThreadSchema(ModelSchema):

@@ -2,6 +2,7 @@ import os
 import django
 import django.apps
 from openai import AsyncOpenAI
+from mistralai import Mistral
 import chainlit as cl
 import logging
 import httpx
@@ -30,13 +31,20 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
 if not django.apps.apps.ready:
     django.setup()
 
-client = AsyncOpenAI()
+openai_client = AsyncOpenAI()
+mistral_client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
 
-settings = {
+# Default settings for different models
+openai_settings = {
     "model": "gpt-4o-mini",
     "temperature": 0.7,
 }
 
+mistral_settings = {
+    "model": "mistral-medium-latest",
+    "temperature": 0.7,
+    "max_tokens": 1000,
+}
 
 async def api_get_activity(activity_id: str):
     """Get activity data from the API."""
@@ -127,6 +135,9 @@ async def _build_system_prompt(activity_data: dict, logger_instance: logging.Log
     adj1 = activity_data.get('agent_attitude', 'friendly')
     expert_mode = activity_data.get('expert_mode', False)
     
+    activity_title = activity_data.get('title', '')
+    activity_description = activity_data.get('description', '')
+    
     course_info = activity_data.get('course', {})
     if isinstance(course_info, dict):
         courseName = course_info.get('title', 'this course')
@@ -201,6 +212,17 @@ async def _build_system_prompt(activity_data: dict, logger_instance: logging.Log
             return f"Your answers should be {limit} words maximum."
         return ""
 
+    def activityContextGen_str(title, description):
+        """Generate activity-specific context for the prompt"""
+        context_str = ""
+        if title and description:
+            context_str = f"This specific activity is titled '{title}' and focuses on: {description}.\n\n"
+        elif title:
+            context_str = f"This specific activity is titled '{title}'.\n\n"
+        elif description:
+            context_str = f"This activity focuses on: {description}.\n\n"
+        return context_str
+
     has_files = bool(vector_store_id)
 
     emojis_str = emojiGen(allow_emojis_flag)
@@ -212,10 +234,11 @@ async def _build_system_prompt(activity_data: dict, logger_instance: logging.Log
     documents_str = docsGen_str(trust_document_flag, has_files)
     files_str = filesGen_str(has_files)
     limits_str = limitsGen_str(word_limit_val)
+    activity_context_str = activityContextGen_str(activity_title, activity_description)
 
     full_template = f"""You are a {adj1} {teaching_adj_str} tutor for the course '{courseName}'.
 
-Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.
+{activity_context_str}Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.
 Respond in a {adj1}, concise and proactive way{emojis_str}
 
 Help the student answer the following questions:
@@ -297,18 +320,37 @@ async def on_chat_start():
         if not previous_messages_data: 
             system_prompt_content = await _build_system_prompt(activity_data, logger)
             
-            openai_initial_messages = [{"role": "system", "content": system_prompt_content}]
+            ai_model = activity_data.get('ai_model', 'gpt')
+            logger.info(f"Creating initial message using AI model: {ai_model}")
             
-            response = await client.chat.completions.create(
-                model=settings["model"],
-                messages=openai_initial_messages,
-                temperature=settings["temperature"],
-            )
-            ai_first_response_content = response.choices[0].message.content
-            
-            await api_create_message(thread_id, ai_first_response_content, "assistant", user_id, model_name=settings["model"])
-            await cl.Message(content=ai_first_response_content).send()
-            logger.info(f"Created initial message for new thread {thread_id}")
+            if ai_model == 'mistral':
+                mistral_initial_messages = [{"role": "system", "content": system_prompt_content}]
+                
+                response = await mistral_client.chat.complete_async(
+                    model=mistral_settings["model"],
+                    messages=mistral_initial_messages,
+                    temperature=mistral_settings["temperature"],
+                    max_tokens=mistral_settings["max_tokens"],
+                    stream=False
+                )
+                ai_first_response_content = response.choices[0].message.content
+                
+                await api_create_message(thread_id, ai_first_response_content, "assistant", user_id, model_name=mistral_settings["model"])
+                await cl.Message(content=ai_first_response_content).send()
+                logger.info(f"Created initial Mistral message for new thread {thread_id}")
+            else:
+                openai_initial_messages = [{"role": "system", "content": system_prompt_content}]
+                
+                response = await openai_client.chat.completions.create(
+                    model=openai_settings["model"],
+                    messages=openai_initial_messages,
+                    temperature=openai_settings["temperature"],
+                )
+                ai_first_response_content = response.choices[0].message.content
+                
+                await api_create_message(thread_id, ai_first_response_content, "assistant", user_id, model_name=openai_settings["model"])
+                await cl.Message(content=ai_first_response_content).send()
+                logger.info(f"Created initial OpenAI message for new thread {thread_id}")
             
         else: 
             if previous_messages_data: 
@@ -347,82 +389,132 @@ async def on_message(message: cl.Message):
     try:
         await api_create_message(thread_id, message.content, "user", user_id, username=username)
         
-        openai_assistant_id = activity_data.get('openai_assistant_id')
+        ai_model = activity_data.get('ai_model', 'gpt')
+        logger.info(f"Using AI model: {ai_model}")
         
-        if openai_assistant_id:
+        if ai_model == 'mistral':
             try:
-                openai_thread_id = cl.user_session.get("openai_thread_id")
-                if not openai_thread_id:
-                    openai_thread = await client.beta.threads.create()
-                    openai_thread_id = openai_thread.id
-                    cl.user_session.set("openai_thread_id", openai_thread_id)
-                    logger.info(f"Created new OpenAI thread: {openai_thread_id}")
+                system_prompt_content = await _build_system_prompt(activity_data, logger)
                 
-                await client.beta.threads.messages.create(
-                    thread_id=openai_thread_id,
-                    role="user",
-                    content=message.content
-                )
-                
-                run = await client.beta.threads.runs.create(
-                    thread_id=openai_thread_id,
-                    assistant_id=openai_assistant_id
-                )
-                
-                while run.status in ['queued', 'in_progress']:
-                    await asyncio.sleep(1)
-                    run = await client.beta.threads.runs.retrieve(
-                        thread_id=openai_thread_id,
-                        run_id=run.id
-                    )
-                
-                if run.status == 'completed':
-                    messages = await client.beta.threads.messages.list(
-                        thread_id=openai_thread_id,
-                        limit=1
-                    )
-                    
-                    if messages.data:
-                        latest_message = messages.data[0]
-                        if latest_message.content:
-                            ai_response_content = latest_message.content[0].text.value
-                            
-                            await api_create_message(thread_id, ai_response_content, "assistant", user_id, model_name="gpt-4o-mini")
-                            
-                            await cl.Message(content=ai_response_content).send()
-                        else:
-                            await cl.Message(content="I apologize, but I couldn't generate a response. Please try again.").send()
-                    else:
-                        await cl.Message(content="I apologize, but I couldn't retrieve the response. Please try again.").send()
-                else:
-                    logger.error(f"OpenAI run failed with status: {run.status}")
-                    await cl.Message(content="I apologize, but I encountered an error processing your request. Please try again.").send()
-                    
-            except Exception as e:
-                logger.error(f"OpenAI Assistant API Error: {e}")
-                await cl.Message(content=f"I apologize, but I'm having trouble processing your request right now. Please try again in a moment. Error: {str(e)}").send()
-                
-        else:
-            logger.info("Using legacy chat completions mode (no OpenAI assistant)")
-            
-            system_prompt_content = await _build_system_prompt(activity_data, logger)
-            
-            messages_history_data = await api_get_messages_for_thread(thread_id)
-            openai_messages = [{"role": "system", "content": system_prompt_content}]
+                messages_history_data = await api_get_messages_for_thread(thread_id)
+                mistral_messages = [{"role": "system", "content": system_prompt_content}]
 
-            for msg_data in messages_history_data:
-                openai_role = msg_data['role'] if msg_data['role'] in ["assistant", "user"] else "user" 
-                openai_messages.append({"role": openai_role, "content": msg_data['content']})
+                for msg_data in messages_history_data:
+                    mistral_role = msg_data['role'] if msg_data['role'] in ["assistant", "user"] else "user" 
+                    mistral_messages.append({"role": mistral_role, "content": msg_data['content']})
+                    
+                response = await mistral_client.chat.complete_async(
+                    model=mistral_settings["model"],
+                    messages=mistral_messages,
+                    temperature=mistral_settings["temperature"],
+                    max_tokens=mistral_settings["max_tokens"],
+                    stream=False
+                )
+                ai_response_content = response.choices[0].message.content
                 
-            response = await client.chat.completions.create(
-                model=settings["model"],
-                messages=openai_messages,
-                temperature=settings["temperature"],
-            )
-            ai_response_content = response.choices[0].message.content
+                await api_create_message(thread_id, ai_response_content, "assistant", user_id, model_name=mistral_settings["model"])
+                await cl.Message(content=ai_response_content).send()
+                
+            except Exception as e:
+                logger.error(f"Mistral AI Error: {e}")
+                await cl.Message(content=f"I apologize, but I'm having trouble processing your request right now. Please try again in a moment. Error: {str(e)}").send()
+        
+        else:
+            openai_assistant_id = activity_data.get('openai_assistant_id')
+            vector_store_id = activity_data.get('vector_store_id')
             
-            await api_create_message(thread_id, ai_response_content, "assistant", user_id, model_name=settings["model"])
-            await cl.Message(content=ai_response_content).send()
+            logger.info(f"GPT model - Assistant ID: {openai_assistant_id}, Vector Store: {vector_store_id}")
+            
+            if openai_assistant_id:
+                try:
+                    logger.info(f"Using OpenAI Assistant API with assistant {openai_assistant_id}")
+                    openai_thread_id = cl.user_session.get("openai_thread_id")
+                    if not openai_thread_id:
+                        openai_thread = await openai_client.beta.threads.create()
+                        openai_thread_id = openai_thread.id
+                        cl.user_session.set("openai_thread_id", openai_thread_id)
+                        logger.info(f"Created new OpenAI thread: {openai_thread_id}")
+                    
+                    await openai_client.beta.threads.messages.create(
+                        thread_id=openai_thread_id,
+                        role="user",
+                        content=message.content
+                    )
+                    
+                    run = await openai_client.beta.threads.runs.create(
+                        thread_id=openai_thread_id,
+                        assistant_id=openai_assistant_id
+                    )
+                    
+                    # Wait for completion with timeout
+                    max_attempts = 30  # 30 seconds timeout
+                    attempts = 0
+                    while run.status in ['queued', 'in_progress'] and attempts < max_attempts:
+                        await asyncio.sleep(1)
+                        attempts += 1
+                        run = await openai_client.beta.threads.runs.retrieve(
+                            thread_id=openai_thread_id,
+                            run_id=run.id
+                        )
+                        logger.info(f"Run status: {run.status} (attempt {attempts})")
+                    
+                    if run.status == 'completed':
+                        messages = await openai_client.beta.threads.messages.list(
+                            thread_id=openai_thread_id,
+                            limit=1
+                        )
+                        
+                        if messages.data:
+                            latest_message = messages.data[0]
+                            if latest_message.content:
+                                ai_response_content = latest_message.content[0].text.value
+                                
+                                await api_create_message(thread_id, ai_response_content, "assistant", user_id, model_name="gpt-4o-mini")
+                                
+                                await cl.Message(content=ai_response_content).send()
+                                logger.info(f"Assistant response sent successfully")
+                            else:
+                                logger.error("Assistant message has no content")
+                                await cl.Message(content="I apologize, but I couldn't generate a response. Please try again.").send()
+                        else:
+                            logger.error("No messages returned from assistant")
+                            await cl.Message(content="I apologize, but I couldn't retrieve the response. Please try again.").send()
+                    elif run.status == 'failed':
+                        logger.error(f"OpenAI run failed: {run.last_error}")
+                        await cl.Message(content="I apologize, but I encountered an error processing your request. Please try again.").send()
+                    elif attempts >= max_attempts:
+                        logger.error(f"OpenAI run timed out after {max_attempts} seconds")
+                        await cl.Message(content="I apologize, but the request is taking too long. Please try again.").send()
+                    else:
+                        logger.error(f"OpenAI run failed with status: {run.status}")
+                        await cl.Message(content="I apologize, but I encountered an error processing your request. Please try again.").send()
+                        
+                except Exception as e:
+                    logger.error(f"OpenAI Assistant API Error: {e}")
+                    await cl.Message(content=f"I apologize, but I'm having trouble processing your request right now. Please try again in a moment. Error: {str(e)}").send()
+                    
+            else:
+                logger.info("No OpenAI assistant available - using legacy chat completions mode")
+                
+                system_prompt_content = await _build_system_prompt(activity_data, logger)
+                
+                messages_history_data = await api_get_messages_for_thread(thread_id)
+                openai_messages = [{"role": "system", "content": system_prompt_content}]
+
+                for msg_data in messages_history_data:
+                    openai_role = msg_data['role'] if msg_data['role'] in ["assistant", "user"] else "user" 
+                    openai_messages.append({"role": openai_role, "content": msg_data['content']})
+                    
+                response = await openai_client.chat.completions.create(
+                    model=openai_settings["model"],
+                    messages=openai_messages,
+                    temperature=openai_settings["temperature"],
+                )
+                ai_response_content = response.choices[0].message.content
+                
+                await api_create_message(thread_id, ai_response_content, "assistant", user_id, model_name=openai_settings["model"])
+                await cl.Message(content=ai_response_content).send()
+                logger.info("Legacy chat completion response sent successfully")
         
     except Exception as e:
         logger.error(f"Error processing message: {e}")

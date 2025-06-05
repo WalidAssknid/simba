@@ -591,6 +591,7 @@ def create_activity_view(request, course_id):
             "end_date": end_date_obj.isoformat() if end_date_obj else None,
             "is_visible": request.POST.get('is_visible') == 'on',
             "allow_redo": request.POST.get('allow_redo') == 'on',
+            "ai_model": request.POST.get('ai_model', 'gpt'),
             "files": files_data
         }
         

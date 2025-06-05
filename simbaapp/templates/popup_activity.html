@@ -49,7 +49,7 @@
                 <div id="questions-list" class="questions-list"></div>
                 <div class="question-input-group">
                     <input type="text" id="new-question" class="form-control" placeholder="Add a question...">
-                    <button type="button" id="add-question" class="btn btn-secondary">
+                    <button type="button" id="add-question" class="btn btn-add-question">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
@@ -71,6 +71,18 @@
                 </select>
                 <small class="form-text">
                     Choose the assistant's tone for this activity.
+                </small>
+            </div>
+            <div class="form-group">
+                <label for="ai-model">
+                    AI Model
+                </label>
+                <select name="ai_model" id="ai-model" class="form-control">
+                    <option value="gpt">GPT (OpenAI)</option>
+                    <option value="mistral">Mistral AI</option>
+                </select>
+                <small class="form-text">
+                    Choose the AI model to power this activity. GPT supports file uploads and advanced features, while Mistral provides fast and efficient responses.
                 </small>
             </div>
             <div class="form-group">
@@ -194,8 +206,24 @@
         const activityFiles = document.getElementById('activity-files');
         const filesList = document.getElementById('files-list');
         const filesHidden = document.getElementById('files-hidden');
+        const aiModelSelect = document.getElementById('ai-model');
         let questions = [];
         let files = [];
+
+        // Debug: Check if all elements exist
+        console.log('Elements check:', {
+            modal: !!modal,
+            questionsList: !!questionsList,
+            newQuestion: !!newQuestion,
+            addQuestionBtn: !!addQuestionBtn,
+            questionsHidden: !!questionsHidden
+        });
+
+        // Only add event listeners if elements exist
+        if (!addQuestionBtn || !newQuestion || !questionsList) {
+            console.error('Required elements for questions functionality not found');
+            return;
+        }
 
         // Open modal
         if (openModalBtn) {
@@ -217,33 +245,44 @@
         });
 
         // Expert mode toggle
-        expertMode.addEventListener('change', function() {
-            customPromptGroup.style.display = this.checked ? 'block' : 'none';
-        });
+        if (expertMode && customPromptGroup) {
+            expertMode.addEventListener('change', function() {
+                customPromptGroup.style.display = this.checked ? 'block' : 'none';
+            });
+        }
 
         // Add question
-        addQuestionBtn.addEventListener('click', function() {
-            const questionText = newQuestion.value.trim();
-            if (questionText) {
-                addQuestion(questionText);
-                newQuestion.value = '';
-                newQuestion.focus();
-            }
-        });
+        if (addQuestionBtn && newQuestion) {
+            addQuestionBtn.addEventListener('click', function() {
+                console.log('Add question button clicked'); // Debug log
+                const questionText = newQuestion.value.trim();
+                console.log('Question text:', questionText); // Debug log
+                if (questionText) {
+                    addQuestion(questionText);
+                    newQuestion.value = '';
+                    newQuestion.focus();
+                } else {
+                    console.log('Question text is empty'); // Debug log
+                }
+            });
 
-        // Enter key for adding questions
-        newQuestion.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                addQuestionBtn.click();
-            }
-        });
+            // Enter key for adding questions
+            newQuestion.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    console.log('Enter key pressed'); // Debug log
+                    addQuestionBtn.click();
+                }
+            });
+        }
 
         // Add a question to the list
         function addQuestion(text) {
+            console.log('Adding question:', text); // Debug log
             questions.push(text);
             updateQuestionsList();
             updateHiddenField();
+            console.log('Current questions array:', questions); // Debug log
         }
 
         // Remove a question from the list
@@ -284,13 +323,15 @@
         }
 
         // Handle file uploads
-        activityFiles.addEventListener('change', function(e) {
-            const selectedFiles = Array.from(e.target.files);
-            selectedFiles.forEach(file => {
-                addFile(file);
+        if (activityFiles) {
+            activityFiles.addEventListener('change', function(e) {
+                const selectedFiles = Array.from(e.target.files);
+                selectedFiles.forEach(file => {
+                    addFile(file);
+                });
+                e.target.value = ''; // Reset input
             });
-            e.target.value = ''; // Reset input
-        });
+        }
 
         // Add a file to the list
         function addFile(file) {
@@ -366,11 +407,71 @@
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
+
+        // Handle AI model selection
+        function handleAiModelChange() {
+            const selectedModel = aiModelSelect.value;
+            const filesSection = document.querySelector('h3.section-title:nth-of-type(2)'); // Activity Files section
+            const filesGroup = activityFiles ? activityFiles.closest('.form-group') : null;
+            const filesSectionHr = filesSection ? filesSection.previousElementSibling : null; // The hr before files section
+            
+            if (selectedModel === 'mistral') {
+                // Hide file upload for Mistral
+                if (filesSection) filesSection.style.display = 'none';
+                if (filesGroup) filesGroup.style.display = 'none';
+                if (filesSectionHr) filesSectionHr.style.display = 'none';
+                
+                // Only clear files if user is actively switching to Mistral (not on initial load)
+                if (aiModelSelect.dataset.initialized === 'true' && files.length > 0) {
+                    if (confirm('Switching to Mistral will remove all uploaded files. Continue?')) {
+                        files = [];
+                        updateFilesList();
+                        updateFilesHiddenField();
+                    } else {
+                        // User cancelled, switch back to GPT
+                        aiModelSelect.value = 'gpt';
+                        return;
+                    }
+                }
+                
+                // Show notice about Mistral limitations
+                if (!document.getElementById('mistral-notice')) {
+                    const notice = document.createElement('div');
+                    notice.id = 'mistral-notice';
+                    notice.className = 'model-notice';
+                    notice.innerHTML = `
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Mistral AI:</strong> File uploads are not supported with Mistral. The assistant will rely on its training data and your instructions.
+                    `;
+                    aiModelSelect.parentNode.appendChild(notice);
+                }
+            } else {
+                // Show file upload for GPT
+                if (filesSection) filesSection.style.display = 'block';
+                if (filesGroup) filesGroup.style.display = 'block';
+                if (filesSectionHr) filesSectionHr.style.display = 'block';
+                
+                // Remove Mistral notice
+                const mistralNotice = document.getElementById('mistral-notice');
+                if (mistralNotice) {
+                    mistralNotice.remove();
+                }
+            }
+            
+            // Mark as initialized after first run
+            aiModelSelect.dataset.initialized = 'true';
+        }
+
+        // Initialize AI model handler
+        if (aiModelSelect) {
+            aiModelSelect.addEventListener('change', handleAiModelChange);
+            // Set initial state
+            handleAiModelChange();
+        }
     });
 </script>
 
 <style>
-    /* Estilos específicos para o modal de atividades */
     #activityModal .modal-content {
         max-width: 700px;
         width: 95%;
@@ -463,7 +564,6 @@
         justify-content: flex-end;
     }
     
-    /* File upload styles */
     .files-list {
         margin-top: 12px;
     }
@@ -510,5 +610,54 @@
     
     .remove-file:hover {
         color: var(--danger-color);
+    }
+    
+    .model-notice {
+        background-color: #fff3e0;
+        border: 1px solid #ffcc80;
+        border-radius: 4px;
+        padding: 12px;
+        margin-top: 8px;
+        font-size: 0.9rem;
+        color: #e65100;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .model-notice i {
+        margin-top: 2px;
+        color: #ff6b35;
+    }
+
+    .btn-add-question {
+        background-color: #ff6b35 !important;
+        border: 2px solid #ff6b35 !important;
+        color: white !important;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        min-width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .btn-add-question:hover {
+        background-color: #e55a2b !important;
+        border-color: #e55a2b !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+    }
+    
+    .btn-add-question:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3);
+    }
+    
+    .btn-add-question i {
+        font-size: 16px;
+        color: white !important;
     }
 </style>

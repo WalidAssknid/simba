@@ -68,11 +68,15 @@ from .eventTracking import (
 )
 from .email_utils import send_email_verification, send_password_reset_email
 import time
+import logging
 
 from django.shortcuts import get_object_or_404
 from http import HTTPStatus
 from . import cluster_students
 from . import openai_assistant
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
 if not django.apps.apps.ready:
@@ -376,41 +380,57 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
         if not can_create:
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner or teachers can create activities."}
 
-        activity_data = {
-            'title': payload.title or f"Activity for {course.title}",
-            'description': payload.description or '',
-            'course_title': course.title,
-            'expert_mode': payload.expert_mode,
-            'custom_prompt': payload.custom_prompt,
-            'questions': payload.questions,
-            'agent_attitude': payload.agent_attitude,
-            'subjects': payload.subjects,
-            'restrict_to_subject': payload.restrict_to_subject,
-            'allow_questions': payload.allow_questions,
-            'allow_emojis': payload.allow_emojis,
-            'trust_document': payload.trust_document,
-            'word_limit': payload.word_limit,
-            'start_date': payload.start_date,
-            'end_date': payload.end_date
-        }
+        assistant_id = None
+        vector_store_id = None
         
-        files_to_upload = []
-        if payload.files:
-            for file_base64 in payload.files:
-                try:
-                    filename, content_type, content = file_base64.split(':', 2)
-                    files_to_upload.append({
-                        'filename': filename,
-                        'content_type': content_type,
-                        'content': content
-                    })
-                except ValueError:
-                    return HTTPStatus.BAD_REQUEST, {"message": "Invalid file format. Expected 'filename:content_type:base64_content'"}
-        
-        assistant_result = openai_assistant.create_assistant(activity_data, files_to_upload)
-        
-        if not assistant_result['success']:
-            return HTTPStatus.BAD_REQUEST, {"message": f"Failed to create OpenAI assistant: {assistant_result.get('error', 'Unknown error')}"}
+        if payload.ai_model == 'gpt':
+            activity_data = {
+                'title': payload.title or f"Activity for {course.title}",
+                'description': payload.description or '',
+                'course_title': course.title,
+                'expert_mode': payload.expert_mode,
+                'custom_prompt': payload.custom_prompt,
+                'questions': payload.questions,
+                'agent_attitude': payload.agent_attitude,
+                'subjects': payload.subjects,
+                'restrict_to_subject': payload.restrict_to_subject,
+                'allow_questions': payload.allow_questions,
+                'allow_emojis': payload.allow_emojis,
+                'trust_document': payload.trust_document,
+                'word_limit': payload.word_limit,
+                'start_date': payload.start_date,
+                'end_date': payload.end_date
+            }
+            
+            files_to_upload = []
+            if payload.files:
+                logger.info(f"Processing {len(payload.files)} files for GPT activity")
+                for i, file_base64 in enumerate(payload.files):
+                    try:
+                        filename, content_type, content = file_base64.split(':', 2)
+                        files_to_upload.append({
+                            'filename': filename,
+                            'content_type': content_type,
+                            'content': content
+                        })
+                        logger.info(f"File {i+1}: {filename} ({content_type})")
+                    except ValueError:
+                        logger.error(f"Invalid file format at index {i}: {file_base64[:100]}...")
+                        return HTTPStatus.BAD_REQUEST, {"message": f"Invalid file format at position {i+1}. Expected 'filename:content_type:base64_content'"}
+            
+            logger.info(f"Creating OpenAI assistant for activity with {len(files_to_upload)} files")
+            assistant_result = openai_assistant.create_assistant(activity_data, files_to_upload)
+            
+            if not assistant_result['success']:
+                error_msg = assistant_result.get('error', 'Unknown error')
+                logger.error(f"Failed to create OpenAI assistant: {error_msg}")
+                return HTTPStatus.BAD_REQUEST, {"message": f"Failed to create OpenAI assistant: {error_msg}"}
+
+            assistant_id = assistant_result['assistant_id']
+            vector_store_id = assistant_result['vector_store_id']
+            logger.info(f"Successfully created OpenAI assistant: {assistant_id}, vector_store: {vector_store_id}")
+        else:
+            logger.info(f"Creating activity with {payload.ai_model} model - no OpenAI assistant needed")
 
         activity = Activity.objects.create(
             course=course,
@@ -431,8 +451,9 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
             end_date=payload.end_date,
             is_visible=payload.is_visible,
             allow_redo=payload.allow_redo,
-            openai_assistant_id=assistant_result['assistant_id'],
-            vector_store_id=assistant_result['vector_store_id']
+            ai_model=payload.ai_model,
+            openai_assistant_id=assistant_id,
+            vector_store_id=vector_store_id
         )
         createdActivity(user,activity.id,{
             "course":payload.course_id,
@@ -452,7 +473,8 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
             "start_date":payload.start_date,
             "end_date":payload.end_date,
             "is_visible":payload.is_visible,
-            "allow_redo":payload.allow_redo},
+            "allow_redo":payload.allow_redo,
+            "ai_model":payload.ai_model},
             time.time())
         return HTTPStatus.CREATED, activity
     except User.DoesNotExist:
@@ -473,6 +495,8 @@ def update_activity_api(request, activity_id: str, payload: ActivityUpdateSchema
         
         if activity.owner_id != user.id and activity.course.owner_id != user.id:
             return HTTPStatus.FORBIDDEN, {"message": "Only the activity owner or course owner can update this activity."}
+        
+        previous_ai_model = activity.ai_model
         
         if payload.title is not None:
             activity.title = payload.title
@@ -496,12 +520,68 @@ def update_activity_api(request, activity_id: str, payload: ActivityUpdateSchema
             activity.end_date = payload.end_date
         activity.is_visible = payload.is_visible
         activity.allow_redo = payload.allow_redo
+        activity.ai_model = payload.ai_model
         
-        if payload.files:
-            activity.files = payload.files
+        if payload.ai_model == 'gpt':
+            activity_data = {
+                'title': activity.title or f"Activity for {activity.course.title}",
+                'description': activity.description or '',
+                'course_title': activity.course.title,
+                'expert_mode': activity.expert_mode,
+                'custom_prompt': activity.custom_prompt,
+                'questions': activity.questions,
+                'agent_attitude': activity.agent_attitude,
+                'subjects': activity.subjects,
+                'restrict_to_subject': activity.restrict_to_subject,
+                'allow_questions': activity.allow_questions,
+                'allow_emojis': activity.allow_emojis,
+                'trust_document': activity.trust_document,
+                'word_limit': activity.word_limit,
+                'start_date': activity.start_date,
+                'end_date': activity.end_date
+            }
+            
+            files_to_upload = []
+            if payload.files:
+                for file_base64 in payload.files:
+                    try:
+                        filename, content_type, content = file_base64.split(':', 2)
+                        files_to_upload.append({
+                            'filename': filename,
+                            'content_type': content_type,
+                            'content': content
+                        })
+                    except ValueError:
+                        return HTTPStatus.BAD_REQUEST, {"message": "Invalid file format. Expected 'filename:content_type:base64_content'"}
+            
+            if activity.openai_assistant_id:
+                assistant_result = openai_assistant.update_assistant(
+                    activity.openai_assistant_id, 
+                    activity_data, 
+                    files_to_upload
+                )
+            else:
+                assistant_result = openai_assistant.create_assistant(activity_data, files_to_upload)
+            
+            if not assistant_result['success']:
+                return HTTPStatus.BAD_REQUEST, {"message": f"Failed to update OpenAI assistant: {assistant_result.get('error', 'Unknown error')}"}
+            
+            activity.openai_assistant_id = assistant_result['assistant_id']
+            activity.vector_store_id = assistant_result['vector_store_id']
+            
+        elif previous_ai_model == 'gpt' and payload.ai_model == 'mistral':
+            if activity.openai_assistant_id:
+                try:
+                    openai_assistant.delete_assistant(activity.openai_assistant_id, activity.vector_store_id)
+                except Exception as e:
+                    logger.warning(f"Failed to clean up OpenAI assistant {activity.openai_assistant_id}: {e}")
+                
+                activity.openai_assistant_id = None
+                activity.vector_store_id = None
         
         activity.save()
-        modifiedActivity(user,activity_id,{"title" : activity.title,"description" : activity.description, "owner" : user.id},time.time())
+        modifiedActivity(user,activity_id,{"title" : activity.title,"description" : activity.description, "owner" : user.id, "ai_model": activity.ai_model},time.time())
+        
         return HTTPStatus.OK, activity
     except User.DoesNotExist:
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
@@ -557,7 +637,8 @@ def get_activity_api(request, activity_id: str):
             'start_date': activity.start_date,
             'end_date': activity.end_date,
             'is_visible': activity.is_visible,
-            'allow_redo': activity.allow_redo
+            'allow_redo': activity.allow_redo,
+            'ai_model': activity.ai_model
         }
         
         return HTTPStatus.OK, activity_data
@@ -1567,6 +1648,7 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
             'allow_emojis': activity.allow_emojis,
             'trust_document': activity.trust_document,
             'word_limit': activity.word_limit,
+            'ai_model': activity.ai_model,
             'openai_assistant_id': activity.openai_assistant_id,
             'vector_store_id': activity.vector_store_id,
             'course': {
@@ -1698,6 +1780,7 @@ def init_chainlit_session(request, payload: ChainlitSessionInitSchema):
             'allow_emojis': activity.allow_emojis,
             'trust_document': activity.trust_document,
             'word_limit': activity.word_limit,
+            'ai_model': activity.ai_model,
             'openai_assistant_id': activity.openai_assistant_id,
             'vector_store_id': activity.vector_store_id,
             'course': {

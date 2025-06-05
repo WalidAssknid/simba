@@ -37,9 +37,9 @@
                 <h1 class="hero-title">{% trans "Welcome to SIMBA" %}</h1>
                 <h2 class="hero-subtitle">{% trans "The AI That Makes Students Think"%}</h2>
                 <p class="hero-description">
-                    {% blocktrans %}
-                    SIMBA is a web and mobile based educational platform that empowers teachers to design, deploy,
-                    and analyze <span style="color: black;">pedagogically-grounded</span> chatbots powered by large language models.
+                    
+                    {% trans 'SIMBA is a web and mobile based educational platform that empowers teachers to design, deploy,
+                    and analyze' %} <span style="color: black;">{% trans 'pedagogically-grounded' %}</span> {% blocktrans %}chatbots powered by large language models.
                     While generative AI is becoming increasingly available, educators often lack the tools to
                     transform it into purposeful, trackable, and effective learning experiences.
                     SIMBA was co-developed with instructors to fill this gap and meet real classroom needs,
@@ -103,9 +103,9 @@
                 <div class="manual-text">
                     <h3>{% trans 'Everything You Need to Know' %}</h3>
                     <p>
-                        {% blocktrans %} 'Whether you're new to educational technology or an experienced educator, our documentation 
+                        {% blocktrans %} Whether you're new to educational technology or an experienced educator, our documentation 
                         will help you make the most of SIMBA. We've put together step-by-step guides, practical 
-                        examples, and troubleshooting tips to get you up and running quickly.' {% endblocktrans %}
+                        examples, and troubleshooting tips to get you up and running quickly. {% endblocktrans %}
                     </p>
                     
                     <!-- What Makes SIMBA Different Section -->
@@ -241,7 +241,7 @@
             <h2 class="section-title">Team</h2>
             <div class="team-content">
                 <p>
-                    {% blocktrans %} 'SIMBA was developed and implemented through a series of collaborative research projects involving researchers from Chile, Brazil, and France. This version of the tool was developed by IRIT with support from the ANR JCJC LASER project (France), Chile's Millennium Nucleus of Higher Education (NMEdSup), and the STIC-AmSud LAFE project.' {% endblocktrans %}
+                    {% blocktrans %} SIMBA was developed and implemented through a series of collaborative research projects involving researchers from Chile, Brazil, and France. This version of the tool was developed by IRIT with support from the ANR JCJC LASER project (France), Chile's Millennium Nucleus of Higher Education (NMEdSup), and the STIC-AmSud LAFE project. {% endblocktrans %}
                 </p>
             </div>
         </div>
@@ -322,7 +322,7 @@
     <!-- How to Cite Section -->
     <section id="citation" class="citation-section">
         <div class="container">
-            <h2 class="section-title">How to cite SIMBA</h2>
+            <h2 class="section-title">{% trans 'How to cite SIMBA' %}</h2>
             <div class="citation-content">
                 <div class="citation-box">
                     <p>
@@ -336,20 +336,20 @@
     <!-- About Section -->
     <section id="about" class="about-section">
         <div class="container">
-            <h2 class="section-title">About SIMBA</h2>
+            <h2 class="section-title">{% trans 'About SIMBA' %}</h2>
             <div class="about-content">
                 <div class="about-text">
-                    <h3>Educational Technology That Actually Helps</h3>
+                    <h3>{% trans 'Educational Technology That Actually Helps' %}</h3>
                     <p>
-                        SIMBA is an educational chatbot designed to support students' learning strategies. 
+                        {% blocktrans %}SIMBA is an educational chatbot designed to support students' learning strategies. 
                         We developed this platform at IRIT as part of the ANR JCJC LASER project, working 
-                        closely with Chile's Millennium Nucleus of Higher Education (NMEdSup).
+                        closely with Chile's Millennium Nucleus of Higher Education (NMEdSup).{% endblocktrans %}
                     </p>
                     <p>
-                        Our goal is simple: help students and teachers become better learners. We believe that with the right 
+                        {% blocktrans %}Our goal is simple: help students and teachers become better learners. We believe that with the right 
                         support and guidance, every student and teacher can develop the critical thinking and self-reflection 
                         skills they need to succeed. SIMBA makes this support accessible, personalized, and available 
-                        whenever students need it most.
+                        whenever students need it most.{% endblocktrans %}
                     </p>
                 </div>
                 <div class="about-visual">
@@ -367,20 +367,20 @@
             <div class="footer-content">
                 <div class="footer-brand">
                     <h3>SIMBA</h3>
-                    <p>The AI That Makes Students Think</p>
+                    <p>{% trans 'The AI That Makes Students Think' %}</p>
                 </div>
                 <div class="footer-links">
                     <div class="footer-column">
                         <h4>Platform</h4>
-                        <a href="{% url 'login' %}">Login</a>
-                        <a href="{% url 'register' %}">Register</a>
-                        <a href="#manual">Documentation</a>
+                        <a href="{% url 'login' %}">{% trans 'Login' %}</a>
+                        <a href="{% url 'register' %}">{% trans 'Register' %}</a>
+                        <a href="#manual">{% trans 'Documentation' %}</a>
                     </div>
                     <div class="footer-column">
                         <h4>Resources</h4>
-                        <a href="#papers">Research Papers</a>
-                        <a href="#use-cases">Use Cases</a>
-                        <a href="#about">About</a>
+                        <a href="#papers">{% trans 'Research Papers' %}</a>
+                        <a href="#use-cases">{% trans 'Use Cases' %}</a>
+                        <a href="#about">{% trans 'About' %}</a>
                     </div>
                     <div class="footer-column">
                         <h4>Contact</h4>

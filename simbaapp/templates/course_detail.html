@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load i18n %}
 {% block title %}{{ course.title }} | SIMBA{% endblock %}
 
 {% block header_title %}
@@ -13,7 +14,7 @@
 <div class="course-details" data-is-owner="{{ is_owner|lower }}" data-user-role="{{ user_role_in_course }}">
     <div class="back-link">
         <a href="{% url 'courses' %}">
-            <i class="fas fa-arrow-left"></i> Back to Courses
+            <i class="fas fa-arrow-left"></i> {% trans 'Back to Courses' %}
         </a>
     </div>
     
@@ -21,7 +22,7 @@
         {% if course.description %}
             <p>{{ course.description }}</p>
         {% else %}
-            <p><em>No description</em></p>
+            <p><em>{% trans 'No description' %}</em></p>
         {% endif %}
     </div>
     
@@ -30,14 +31,14 @@
         <div class="action-buttons">
             {% if is_owner %}
             <button id="generateInviteLinks" class="btn btn-secondary">
-                Generate Invite Links
+                {% trans 'Generate Invite Links' %}
             </button>
             {% endif %}
             <button id="showEnrollmentCode" class="btn btn-secondary">
-                Show Enrollment Code
+                {% trans 'Show Enrollment Code' %}
             </button>
             <button id="showParticipants" class="btn btn-secondary">
-                Show Participants
+                {% trans 'Show Participants' %}
             </button>
     {% if is_owner or user_role_in_course == 'teacher' %}
             <button id="createActivityBtn" class="add-button" title="Create Activity">
@@ -52,34 +53,34 @@
     <div id="inviteLinksModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h3 class="modal-title">Generate Invite Links</h3>
+            <h3 class="modal-title">{% trans 'Generate Invite Links' %}</h3>
             <div class="invite-links-content">
-                <p>Generate invite links to allow people to join your course with specific roles:</p>
+                <p>{% trans 'Generate invite links to allow people to join your course with specific roles:' %}</p>
                 
                 <div class="invite-section">
-                    <h4>Student Invite Link</h4>
-                    <p>People who use this link will join as students</p>
+                    <h4>{% trans 'Student Invite Link' %}</h4>
+                    <p>{% trans 'People who use this link will join as students' %}</p>
                     <button id="generateStudentLink" class="btn btn-primary" data-role="student">
-                        Generate Student Link
+                        {% trans 'Generate Student Link' %}
                     </button>
                     <div id="studentLinkResult" class="link-result" style="display: none;">
                         <div class="code-display" id="studentLinkDisplay"></div>
                         <button class="btn btn-secondary copy-link-btn" data-target="studentLinkDisplay">
-                            Copy Link
+                            {% trans 'Copy Link' %}
                         </button>
                     </div>
                 </div>
                 
                 <div class="invite-section">
-                    <h4>Teacher Invite Link</h4>
-                    <p>People who use this link will join as teachers</p>
+                    <h4>{% trans 'Teacher Invite Link' %}</h4>
+                    <p>{% trans 'People who use this link will join as teachers' %}</p>
                     <button id="generateTeacherLink" class="btn btn-primary" data-role="teacher">
-                        Generate Teacher Link
+                        {% trans 'Generate Teacher Link' %}
                     </button>
                     <div id="teacherLinkResult" class="link-result" style="display: none;">
                         <div class="code-display" id="teacherLinkDisplay"></div>
                         <button class="btn btn-secondary copy-link-btn" data-target="teacherLinkDisplay">
-                            Copy Link
+                            {% trans 'Copy Link' %}
                         </button>
                     </div>
                 </div>
@@ -92,9 +93,9 @@
     <div id="enrollmentCodeModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h3 class="modal-title">Course Enrollment Code</h3>
+            <h3 class="modal-title">{% trans 'Course Enrollment Code' %}</h3>
         <div class="enrollment-code">
-                <p>Share this code with students to join your course:</p>
+                <p>{% trans 'Share this code with students to join your course:' %}</p>
                 <div class="code-display">{{ course.enrollment_code }}</div>
             </div>
         </div>
@@ -104,13 +105,13 @@
     <div id="participantsModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h3 class="modal-title">Course Participants</h3>
+            <h3 class="modal-title">{% trans 'Course Participants' %}</h3>
         <div class="participants-list">
             <!-- Owner always appears first -->
             <div class="participant-card">
                 <div class="participant-info">
                     <span class="participant-name">{{ course.owner.username }}</span>
-                    <span class="participant-role">Owner</span>
+                    <span class="participant-role">{% trans 'Owner' %}</span>
                 </div>
             </div>
             
@@ -180,12 +181,12 @@
                 </div>
                 {% empty %}
                     <div class="empty-state">
-                    <h3>No activities found</h3>
+                    <h3>{% trans 'No activities found' %}</h3>
                         <p>
                             {% if is_owner or user_role_in_course == 'teacher' %}
-                            Click the <i class="fas fa-plus"></i> button to create a new activity!
+                            {% blocktrans %} Click the <i class="fas fa-plus"></i> button to create a new activity! {% endblocktrans %}
                             {% else %}
-                            This course doesn't have any activities yet.
+                            {% trans "This course doesn't have any activities yet." %}
                             {% endif %}
                         </p>
                     </div>
@@ -199,7 +200,7 @@
                 <div class="header-left">
                     <div class="back-link">
                         <a href="#" id="back-to-activities">
-                            <i class="fas fa-arrow-left"></i> <span class="back-text">Back to Activities</span>
+                            <i class="fas fa-arrow-left"></i> <span class="back-text">{% trans 'Back to Activities' %}</span>
                         </a>
                     </div>
                 </div>
@@ -210,17 +211,17 @@
                     {% if not is_owner and user_role_in_course != 'teacher' %}
                     <div class="redo-controls" style="display: none;">
                         <button class="btn btn-secondary redo-activity-btn" id="chainlit-redo-btn">
-                            <i class="fas fa-redo"></i> <span class="redo-text">Re-do Activity</span>
+                            <i class="fas fa-redo"></i> <span class="redo-text">{% trans 'Re-do Activity' %}</span>
                         </button>
                         <div class="attempt-dropdown" id="chainlit-attempt-dropdown" style="display: none;">
                             <select class="form-control attempt-selector" id="chainlit-attempt-selector">
-                                <option value="new">Start New Attempt</option>
+                                <option value="new">{% trans 'Start New Attempt' %}</option>
                             </select>
                             <button class="btn btn-primary start-attempt-btn" id="chainlit-start-btn">
-                                Start
+                                {% trans 'Start' %}
                             </button>
                             <button class="btn btn-secondary cancel-attempt-btn" id="chainlit-cancel-btn">
-                                Cancel
+                                {% trans 'Cancel' %}
                             </button>
                         </div>
                     </div>
@@ -237,16 +238,17 @@
     <div id="activityLinkModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h3 class="modal-title">Activity Link</h3>
-            <p>Share this link with students to access the activity:</p>
+            <h3 class="modal-title">{% trans 'Activity Link' %}</h3>
+            <p>{% trans 'Share this link with students to access the activity:' %}</p>
             <div class="code-display" id="activityLinkDisplay"></div>
-            <button class="btn btn-primary copy-link-btn" data-target="activityLinkDisplay">Copy Link</button>
+            <button class="btn btn-primary copy-link-btn" data-target="activityLinkDisplay">{% trans 'Copy Link' %}</button>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script type="text/javascript" src="{% url 'javascript-catalog' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Create Activity Button
@@ -481,7 +483,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
                 .then(response => response.json())
                 .then(data => {
-                    chainlitAttemptSelector.innerHTML = '<option value="new">Start New Attempt</option>';
+                    chainlitAttemptSelector.innerHTML = gettext('<option value="new">Start New Attempt</option>');
                     
                     // Access the attempts array from the response object
                     const attempts = data.attempts || [];
@@ -758,7 +760,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 
                                 document.body.removeChild(editModal);
                                 
-                                alert('Activity updated successfully!');
+                                alert(gettext('Activity updated successfully!'));
                             })
                             .catch(error => {
                                 console.error('Error updating activity:', error);
@@ -878,7 +880,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 if (activitiesList.querySelectorAll('.activity-item').length === 0) {
                                     const emptyState = document.createElement('div');
                                     emptyState.className = 'empty-state';
-                                    emptyState.innerHTML = `
+                                    emptyState.innerHTML = gettext(`
                                         <h3>No activities found</h3>
                                         <p>
                                             {% if is_owner or user_role_in_course == 'teacher' %}
@@ -887,7 +889,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             This course doesn't have any activities yet.
                                             {% endif %}
                                         </p>
-                                    `;
+                                    `);
                                     activitiesList.appendChild(emptyState);
                                 }
                             }
@@ -899,7 +901,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .catch(error => {
                         console.error('Error deleting activity:', error);
-                        alert('An unexpected error occurred while trying to delete the activity.');
+                        alert(gettext('An unexpected error occurred while trying to delete the activity.'));
                     });
                 }
             }
@@ -1054,7 +1056,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .catch(err => {
                     console.error('Failed to copy link:', err);
-                    alert('Failed to copy link to clipboard');
+                    alert(gettext('Failed to copy link to clipboard'));
                 });
         });
     }
@@ -1084,7 +1086,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const currentUserId = '{{ request.session.user_id }}';
 
                 if (!currentUserId) {
-                    alert("Error: Could not verify current user. Please re-login.");
+                    alert(gettext("Error: Could not verify current user. Please re-login."));
                     return;
                 }
 
@@ -1127,7 +1129,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .catch(error => {
                         console.error('Error removing student:', error);
-                        alert('An unexpected error occurred while trying to remove the student.');
+                        alert(gettext('An unexpected error occurred while trying to remove the student.'));
                     });
                 }
             }
@@ -1173,7 +1175,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Show success message
-                alert(`Activity ${newIsVisible ? 'shown to' : 'hidden from'} students successfully!`);
+                alert(gettext(`Activity ${newIsVisible ? 'shown to' : 'hidden from'} students successfully!`));
             })
             .catch(error => {
                 console.error('Error updating activity visibility:', error);

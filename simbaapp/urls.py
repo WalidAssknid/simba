@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.i18n import JavaScriptCatalog
 from . import views
 from .api import api 
 urlpatterns = [
@@ -37,4 +38,7 @@ urlpatterns = [
     
     # Test error endpoint (remove in production)
     path('test-error/', views.test_error_view, name='test_error'),
+
+    #gettext
+    path('jsi18n/', JavaScriptCatalog.as_view(), name='javascript-catalog'),
 ]

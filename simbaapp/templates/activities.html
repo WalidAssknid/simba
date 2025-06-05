@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% block title %}Activities | SIMBA{% endblock %}
-
 {% block content %}
+{% load i18n %}
 <div class="action-bar" data-is-teacher="{{ is_teacher|lower }}">
     <h3>Activities</h3>
     <!-- Filtro de cursos disponível para todos os usuários -->
     <select id="courseSelector" class="form-control course-selector">
-        <option value="">All Courses</option>
+        <option value="">{% trans 'All Courses' %}</option>
         {% for course in courses %}
         <option value="{{ course.id }}">{{ course.title }}</option>
         {% endfor %}
@@ -15,10 +15,10 @@
     {% if can_create_activity %}
     <div class="action-buttons">
         <button id="showEnrollmentCode" class="btn btn-secondary">
-            Show Enrollment Code
+            {% trans 'Show Enrollment Code' %}
         </button>
         <button id="showParticipants" class="btn btn-secondary">
-            Show Participants
+            {% trans 'Show Participants' %}
         </button>
         <a href="#" id="createActivityBtn" class="add-button hidden" title="Create Activity">
             <i class="fas fa-plus"></i>
@@ -31,9 +31,9 @@
 <div id="enrollmentCodeModal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <h3 class="modal-title">Course Enrollment Code</h3>
+        <h3 class="modal-title">{% trans 'Course Enrollment Code' %}</h3>
         <div class="enrollment-code">
-            <p>Share this code with students to join your course:</p>
+            <p>{% trans 'Share this code with students to join your course:' %}</p>
             <div id="enrollmentCodeDisplay" class="code-display"></div>
         </div>
     </div>
@@ -43,7 +43,7 @@
 <div id="participantsModal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <h3 class="modal-title">Course Participants</h3>
+        <h3 class="modal-title">{% trans 'Course Participants' %}</h3>
         <div id="participantsList" class="participants-list">
             <!-- Participants will be dynamically loaded here -->
         </div>
@@ -74,16 +74,16 @@
                     <div class="activity-menu">
                             {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
                         <a href="#" class="activity-menu-item" data-action="edit" data-activity-id="{{ activity.id }}">
-                            <i class="fas fa-edit"></i> Edit
+                            <i class="fas fa-edit"></i> {% trans 'Edit' %}
                         </a>
                         <a href="#" class="activity-menu-item" data-action="chat" data-activity-id="{{ activity.id }}">
-                            <i class="fas fa-comment"></i> Chat with Activity
+                            <i class="fas fa-comment"></i> {% trans 'Chat with Activity' %}
                         </a>
                         <a href="#" class="activity-menu-item" data-action="link" data-activity-id="{{ activity.id }}">
-                            <i class="fas fa-link"></i> Get Activity Link
+                            <i class="fas fa-link"></i> {% trans 'Get Activity Link' %}
                         </a>
                         <a href="#" class="activity-menu-item delete-activity" data-action="delete" data-activity-id="{{ activity.id }}">
-                            <i class="fas fa-trash"></i> Delete
+                            <i class="fas fa-trash"></i> {% trans 'Delete' %}
                         </a>
                         {% endif %}
                     </div>
@@ -99,7 +99,7 @@
                         <div class="role-info">
                             <span class="role-badge badge-{{ activity_info.user_role }}">
                                 {% if activity_info.is_owner %}
-                                    Owner
+                                    {% trans 'Owner' %}
                                 {% else %}
                                     {{ activity_info.user_role|capfirst }}
                                 {% endif %}
@@ -110,12 +110,12 @@
                 {% endwith %}
             {% empty %}
             <div class="empty-state">
-                <h3>No activities found</h3>
+                <h3>{% trans 'No activities found' %}</h3>
                 <p>
                     {% if can_create_activity %}
-                        Click the <i class="fas fa-plus"></i> button to create a new activity!
+                        {% blocktrans %} Click the <i class="fas fa-plus"></i> button to create a new activity! {% endblocktrans %}
                     {% else %}
-                        You don't have any activities yet. Ask your teacher to create one!
+                        {% trans "You don't have any activities yet. Ask your teacher to create one!" %}
                     {% endif %}
                 </p>
             </div>
@@ -129,7 +129,7 @@
             <div class="header-left">
                 <div class="back-link">
                     <a href="#" id="back-to-activities">
-                        <i class="fas fa-arrow-left"></i> <span class="back-text">Back to Activities</span>
+                        <i class="fas fa-arrow-left"></i> <span class="back-text">{% trans 'Back to Activities' %}</span>
                     </a>
                 </div>
             </div>
@@ -139,17 +139,17 @@
             <div class="header-right">
                 <div class="redo-controls" style="display: none;">
                     <button class="btn btn-secondary redo-activity-btn" id="chainlit-redo-btn">
-                        <i class="fas fa-redo"></i> <span class="redo-text">Re-do Activity</span>
+                        <i class="fas fa-redo"></i> <span class="redo-text">{% trans 'Re-do Activity' %}</span>
                     </button>
                     <div class="attempt-dropdown" id="chainlit-attempt-dropdown" style="display: none;">
                         <select class="form-control attempt-selector" id="chainlit-attempt-selector">
-                            <option value="new">Start New Attempt</option>
+                            <option value="new">{% trans 'Start New Attempt' %}</option>
                         </select>
                         <button class="btn btn-primary start-attempt-btn" id="chainlit-start-btn">
-                            Start
+                            {% trans 'Start' %}
                         </button>
                         <button class="btn btn-secondary cancel-attempt-btn" id="chainlit-cancel-btn">
-                            Cancel
+                            {% trans 'Cancel' %}
                         </button>
                     </div>
                 </div>
@@ -269,15 +269,16 @@
     <div class="modal-content">
         <span class="close">&times;</span>
         <h3 class="modal-title">Activity Link</h3>
-        <p>Share this link with students to access the activity:</p>
+        <p>{% trans 'Share this link with students to access the activity:' %}</p>
         <div class="code-display" id="activityLinkDisplay"></div>
-        <button class="btn btn-primary copy-link-btn" data-target="activityLinkDisplay">Copy Link</button>
+        <button class="btn btn-primary copy-link-btn" data-target="activityLinkDisplay">{% trans 'Copy Link' %}</button>
     </div>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
+<script type="text/javascript" src="{% url 'javascript-catalog' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const questionsHidden = document.getElementById('questions-hidden');
@@ -384,13 +385,13 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
                 .then(response => response.json())
                 .then(data => {
-                    chainlitAttemptSelector.innerHTML = '<option value="new">Start New Attempt</option>';
+                    chainlitAttemptSelector.innerHTML = gettext('<option value="new">Start New Attempt</option>');
                     
                     const attempts = data.attempts || [];
                     attempts.forEach(attempt => {
                         const option = document.createElement('option');
                         option.value = attempt.thread_id;
-                        option.textContent = `Attempt ${attempt.attempt_number} (${new Date(attempt.created_at).toLocaleDateString()})`;
+                        option.textContent =  gettext(`Attempt ${attempt.attempt_number} (${new Date(attempt.created_at).toLocaleDateString()})`);
                         chainlitAttemptSelector.appendChild(option);
                     });
                     
@@ -595,7 +596,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const selectedCourseId = document.getElementById('courseSelector').value;
             if (!selectedCourseId) {
-                alert('Please select a course first to create an activity');
+                alert( gettext('Please select a course first to create an activity'));
                 return;
             }
             
@@ -626,7 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const courseId = this.action.match(/\/courses\/([^\/]+)\/create_activity\//);
             if (!courseId || !courseId[1]) {
                 e.preventDefault();
-                alert('Course ID is missing. Please select a course first.');
+                alert( gettext('Course ID is missing. Please select a course first.'));
             }
         });
     }
@@ -773,7 +774,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 
                                 document.body.removeChild(editModal);
                                 
-                                alert('Activity updated successfully!');
+                                alert( gettext('Activity updated successfully!'));
                                 
                                 window.location.reload();
                             })
@@ -796,7 +797,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Failed to load activity details for editing.');
+                        alert( gettext('Failed to load activity details for editing.'));
                     });
             } else if (action === 'chat') {
                 const activityItem = document.querySelector(`.activity-item[data-activity-id="${activityId}"]`);
@@ -899,7 +900,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 if (activitiesList.querySelectorAll('.activity-item').length === 0) {
                                     const emptyState = document.createElement('div');
                                     emptyState.className = 'empty-state';
-                                    emptyState.innerHTML = `
+                                    emptyState.innerHTML =  gettext(`
                                         <h3>No activities found</h3>
                                         <p>
                                             {% if can_create_activity %}
@@ -908,12 +909,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                             You don't have any activities yet. Ask your teacher to create one!
                                             {% endif %}
                                         </p>
-                                    `;
+                                    `);
                                     activitiesList.appendChild(emptyState);
                                 }
                             }
                             
-                            alert('Activity deleted successfully!');
+                            alert( gettext('Activity deleted successfully!'));
                             
                             window.location.reload();
                         } else {
@@ -924,7 +925,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .catch(error => {
                         console.error('Error deleting activity:', error);
-                        alert('An unexpected error occurred while trying to delete the activity.');
+                        alert( gettext('An unexpected error occurred while trying to delete the activity.'));
                     });
                 }
             }
@@ -1099,7 +1100,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showEnrollmentCodeBtn.addEventListener('click', function() {
             const selectedCourseId = document.getElementById('courseSelector').value;
             if (!selectedCourseId) {
-                alert('Please select a course first');
+                alert( gettext('Please select a course first'));
                 return;
             }
             
@@ -1116,7 +1117,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .catch(error => {
                     console.error('Error fetching course data:', error);
-                    alert('Failed to load enrollment code');
+                    alert( gettext('Failed to load enrollment code'));
                 });
         });
     }
@@ -1126,7 +1127,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showParticipantsBtn.addEventListener('click', function() {
             const selectedCourseId = document.getElementById('courseSelector').value;
             if (!selectedCourseId) {
-                alert('Please select a course first');
+                alert( gettext('Please select a course first'));
                 return;
             }
             
@@ -1207,11 +1208,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const currentUserId = '{{ request.session.user_id }}';
 
                 if (!currentUserId) {
-                    alert("Error: Could not verify current user. Please re-login.");
+                    alert( gettext("Error: Could not verify current user. Please re-login."));
                     return;
                 }
 
-                if (confirm(`Are you sure you want to remove ${username} from this course?`)) {
+                if (confirm( gettext(`Are you sure you want to remove ${username} from this course?`))) {
                     fetch(`/api/enrollments/${enrollmentId}?current_user_id=${currentUserId}`, {
                         method: 'DELETE',
                         headers: {
@@ -1249,7 +1250,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .catch(error => {
                         console.error('Error removing student:', error);
-                        alert('An unexpected error occurred while trying to remove the student.');
+                        alert( gettext('An unexpected error occurred while trying to remove the student.'));
                     });
                 }
             }
@@ -1280,7 +1281,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .catch(err => {
                         console.error('Failed to copy link:', err);
-                        alert('Failed to copy link to clipboard');
+                        alert( gettext('Failed to copy link to clipboard'));
                     });
             }
         });

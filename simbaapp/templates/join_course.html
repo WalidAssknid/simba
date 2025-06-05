@@ -1,29 +1,30 @@
 {% extends 'base.html' %}
-{% block title %}Join a Course | SIMBA{% endblock %}
+{% load i18n %}
+{% block title %}{% trans 'Join a Course' %} | SIMBA{% endblock %}
 
 {% block header_title %}
-<h2>Join a Course</h2>
+<h2>{% trans 'Join a Course' %}</h2>
 {% endblock %}
 
 {% block content %}
 <div class="join-course-container">
     <div class="card">
         <div class="card-header">
-            <h3>Enter the course code</h3>
+            <h3>{% trans 'Enter the course code' %}</h3>
         </div>
         <div class="card-body">
-            <p class="card-description">Ask your teacher for the course code and enter it below. You will join as a student.</p>
+            <p class="card-description">{% trans 'Ask your teacher for the course code and enter it below. You will join as a student.' %}</p>
             <form method="post" action="{% url 'join_course' %}">
                 {% csrf_token %}
                 <div class="form-group">
-                    <label for="enrollment_code_main">Enrollment code:</label>
+                    <label for="enrollment_code_main">{% trans 'Enrollment code:' %}</label>
                     <input type="text" name="enrollment_code" id="enrollment_code_main" class="form-control" required>
-                    <small>Enter the code provided by your teacher</small>
+                    <small>{% trans 'Enter the code provided by your teacher' %}</small>
                 </div>
                 
                 <div class="form-actions">
-                    <a href="{% url 'courses' %}" class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn">Join as Student</button>
+                    <a href="{% url 'courses' %}" class="btn btn-secondary">{% trans 'Cancel' %}</a>
+                    <button type="submit" class="btn">{% trans 'Join as Student' %}</button>
                 </div>
             </form>
         </div>
@@ -35,19 +36,19 @@
 <div class="modal" id="joinDialog">
     <div class="modal-content">
         <div class="modal-header">
-            <h3 class="modal-title">Join a Course</h3>
+            <h3 class="modal-title">{% trans 'Join a Course' %}</h3>
             <span class="close" id="closeBtn">&times;</span>
         </div>
         
         <form id="joinForm" action="{% url 'join_course' %}" method="POST">
             {% csrf_token %}
             <div class="form-group">
-                <label for="enrollment_code">Enrollment code:</label>
+                <label for="enrollment_code">{% trans 'Enrollment code:' %}</label>
                 <input type="text" id="enrollment_code" name="enrollment_code" class="form-control" required>
-                <small>Enter the code provided by your teacher</small>
+                <small>{% trans 'Enter the code provided by your teacher' %}</small>
             </div>
             <div class="form-actions">
-                <button type="submit" class="btn">Join as Student</button>
+                <button type="submit" class="btn">{% trans 'Join as Student' %}</button>
             </div>
         </form>
     </div>

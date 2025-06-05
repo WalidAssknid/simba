@@ -3,6 +3,7 @@
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
@@ -11,12 +12,11 @@ msgstr ""
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: fr\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n > 1);\n"
-
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 #: .\simbaapp\templates\activities.html:9
 #: .\simbaapp\templates\dashboard.html:842
 msgid "All Courses"
@@ -646,7 +646,7 @@ msgstr ""
 
 #: .\simbaapp\templates\home.html:37 .\simbaapp\templates\login.html:10
 msgid "Welcome to SIMBA"
-msgstr "Bienvenue sur SIMBA"
+msgstr ""
 
 #: .\simbaapp\templates\home.html:38 .\simbaapp\templates\home.html:370
 msgid "The AI That Makes Students Think"
@@ -819,10 +819,8 @@ msgid "PhD Student from IRIT"
 msgstr ""
 
 #: .\simbaapp\templates\home.html:325
-#, fuzzy
-#| msgid "Welcome to SIMBA"
 msgid "How to cite SIMBA"
-msgstr "Bienvenue sur SIMBA"
+msgstr ""
 
 #: .\simbaapp\templates\home.html:339
 msgid "About SIMBA"

@@ -1,30 +1,31 @@
 {% load static %}
-<div class="modal" id="activityModal">
+{% load i18n %}
+<div class="modal" id="activityModal" lang="en">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <h2 class="modal-title">Create New Activity</h2>
+        <h2 class="modal-title">{% trans 'Create New Activity' %}</h2>
         <form method="post" action="{% if course.id %}{% url 'create_activity' course.id %}{% else %}#{% endif %}" id="create-activity-form">
             {% csrf_token %}
             <div class="form-group">
-                <label for="activity-title">Activity Title</label>
+                <label for="activity-title">{% trans 'Activity Title' %}</label>
                 <input type="text" name="activity_title" id="activity-title" class="form-control" required>
-                <small class="form-text">The name of your activity.</small>
+                <small class="form-text">{% trans 'The name of your activity.' %}</small>
             </div>
             <div class="form-group">
-                <label for="activity-description">Activity Description</label>
+                <label for="activity-description">{% trans 'Activity Description' %}</label>
                 <textarea name="activity_description" id="activity-description" class="form-control" required></textarea>
-                <small class="form-text">Briefly explain the purpose or context of this activity.</small>
+                <small class="form-text">{% trans 'Briefly explain the purpose or context of this activity.' %}</small>
             </div>
             
             <div class="form-group checkbox-group">
                 <div class="checkbox-wrapper">
                     <input type="checkbox" name="is_visible" id="is-visible" checked>
                     <label for="is-visible">
-                        Make activity visible to students
+                        {% trans 'Make activity visible to students' %}
                     </label>
                 </div>
                 <small class="form-text">
-                    Uncheck to hide this activity from students until you're ready.
+                    {% trans "Uncheck to hide this activity from students until you're ready." %}
                 </small>
             </div>
             
@@ -32,20 +33,20 @@
                 <div class="checkbox-wrapper">
                     <input type="checkbox" name="expert_mode" id="activity-expert-mode">
                     <label for="activity-expert-mode">
-                        Allows you to customize the assistant's instructions for this activity.
+                        {% trans "Allows you to customize the assistant's instructions for this activity." %}
                     </label>
                 </div>
                 <small class="form-text">
-                    Expert Mode enables advanced customization options for the activity.
+                    {% trans 'Expert Mode enables advanced customization options for the activity.' %}
                 </small>
             </div>
             <div class="form-group" id="custom-prompt-group" style="display:none;">
-                <label for="custom-prompt">Custom assistant instructions</label>
+                <label for="custom-prompt">{% trans 'Custom assistant instructions' %}</label>
                 <textarea name="custom-prompt" id="custom-prompt" class="form-control"></textarea>
-                <small class="form-text">Describe how the assistant should behave in this activity.</small>
+                <small class="form-text">{% trans 'Describe how the assistant should behave in this activity.' %}</small>
             </div>
             <div class="form-group">
-                <label>Activity Questions</label>
+                <label>{% trans 'Activity Questions' %}</label>
                 <div id="questions-list" class="questions-list"></div>
                 <div class="question-input-group">
                     <input type="text" id="new-question" class="form-control" placeholder="Add a question...">
@@ -55,43 +56,43 @@
                 </div>
                 <input type="hidden" name="questions[]" id="questions-hidden">
                 <small class="form-text">
-                    Add questions that the assistant can use to guide students (for example, "What is light?").
+                    {% trans 'Add questions that the assistant can use to guide students (for example, "Who is the inventor of penicilin?").' %}
                 </small>
             </div>
             <hr>
-            <h3 class="section-title">Advanced Assistant Options</h3>
+            <h3 class="section-title">{% trans 'Advanced Assistant Options' %}</h3>
             <div class="form-group">
                 <label for="agent-attitude">
-                    What attitude should the assistant have toward students?
+                    {% trans 'What attitude should the assistant have toward students?' %}
                 </label>
                 <select name="agent_attitude" id="agent-attitude" class="form-control">
-                    <option value="friendly">Friendly</option>
-                    <option value="informal">Informal</option>
-                    <option value="formal">Formal</option>
+                    <option value="friendly">{% trans 'Friendly' %}</option>
+                    <option value="informal">{% trans 'Informal' %}</option>
+                    <option value="formal">{% trans 'Formal' %}</option>
                 </select>
                 <small class="form-text">
-                    Choose the assistant's tone for this activity.
+                    {% trans "Choose the assistant's tone for this activity." %}
                 </small>
             </div>
             <div class="form-group">
                 <label for="ai-model">
-                    AI Model
+                    {% trans 'AI Model' %}
                 </label>
                 <select name="ai_model" id="ai-model" class="form-control">
-                    <option value="gpt">GPT (OpenAI)</option>
-                    <option value="mistral">Mistral AI</option>
+                    <option value="gpt">{% trans 'GPT (OpenAI)' %}</option>
+                    <option value="mistral">{% trans 'Mistral AI' %}</option>
                 </select>
                 <small class="form-text">
-                    Choose the AI model to power this activity. GPT supports file uploads and advanced features, while Mistral provides fast and efficient responses.
+                    {% trans 'Choose the AI model to power this activity. GPT supports file uploads and advanced features, while Mistral provides fast and efficient responses.' %}
                 </small>
             </div>
             <div class="form-group">
                 <label for="subjects">
-                    Course or activity subjects (comma separated)
+                    {% trans 'Course or activity subjects (comma separated).' %}
                 </label>
                 <input type="text" name="subjects" id="subjects" class="form-control">
                 <small class="form-text">
-                    List subjects to guide the assistant (for example, optics, energy).
+                    {% trans 'List subjects to guide the assistant (for example, optics, energy).' %}
                 </small>
             </div>
             <div class="advanced-options">
@@ -99,93 +100,93 @@
                     <div class="checkbox-wrapper">
                         <input type="checkbox" name="restrict_to_subject" id="restrict-to-subject">
                         <label for="restrict-to-subject">
-                            Restrict assistant to course subjects?
+                            {% trans 'Restrict assistant to course subjects?' %}
                         </label>
                     </div>
                     <small class="form-text">
-                        The assistant will only answer questions related to the subjects above.
+                        {% trans 'The assistant will only answer questions related to the subjects above.' %}
                     </small>
                 </div>
                 <div class="form-group checkbox-group">
                     <div class="checkbox-wrapper">
                         <input type="checkbox" name="allow_questions" id="allow-questions" checked>
                         <label for="allow-questions">
-                            Can the assistant ask questions to the student?
+                            {% trans 'Can the assistant ask questions to the student?' %}
                         </label>
                     </div>
                     <small class="form-text">
-                        If enabled, the assistant can suggest questions to students.
+                        {% trans 'If enabled, the assistant can suggest questions to students.' %}
                     </small>
                 </div>
                 <div class="form-group checkbox-group">
                     <div class="checkbox-wrapper">
                         <input type="checkbox" name="allow_emojis" id="allow-emojis" checked>
                         <label for="allow-emojis">
-                            Can the assistant use emojis?
+                            {% trans 'Can the assistant use emojis?' %}
                         </label>
                     </div>
                     <small class="form-text">
-                        If enabled, the assistant can use emojis in its answers.
+                        {% trans 'If enabled, the assistant can use emojis in its answers.' %}
                     </small>
                 </div>
                 <div class="form-group checkbox-group">
                     <div class="checkbox-wrapper">
                         <input type="checkbox" name="trust_document" id="trust-document" checked>
                         <label for="trust-document">
-                            Should the assistant trust the provided document?
+                            {% trans 'Should the assistant trust the provided document?' %}
                         </label>
                     </div>
                     <small class="form-text">
-                        If enabled, the assistant will use the provided document as a trusted source.
+                        {% trans 'If enabled, the assistant will use the provided document as a trusted source.' %}
                     </small>
                 </div>
                 <div class="form-group checkbox-group">
                     <div class="checkbox-wrapper">
                         <input type="checkbox" name="allow_redo" id="allow-redo" checked>
                         <label for="allow-redo">
-                            Allow students to redo this activity
+                            {% trans 'Allow students to redo this activity' %}
                         </label>
                     </div>
                     <small class="form-text">
-                        If enabled, students can start the activity again with a fresh conversation.
+                        {% trans 'If enabled, students can start the activity again with a fresh conversation.' %}
                     </small>
                 </div>
                 <div class="form-group">
                     <label for="word-limit">
-                        Word limit for assistant responses
+                        {% trans 'Word limit for assistant responses' %}
                     </label>
                     <input type="number" name="word_limit" id="word-limit" class="form-control" min="0" step="50" value="0">
                     <small class="form-text">
-                        0 = no limit. Set a value to limit responses.
+                        {% trans '0 = no limit. Set a value to limit responses.' %}
                     </small>
                 </div>
             </div>
             
             <hr>
-            <h3 class="section-title">Activity Files</h3>
+            <h3 class="section-title">{% trans 'Activity Files' %}</h3>
             <div class="form-group">
-                <label for="activity-files">Upload Files (PDF, TXT, DOC, etc.)</label>
+                <label for="activity-files">{% trans 'Upload Files (PDF, TXT, DOC, etc.)' %}</label>
                 <input type="file" id="activity-files" class="form-control" multiple accept=".c,.cs,.cpp,.doc,.docx,.html,.java,.json,.md,.pdf,.php,.pptx,.py,.rb,.tex,.txt,.css,.js,.sh,.ts">
-                <small class="form-text">Upload documents that the assistant can reference during conversations.</small>
+                <small class="form-text">{% trans 'Upload documents that the assistant can reference during conversations.' %}</small>
                 <div id="files-list" class="files-list"></div>
                 <input type="hidden" name="files[]" id="files-hidden">
             </div>
             
             <hr>
-            <h3 class="section-title">Activity Schedule & Settings</h3>
+            <h3 class="section-title">{% trans 'Activity Schedule & Settings' %}</h3>
             <div class="form-group">
-                <label for="start-date">Start Date (Optional)</label>
+                <label for="start-date">{% trans 'Start Date (Optional)' %}</label>
                 <input type="datetime-local" name="start_date" id="start-date" class="form-control">
-                <small class="form-text">When should this activity become available to students?</small>
+                <small class="form-text">{% trans 'When should this activity become available to students?' %}</small>
             </div>
             <div class="form-group">
-                <label for="end-date">End Date (Optional)</label>
+                <label for="end-date">{% trans 'End Date (Optional)' %}</label>
                 <input type="datetime-local" name="end_date" id="end-date" class="form-control">
-                <small class="form-text">When should this activity stop being available to students?</small>
+                <small class="form-text">{% trans 'When should this activity stop being available to students?' %}</small>
             </div>
             
             <div class="form-actions">
-                <button type="submit" class="btn">Create Activity</button>
+                <button type="submit" class="btn">{% trans 'Create Activity' %}</button>
             </div>
         </form>
     </div>

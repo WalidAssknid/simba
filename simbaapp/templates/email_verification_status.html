@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
-{% block title %}Email Verification Required - Simba{% endblock %}
+{% load i18n %}
+{% block title %}{% trans 'Email Verification Required - Simba' %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -108,17 +109,17 @@
         <div class="col-12 col-md-6 col-lg-5">
             <div class="card shadow-sm">
                 <div class="card-header bg-warning text-dark text-center">
-                    <h4 class="mb-0">Email Verification Required</h4>
+                    <h4 class="mb-0">{% trans 'Email Verification Required' %}</h4>
                 </div>
                 <div class="card-body p-4">
                     <div class="text-center mb-4">
                         <h5 class="text-muted">Hi <strong>{{ user.username }}</strong>!</h5>
-                        <p class="mb-0">Please verify your email address to continue</p>
+                        <p class="mb-0">{% trans 'Please verify your email address to continue' %}</p>
                     </div>
                     
                     <div class="alert" style="background-color: #fff3e0; border: 1px solid #d64000; color: #d64000;" class="text-center">
                         <p class="mb-2">
-                            We've sent a verification email to:
+                            {% trans "We've sent a verification email to:" %}
                         </p>
                         <div class="email-display">
                             {{ user.email }}
@@ -126,42 +127,42 @@
                     </div>
 
                     <div class="mb-4">
-                        <h5 class="text-center mb-4 fw-bold">What to do next:</h5>
+                        <h5 class="text-center mb-4 fw-bold">{% trans 'What to do next:' %}</h5>
                         <div class="row text-center">
                             <div class="col-4">
                                 <div class="mb-3">
                                     <i class="fas fa-envelope fa-2x" style="color: #d64000;"></i>
                                 </div>
-                                <small class="fw-medium">Check your email inbox</small>
+                                <small class="fw-medium">{% trans 'Check your email inbox' %}</small>
                             </div>
                             <div class="col-4">
                                 <div class="mb-3">
                                     <i class="fas fa-mouse-pointer fa-2x" style="color: #d64000;"></i>
                                 </div>
-                                <small class="fw-medium">Click "Verify Email"</small>
+                                <small class="fw-medium">{% trans 'Click "Verify Email"' %}</small>
                             </div>
                             <div class="col-4">
                                 <div class="mb-3">
                                     <i class="fas fa-check-circle fa-2x" style="color: #d64000;"></i>
                                 </div>
-                                <small class="fw-medium">Then you just need to refresh this page!</small>
+                                <small class="fw-medium">{% trans 'Then you just need to refresh this page!' %}</small>
                             </div>
                         </div>
                     </div>
 
                     <div class="d-grid">
                         <a href="{% url 'resend_verification' %}" class="btn btn-primary btn-spacing">
-                            Resend Verification Email
+                            {% trans 'Resend Verification Email' %}
                         </a>
                         
                         <a href="{% url 'logout' %}" class="btn btn-outline-secondary btn-spacing">
-                            Logout
+                            {% trans 'Logout' %}
                         </a>
                         
                         <div class="text-center mt-3">
                             <small class="text-muted">
-                                Need to change your email? 
-                                <a href="{% url 'logout' %}" class="text-decoration-none">Logout</a> and register again.
+                                {% trans 'Need to change your email? ' %}
+                                <a href="{% url 'logout' %}" class="text-decoration-none">{% trans 'Logout' %}</a> {% trans 'and register again.' %}
                             </small>
                         </div>
                     </div>

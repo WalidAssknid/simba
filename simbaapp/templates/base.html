@@ -1,4 +1,5 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,7 +27,7 @@
             {% if request.session.user_id %}
                 <!-- Main navigation -->
                         <a href="{% url 'courses' %}" class="sidebar-item {% if request.resolver_match.url_name == 'courses' %}active{% endif %}">
-                    Courses
+                    {% trans 'Courses' %}
                         </a>
                 
                 {% if enrolled_courses and request.resolver_match.url_name == 'course_detail' %}
@@ -39,25 +40,25 @@
                 {% endif %}
                 
                 <a href="{% url 'activities' %}" class="sidebar-item {% if request.resolver_match.url_name == 'activities' %}active{% endif %}">
-                    Activities
+                    {% trans 'Activities' %}
                     </a>
                     <a href="{% url 'dashboard' %}" class="sidebar-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                        Dashboard
+                        {% trans 'Dashboard' %}
                     </a>
                     
                     {% comment %} Show admin dashboard link only for admin users {% endcomment %}
                     {% if request.session.user_id %}
                         {% comment %} Check if user is admin - we'll do this via JS for now {% endcomment %}
                         <a href="{% url 'admin_dashboard' %}" class="sidebar-item admin-only {% if 'admin' in request.resolver_match.url_name %}active{% endif %}" id="adminDashboardLink" style="display: none;">
-                            Admin Dashboard
+                            {% trans 'Admin Dashboard' %}
                         </a>
                     {% endif %}
             {% else %}
                 <a href="{% url 'login' %}" class="sidebar-item {% if request.resolver_match.url_name == 'login' %}active{% endif %}">
-                    Login
+                    {% trans 'Login' %}
                 </a>
                 <a href="{% url 'register' %}" class="sidebar-item {% if request.resolver_match.url_name == 'register' %}active{% endif %}">
-                    Register
+                    {% trans 'Register' %}
                 </a>
             {% endif %}
         </div>
@@ -101,8 +102,8 @@
                     <div class="user-profile" id="userMenu">
                         {{ request.session.username|first|upper }}
                         <div class="user-menu-content">
-                            <a href="{% url 'profile' %}">Manage Account</a>
-                            <a href="{% url 'logout' %}">Logout</a>
+                            <a href="{% url 'profile' %}">{% trans 'Manage Account' %}</a>
+                            <a href="{% url 'logout' %}">{% trans 'Logout' %}</a>
                         </div>
                     </div>
                 {% endif %}
@@ -124,8 +125,8 @@
         {% if request.session.email_verification_warning and request.session.user_id and not request.resolver_match.url_name == 'login' and not request.resolver_match.url_name == 'register' and not request.resolver_match.url_name == 'home' %}
             <div class="alert alert-warning email-verification-warning persistent-alert">
                 <i class="fas fa-exclamation-triangle" style="margin-right: 8px; color: #d64000;"></i>
-                <strong style="color: #ac3300;">Email Verification Required: </strong>Please verify your email address to confirm your account. Otherwise, you will not be able to log in again.
-                <a href="{% url 'resend_verification' %}" style="color: #ac3300; text-decoration: underline; margin-left: 10px;">Resend verification email</a>
+                <strong style="color: #ac3300;">{% trans 'Email Verification Required:' %} </strong>{% trans 'Please verify your email address to confirm your account. Otherwise, you will not be able to log in again.' %}
+                <a href="{% url 'resend_verification' %}" style="color: #ac3300; text-decoration: underline; margin-left: 10px;">{% trans 'Resend verification email' %}</a>
             </div>
         {% endif %}
         

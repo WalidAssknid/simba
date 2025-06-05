@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Resend Email Verification - Simba{% endblock %}
+{% block title %}{% trans 'Resend Email Verification' %} - Simba{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -66,31 +67,31 @@
             <div class="text-center mb-7">
                 <a href="{% url 'login' %}" class="text-dark text-decoration-none">
                     <i class="fas fa-arrow-left me-2"></i>
-                    Back to Login
+                    {% trans 'Back to Login' %}
                 </a>
             </div>
             
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white text-center">
-                    <h4 class="mb-0">Resend Email Verification</h4>
+                    <h4 class="mb-0">{% trans 'Resend Email Verification' %}</h4>
                 </div>
                 <div class="card-body p-4">
                     <div class="text-center mb-4">
                         <p class="text-muted">
-                            Enter your email address to receive a new verification link.
+                            {% trans 'Enter your email address to receive a new verification link.' %}
                         </p>
                     </div>
 
                     <form method="post">
                         {% csrf_token %}
                         <div class="mb-3">
-                            <label for="email" class="form-label">Email Address</label>
+                            <label for="email" class="form-label">{% trans 'Email Address' %}</label>
                             <input type="email" class="form-control" id="email" name="email" required>
                         </div>
                         
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary">
-                                Send Verification Email
+                                {% trans 'Send Verification Email' %}
                             </button>
                         </div>
                     </form>

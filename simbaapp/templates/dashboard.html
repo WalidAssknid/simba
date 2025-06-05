@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
-{% block title %}Analytics Dashboard{% endblock %}
+{% load i18n %}
+{% block title %}{% trans 'Analytics Dashboard' %}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" type="text/script" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">
@@ -821,24 +822,24 @@
 
 {% block content %}
 <div class="dashboard-header">
-  <h2>Analytics Dashboard</h2>
+  <h2>{% trans 'Analytics Dashboard' %}</h2>
 </div>
 
 <div class="filters">
   <div>
-    <label for="view-as-filter">View as:</label>
+    <label for="view-as-filter">{% trans 'View as:' %}</label>
     <select id="view-as-filter" class="form-control" onchange="updateDashboard()">
         <option value="teacher" {% if view_as == 'teacher' %}selected{% endif %} {% if not has_teacher_role %}disabled title="You need to own a course or be enrolled as a teacher"{% endif %}>
-            Teacher View
+            {% trans 'Teacher View' %}
         </option>
         <option value="student" {% if view_as == 'student' %}selected{% endif %} {% if not has_student_role %}disabled title="You need to be enrolled as a student in a course"{% endif %}>
-            Student View
+            {% trans 'Student View' %}
         </option>
     </select>
   </div>
   <div>
     <select id="course-filter" onchange="updateDashboard()">
-      <option value="all" {% if not selected_course_id %}selected{% endif %}>All Courses</option>
+      <option value="all" {% if not selected_course_id %}selected{% endif %}>{% trans 'All Courses' %}</option>
     {% for c in courses %}
         <option value="{{ c.id }}" {% if selected_course_id and c.id|stringformat:"s" == selected_course_id %}selected{% endif %}>{{ c.title }}</option>
     {% endfor %}
@@ -846,7 +847,7 @@
   </div>
   <div>
     <select id="activity-filter" onchange="updateDashboard()">
-      <option value="all" {% if not selected_activity_id or selected_activity_id == 'all' %}selected{% endif %}>All Activities</option>
+      <option value="all" {% if not selected_activity_id or selected_activity_id == 'all' %}selected{% endif %}>{% trans 'All Activities' %}</option>
       {% for activity in activities %}
         <option value="{{ activity.id }}" {% if selected_activity_id and activity.id|stringformat:"s" == selected_activity_id %}selected{% endif %}>
           {{ activity.title }}{% if not selected_course_id %} ({{ activity.course.title }}){% endif %}
@@ -858,12 +859,12 @@
 
 <div class="tabs">
   {% if view_as == 'teacher' %}
-  <div class="tab {% if active_tab == 'conversation-stats' %}active{% endif %}" data-tab="conversation-stats">Conversation Stats</div>
-  <div class="tab {% if active_tab == 'student-stats' %}active{% endif %}" data-tab="student-stats">Student Stats</div>
-  <div class="tab {% if active_tab == 'student-engagement' %}active{% endif %}" data-tab="student-engagement">Students Engagement</div>
-  <div class="tab {% if active_tab == 'raw-data' %}active{% endif %}" data-tab="raw-data">Raw Data</div>
+  <div class="tab {% if active_tab == 'conversation-stats' %}active{% endif %}" data-tab="conversation-stats">{% trans 'Conversation Stats' %}</div>
+  <div class="tab {% if active_tab == 'student-stats' %}active{% endif %}" data-tab="student-stats">{% trans 'Student Stats' %}</div>
+  <div class="tab {% if active_tab == 'student-engagement' %}active{% endif %}" data-tab="student-engagement">{% trans 'Students Engagement' %}</div>
+  <div class="tab {% if active_tab == 'raw-data' %}active{% endif %}" data-tab="raw-data">{% trans 'Raw Data' %}</div>
   {% else %}
-  <div class="tab {% if active_tab == 'student-stats' or active_tab == 'conversation-stats' %}active{% endif %}" data-tab="student-stats">My Stats</div>
+  <div class="tab {% if active_tab == 'student-stats' or active_tab == 'conversation-stats' %}active{% endif %}" data-tab="student-stats">{% trans 'My Stats' %}</div>
   {% endif %}
 </div>
 
@@ -872,37 +873,37 @@
 <div id="conversation-stats" class="tab-content {% if active_tab == 'conversation-stats' %}active{% endif %}">
   <div class="metric-cards">
     <div class="metric-card">
-      <h3>Total Students</h3>
+      <h3>{% trans 'Total Students' %}</h3>
       <p>{{ students_count }}</p>
     </div>
     <div class="metric-card">
-      <h3>Total Activities</h3>
+      <h3>{% trans 'Total Activities' %}</h3>
       <p>{{ activities_count }}</p>
     </div>
     <div class="metric-card">
-    <h3>Total Messages</h3>
+    <h3>{% trans 'Total Messages' %}</h3>
     <p>{{ total_messages }}</p>
   </div>
     <div class="metric-card">
-      <h3>Avg Message Length</h3>
+      <h3>{% trans 'Avg Message Length' %}</h3>
       <p>{{ avg_message_length }}</p>
     </div>
     <div class="metric-card">
-      <h3>Avg Time per Student</h3>
+      <h3>{% trans 'Avg Time per Student' %}</h3>
       <p>{{ avg_time_per_student }}</p>
     </div>
 </div>
 
   <div class="two-columns">
     <div class="chart-container">
-      <h3>Student Engagement</h3>
+      <h3>{% trans 'Student Engagement' %}</h3>
       <div class="engagement-table">
         <table>
   <thead>
     <tr>
-              <th>Student</th>
-              <th>Messages</th>
-              <th>Avg Length</th>
+              <th>{% trans 'Student' %}</th>
+              <th>{% trans 'Messages' %}</th>
+              <th>{% trans 'Avg Length' %}</th>
     </tr>
   </thead>
   <tbody>
@@ -914,7 +915,7 @@
       </tr>
     {% empty %}
             <tr>
-              <td colspan="3">No student data available</td>
+              <td colspan="3">{% trans 'No student data available' %}</td>
             </tr>
     {% endfor %}
   </tbody>
@@ -923,23 +924,23 @@
     </div>
     
     <div class="chart-container">
-      <h3>Activity Statistics</h3>
+      <h3>{% trans 'Activity Statistics' %}</h3>
       <canvas id="activity-stats-chart"></canvas>
     </div>
   </div>
   
   <div class="chart-container">
-    <h3>Student Segmentation by Engagement</h3>
+    <h3>{% trans 'Student Segmentation by Engagement' %}</h3>
     <canvas id="segmentation-chart"></canvas>
   </div>
   
   <div class="summary-container">
-    <h3>Message Summary</h3>
+    <h3>{% trans 'Message Summary' %}</h3>
     <div id="summary-content">
-      <p><i>Select a specific activity (not "All Activities") and click Generate to create an AI-powered summary of student conversations.</i></p>
-      <p><small>This feature uses OpenAI's API to analyze student messages and provide insights.</small></p>
+      <p><i>{% trans 'Select a specific activity (not "All Activities") and click Generate to create an AI-powered summary of student conversations.' %}</i></p>
+      <p><small>{% trans "This feature uses OpenAI's API to analyze student messages and provide insights." %}</small></p>
     </div>
-    <button id="generate-summary" class="btn-generate">Generate Summary</button>
+    <button id="generate-summary" class="btn-generate">{% trans 'Generate Summary' %}</button>
     <div id="summary-spinner" class="spinner"></div>
   </div>
 </div>
@@ -950,7 +951,7 @@
   {% if view_as == 'teacher' %}
   <div class="filters">
     <select id="student-filter" onchange="loadStudentData()">
-      <option value="">Select a student</option>
+      <option value="">{% trans 'Select a student' %}</option>
       {% for student in all_students %}
         <option value="{{ student.id }}">{{ student.username }}</option>
       {% endfor %}
@@ -961,54 +962,54 @@
   <div id="student-metrics" {% if view_as == 'student' %}style="display: block;"{% else %}style="display: none;"{% endif %}>
     <div class="metric-cards">
       <div class="metric-card">
-        <h3>Activities</h3>
+        <h3>{% trans 'Activities' %}</h3>
         <p id="student-activities-count">{% if view_as == 'student' and student_personal_stats %}{{ student_personal_stats.activities_count }}{% else %}-{% endif %}</p>
       </div>
       <div class="metric-card">
-        <h3>Messages</h3>
+        <h3>{% trans 'Messages' %}</h3>
         <p id="student-messages-count">{% if view_as == 'student' and student_personal_stats %}{{ student_personal_stats.messages_count }}{% else %}-{% endif %}</p>
       </div>
       <div class="metric-card">
-        <h3>Total Characters</h3>
+        <h3>{% trans 'Total Characters' %}</h3>
         <p id="student-total-chars">{% if view_as == 'student' and student_personal_stats %}{{ student_personal_stats.total_chars|floatformat:0 }}{% else %}-{% endif %}</p>
       </div>
       <div class="metric-card">
-        <h3>Retries</h3>
+        <h3>{% trans 'Retries' %}</h3>
         <p id="student-retries-count">{% if view_as == 'student' and student_personal_stats %}{{ student_personal_stats.retries_count }}{% else %}-{% endif %}</p>
       </div>
     </div>
     
     <div class="two-columns">
       <div class="chart-container">
-        <h3>Message Length Distribution</h3>
+        <h3>{% trans 'Message Length Distribution' %}</h3>
         <canvas id="length-distribution-chart"></canvas>
       </div>
       <div class="chart-container">
-        <h3>Activity Engagement</h3>
+        <h3>{% trans 'Activity Engagement' %}</h3>
         <canvas id="activity-engagement-chart"></canvas>
       </div>
     </div>
     
     <div class="two-columns">
       <div class="student-chat" id="student-conversation">
-        <h3>Conversation History</h3>
+        <h3>{% trans 'Conversation History' %}</h3>
         <div id="chat-messages"></div>
       </div>
       
       <div class="summary-container">
-        <h3>Student Analysis</h3>
+        <h3>{% trans 'Student Analysis' %}</h3>
         <div id="student-summary-content">
           {% if view_as == 'student' %}
-          <p><i>Select a specific activity from the filter above, then click Generate Analysis for an AI-powered assessment of your conversation patterns.</i></p>
-          <p><small>This feature uses OpenAI's API to analyze your communication style, engagement level, and identify potential misconceptions.</small></p>
+          <p><i>{% trans 'Select a specific activity from the filter above, then click Generate Analysis for an AI-powered assessment of your conversation patterns.' %}</i></p>
+          <p><small>{% trans "This feature uses OpenAI's API to analyze your communication style, engagement level, and identify potential misconceptions." %}</small></p>
           {% else %}
-          <p><i>Select a student above to view their data, then click Generate Analysis for an AI-powered assessment of their conversation patterns.</i></p>
-          <p><small>This feature uses OpenAI's API to analyze the student's communication style, engagement level, and identify potential misconceptions.</small></p>
+          <p><i>{% trans 'Select a student above to view their data, then click Generate Analysis for an AI-powered assessment of their conversation patterns.' %}</i></p>
+          <p><small>{% trans 'This feature uses OpenAI's API to analyze the student's communication style, engagement level, and identify potential misconceptions.' %}</small></p>
           {% endif %}
         </div>
         <div class="button-group" style="display: flex; gap: 10px; margin-top: 15px;">
-          <button id="generate-student-summary" class="btn-generate">Generate Analysis</button>
-          <button id="download-student-conversation" class="btn-generate" style="background-color: #28a745;">Download Conversation</button>
+          <button id="generate-student-summary" class="btn-generate">{% trans 'Generate Analysis' %}</button>
+          <button id="download-student-conversation" class="btn-generate" style="background-color: #28a745;">{% trans 'Download Conversation' %}</button>
         </div>
         <div id="student-summary-spinner" class="spinner"></div>
       </div>
@@ -1020,12 +1021,12 @@
 {% if view_as == 'teacher' %}
 <div id="student-engagement" class="tab-content {% if active_tab == 'student-engagement' %}active{% endif %}">
   <div class="chart-container">
-    <h3>Word Cloud Analysis</h3>
-    <p>The most frequently used words by students in their conversations. Click on any word to see which students used it.</p>
+    <h3>{% trans 'Word Cloud Analysis' %}</h3>
+    <p>{% trans 'The most frequently used words by students in their conversations. Click on any word to see which students used it.' %}</p>
     
     <div class="filters">
       <div>
-        <label for="min-word-length">Minimum word length:</label>
+        <label for="min-word-length">{% trans 'Minimum word length:' %}</label>
         <select id="min-word-length" onchange="loadWordCloud()">
           <option value="2">2</option>
           <option value="3" selected>3</option>
@@ -1034,7 +1035,7 @@
         </select>
       </div>
       <div>
-        <label for="max-words">Maximum words:</label>
+        <label for="max-words">{% trans 'Maximum words:' %}</label>
         <select id="max-words" onchange="loadWordCloud()">
           <option value="50">50</option>
           <option value="100" selected>100</option>
@@ -1042,7 +1043,7 @@
           <option value="200">200</option>
         </select>
       </div>
-      <button class="btn-generate" onclick="loadWordCloud()">Update Word Cloud</button>
+      <button class="btn-generate" onclick="loadWordCloud()">{% trans 'Update Word Cloud' %}</button>
     </div>
     
     <div id="word-cloud-spinner" class="spinner"></div>
@@ -1058,39 +1059,39 @@
         <button class="zoom-btn" onclick="resetZoom()" title="Reset View">⌂</button>
       </div>
       <div class="zoom-info">
-        <span id="zoom-level">100%</span> | Drag to pan
+        <span id="zoom-level">100%</span> | {% trans 'Drag to pan' %}
       </div>
     </div>
   </div>
   
   <div class="two-columns">
     <div class="chart-container">
-      <h3>Word Details</h3>
+      <h3>{% trans 'Word Details' %}</h3>
       <div id="word-details" class="word-details">
-        <p>Click on a word in the cloud to see which students used it.</p>
+        <p>{% trans 'Click on a word in the cloud to see which students used it.' %}</p>
       </div>
     </div>
     
     <div class="chart-container">
-      <h3>Student Distribution by Features</h3>
+      <h3>{% trans 'Student Distribution by Features' %}</h3>
       <div class="filters">
         <div>
           <label for="feature-x">X-Axis:</label>
           <select id="feature-x" onchange="updateScatterPlot()">
-            <option value="num_messages">Message Count</option>
-            <option value="avg_length">Average Length</option>
-            <option value="lexical_diversity">Lexical Diversity</option>
-            <option value="vocab_size">Vocabulary Size</option>
+            <option value="num_messages">{% trans 'Message Count' %}</option>
+            <option value="avg_length">{% trans 'Average Length' %}</option>
+            <option value="lexical_diversity">{% trans 'Lexical Diversity' %}</option>
+            <option value="vocab_size">{% trans 'Vocabulary Size' %}</option>
           </select>
         </div>
         
         <div>
-          <label for="feature-y">Y-Axis:</label>
+          <label for="feature-y">{% trans 'Y-Axis:' %}</label>
           <select id="feature-y" onchange="updateScatterPlot()">
-            <option value="avg_length">Average Length</option>
-            <option value="num_messages">Message Count</option>
-            <option value="lexical_diversity">Lexical Diversity</option>
-            <option value="vocab_size">Vocabulary Size</option>
+            <option value="avg_length">{% trans 'Average Length' %}</option>
+            <option value="num_messages">{% trans 'Message Count' %}</option>
+            <option value="lexical_diversity">{% trans 'Lexical Diversity' %}</option>
+            <option value="vocab_size">{% trans 'Vocabulary Size' %}</option>
           </select>
         </div>
       </div>
@@ -1105,20 +1106,20 @@
 {% if view_as == 'teacher' %}
 <div id="raw-data" class="tab-content {% if active_tab == 'raw-data' %}active{% endif %}">
   <div class="chart-container">
-    <h3>{% if view_as == 'student' %}My Conversation History{% else %}Raw Conversation Data{% endif %}</h3>
+    <h3>{% if view_as == 'student' %}{% trans 'My Conversation History' %}{% else %}{% trans 'Raw Conversation Data' %}{% endif %}</h3>
     <div style="margin-bottom: 10px; text-align: right;">
-      <button id="export-csv" class="btn-generate">Export to CSV</button>
+      <button id="export-csv" class="btn-generate">{% trans 'Export to CSV' %}</button>
     </div>
     <div style="max-height: 400px; overflow: auto;">
       <table class="engagement-table">
   <thead>
     <tr>
-      <th>User</th>
-      <th>Course</th>
-      <th>Activity</th>
-      <th>Role</th>
-      <th>Timestamp</th>
-      <th>Content</th>
+      <th>{% trans 'User' %}</th>
+      <th>{% trans 'Course' %}</th>
+      <th>{% trans 'Activity' %}</th>
+      <th>{% trans 'Role' %}</th>
+      <th>{% trans 'Timestamp' %}</th>
+      <th>{% trans 'Content' %}</th>
     </tr>
   </thead>
   <tbody>
@@ -1133,7 +1134,7 @@
       </tr>
     {% empty %}
           <tr>
-            <td colspan="6">No messages available</td>
+            <td colspan="6">{% trans 'No messages available' %}</td>
           </tr>
     {% endfor %}
   </tbody>
@@ -1142,19 +1143,19 @@
   </div>
   
   <div class="chart-container">
-    <h3>Conversation Statistics</h3>
+    <h3>{% trans 'Conversation Statistics' %}</h3>
     <div style="max-height: 400px; overflow: auto;">
       <table class="engagement-table">
         <thead>
           <tr>
-            <th>User</th>
-            <th>Total Turns</th>
-            <th>User Turns</th>
-            <th>Model Turns</th>
-            <th>Turn Ratio</th>
-            <th>Num Activities</th>
-            <th>Vocab Size</th>
-            <th>Avg Word Length</th>
+            <th>{% trans 'User' %}</th>
+            <th>{% trans 'Total Turns' %}</th>
+            <th>{% trans 'User Turns' %}</th>
+            <th>{% trans 'Model Turns' %}</th>
+            <th>{% trans 'Turn Ratio' %}</th>
+            <th>{% trans 'Num Activities' %}</th>
+            <th>{% trans 'Vocab Size' %}</th>
+            <th>{% trans 'Avg Word Length' %}</th>
           </tr>
         </thead>
         <tbody id="conversation-stats-body">
@@ -1168,6 +1169,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script type="text/javascript" src="{% url 'javascript-catalog' %}"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   const activityNames = JSON.parse('{{ activity_names_json|escapejs }}');
@@ -1274,13 +1276,13 @@
           
           if (!studentId) {
             const summaryContent = document.getElementById('student-summary-content');
-            summaryContent.innerHTML = '<p class="error" style="color:red;font-weight:bold">User session not found. Please refresh the page.</p>';
+            summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">User session not found. Please refresh the page.</p>');
             return;
           }
           
           if (activityId === 'all') {
             const summaryContent = document.getElementById('student-summary-content');
-            summaryContent.innerHTML = '<p class="error" style="color:red;font-weight:bold">Please select a specific activity first. Analysis can only be generated for individual activities.</p>';
+            summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">Please select a specific activity first. Analysis can only be generated for individual activities.</p>');
             return;
           }
         } else {
@@ -1290,7 +1292,7 @@
           
           if (!studentId) {
             const summaryContent = document.getElementById('student-summary-content');
-            summaryContent.innerHTML = '<p class="error" style="color:red;font-weight:bold">Please select a student first.</p>';
+            summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">Please select a student first.</p>');
             return;
           }
         }
@@ -1299,7 +1301,7 @@
         const spinner = document.getElementById('student-summary-spinner');
         
         spinner.style.display = 'block';
-        summaryContent.innerHTML = '<p>Analyzing student data with AI... This may take a moment.</p>';
+        summaryContent.innerHTML = gettext('<p>Analyzing student data with AI... This may take a moment.</p>');
         
         fetch(`/api/dashboard/generate_student_analysis/?student_id=${studentId}&activity_id=${activityId}`)
           .then(response => response.json())
@@ -1309,7 +1311,7 @@
           })
           .catch(error => {
             spinner.style.display = 'none';
-            summaryContent.innerHTML = `<p class="error" style="color:red">Error generating analysis: ${error}</p>`;
+            summaryContent.innerHTML = gettext(`<p class="error" style="color:red">Error generating analysis: ${error}</p>`);
           });
       });
     }
@@ -1330,13 +1332,13 @@
           
           if (!studentId) {
             const summaryContent = document.getElementById('student-summary-content');
-            summaryContent.innerHTML = '<p class="error" style="color:red;font-weight:bold">User session not found. Please refresh the page.</p>';
+            summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">User session not found. Please refresh the page.</p>');
             return;
           }
           
           if (activityId === 'all') {
             const summaryContent = document.getElementById('student-summary-content');
-            summaryContent.innerHTML = '<p class="error" style="color:red;font-weight:bold">Please select a specific activity first. Conversation download is only available for individual activities.</p>';
+            summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">Please select a specific activity first. Conversation download is only available for individual activities.</p>');
             return;
           }
         } else {
@@ -1347,7 +1349,7 @@
           
           if (!studentId) {
             const summaryContent = document.getElementById('student-summary-content');
-            summaryContent.innerHTML = '<p class="error" style="color:red;font-weight:bold">Please select a student first.</p>';
+            summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">Please select a student first.</p>');
             return;
           }
         }
@@ -1377,7 +1379,7 @@
             spinner.style.display = 'none';
             
             if (!data.messages || data.messages.length === 0) {
-              alert('No conversation data available for this activity.');
+              alert(gettext('No conversation data available for this activity.'));
               return;
             }
             
@@ -1421,7 +1423,7 @@
           .catch(error => {
             spinner.style.display = 'none';
             console.error('Error fetching student data:', error);
-            alert('Failed to download conversation data. Please try again.');
+            alert(gettext('Failed to download conversation data. Please try again.'));
           });
       });
     }
@@ -1522,11 +1524,11 @@
             if (data.messages && data.messages.length > 0) {
               updateConversationHistory(data.messages);
             } else {
-              chatMessages.innerHTML = '<p>No conversation history available for this activity.</p>';
+              chatMessages.innerHTML = gettext('<p>No conversation history available for this activity.</p>');
             }
           } else {
             // Show message to select specific activity
-            chatMessages.innerHTML = '<p><i>Select a specific activity from the filter above to view conversation history.</i></p>';
+            chatMessages.innerHTML = gettext('<p><i>Select a specific activity from the filter above to view conversation history.</i></p>');
           }
         }
         
@@ -1534,9 +1536,9 @@
         const summaryContent = document.getElementById('student-summary-content');
         if (summaryContent) {
           if (activityId && activityId !== 'all') {
-            summaryContent.innerHTML = '<p><i>Click Generate Analysis for an AI-powered assessment of your conversation patterns in this activity.</i></p><p><small>This feature uses OpenAI\'s API to analyze your communication style, engagement level, and identify potential misconceptions.</small></p>';
+            summaryContent.innerHTML = gettext('<p><i>Click Generate Analysis for an AI-powered assessment of your conversation patterns in this activity.</i></p><p><small>This feature uses OpenAI\'s API to analyze your communication style, engagement level, and identify potential misconceptions.</small></p>');
           } else {
-            summaryContent.innerHTML = '<p><i>Select a specific activity from the filter above, then click Generate Analysis for an AI-powered assessment of your conversation patterns.</i></p><p><small>This feature uses OpenAI\'s API to analyze your communication style, engagement level, and identify potential misconceptions.</small></p>';
+            summaryContent.innerHTML = gettext('<p><i>Select a specific activity from the filter above, then click Generate Analysis for an AI-powered assessment of your conversation patterns.</i></p><p><small>This feature uses OpenAI\'s API to analyze your communication style, engagement level, and identify potential misconceptions.</small></p>');
           }
         }
       })
@@ -1676,11 +1678,11 @@
     const hasStudentRole = '{{ has_student_role|yesno:"true,false" }}' === 'true';
     
     if (viewAs === 'teacher' && !hasTeacherRole) {
-      alert('You need to own a course or be enrolled as a teacher to access teacher view.');
+      alert(gettext('You need to own a course or be enrolled as a teacher to access teacher view.'));
       if (viewAsFilter) viewAsFilter.value = currentViewAs;
       return;
     } else if (viewAs === 'student' && !hasStudentRole) {
-      alert('You need to be enrolled as a student in a course to access student view.');
+      alert(gettext('You need to be enrolled as a student in a course to access student view.'));
       if (viewAsFilter) viewAsFilter.value = currentViewAs;
       return;
     }
@@ -1729,7 +1731,7 @@
     const currentActivityId = activityFilter.value;
     
     // Clear current options except "All Activities"
-    activityFilter.innerHTML = '<option value="all">All Activities</option>';
+    activityFilter.innerHTML = gettext('<option value="all">All Activities</option>');
     
     // Get activities from the page context
     // Read current activity options to rebuild them dynamically
@@ -1978,7 +1980,7 @@
     
     if (activityId === 'all') {
       const summaryContent = document.getElementById('summary-content');
-      summaryContent.innerHTML = '<p class="error" style="color:red;font-weight:bold">Please select a specific activity first. Summaries can only be generated for individual activities.</p>';
+      summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">Please select a specific activity first. Summaries can only be generated for individual activities.</p>');
       return;
     }
     
@@ -1986,7 +1988,7 @@
     const spinner = document.getElementById('summary-spinner');
     
     spinner.style.display = 'block';
-    summaryContent.innerHTML = '<p>Generating summary with AI... This may take a moment.</p>';
+    summaryContent.innerHTML = gettext('<p>Generating summary with AI... This may take a moment.</p>');
     
     fetch(`/api/dashboard/generate_summary/?activity_id=${activityId}`)
       .then(response => response.json())
@@ -1996,7 +1998,7 @@
       })
       .catch(error => {
         spinner.style.display = 'none';
-        summaryContent.innerHTML = `<p class="error" style="color:red">Error generating summary: ${error}</p>`;
+        summaryContent.innerHTML = gettext(`<p class="error" style="color:red">Error generating summary: ${error}</p>`);
       });
   });
   
@@ -2044,7 +2046,7 @@
     const clusterVisContainer = document.getElementById('cluster-visualization');
     
     spinner.style.display = 'block';
-    clusterVisContainer.innerHTML = '<p>Loading clusters...</p>';
+    clusterVisContainer.innerHTML = gettext('<p>Loading clusters...</p>');
     
     fetch(`/api/dashboard/student_clusters/?course_id=${courseId}&n_clusters=${clusterCount}`)
       .then(response => response.json())
@@ -2055,13 +2057,13 @@
         console.log("Cluster data received:", data);
         
         if (data.error) {
-          clusterVisContainer.innerHTML = `<p class="error">Error generating clusters: ${data.error}</p>`;
+          clusterVisContainer.innerHTML = gettext(`<p class="error">Error generating clusters: ${data.error}</p>`);
           console.error("Error in cluster data:", data.error);
           return;
         }
         
         if (!data.clusters || data.clusters.length === 0) {
-          clusterVisContainer.innerHTML = '<p>Could not generate clusters. Please ensure there are enough messages from at least 2 students.</p>';
+          clusterVisContainer.innerHTML = gettext('<p>Could not generate clusters. Please ensure there are enough messages from at least 2 students.</p>');
           console.log("No clusters data available");
           return;
         }
@@ -2072,7 +2074,7 @@
       })
       .catch(error => {
         spinner.style.display = 'none';
-        clusterVisContainer.innerHTML = `<p class="error">Error loading clusters: ${error}</p>`;
+        clusterVisContainer.innerHTML = gettext(`<p class="error">Error loading clusters: ${error}</p>`);
         console.error('Error fetching clusters:', error);
       });
   }
@@ -2082,14 +2084,14 @@
     container.innerHTML = '';
     
     if (!clusters || clusters.length === 0) {
-      container.innerHTML = '<p>Not enough data to create clusters. Add more students or messages.</p>';
+      container.innerHTML = gettext('<p>Not enough data to create clusters. Add more students or messages.</p>');
       return;
     }
     
     const totalStudents = clusters.reduce((sum, c) => sum + c.size, 0);
     
     if (totalStudents === 0) {
-      container.innerHTML = '<p>No students with sufficient data for clustering.</p>';
+      container.innerHTML = gettext('<p>No students with sufficient data for clustering.</p>');
       return;
     }
     
@@ -2149,7 +2151,7 @@
     if (!clusterData || !clusterData.clusters) {
       console.error("No cluster data available");
       document.getElementById('cluster-details').innerHTML = 
-        '<p>No group data available. Try updating the groups.</p>';
+        gettext('<p>No group data available. Try updating the groups.</p>');
       return;
     }
     
@@ -2157,7 +2159,7 @@
     if (!cluster) {
       console.error(`Cluster with ID ${clusterId} not found`);
       document.getElementById('cluster-details').innerHTML = 
-        '<p>Selected group not found. Try updating the groups.</p>';
+        gettext('<p>Selected group not found. Try updating the groups.</p>');
       return;
     }
     
@@ -2211,7 +2213,7 @@
     const clusterDescription = getClusterDescription(cluster.name);
     
     const container = document.getElementById('cluster-details');
-    container.innerHTML = `
+    container.innerHTML = gettext(`
       <h4>${cluster.name}</h4>
       <p>${clusterDescription}</p>
       <p><strong>Number of students:</strong> ${cluster.size}</p>
@@ -2220,7 +2222,7 @@
         ${cluster.users.map(user => `<li>${user.username}</li>`).join('')}
       </ul>
       <p><em>Tip: Hover over the group bubble to see a brief description of what this type means.</em></p>
-    `;
+    `);
   }
   
   function updateScatterPlot() {
@@ -2373,7 +2375,7 @@
     const rows = Array.from(table.querySelectorAll('tbody tr'));
     
     if (rows.length === 0 || rows[0].querySelector('td[colspan]')) {
-      alert('No data available to export');
+      alert(gettext('No data available to export'));
       spinner.remove();
       return;
     }
@@ -2439,7 +2441,7 @@
         spinner.remove();
       } catch (error) {
         console.error('Error exporting data:', error);
-        alert('An error occurred while exporting data. Please try again.');
+        alert(gettext('An error occurred while exporting data. Please try again.'));
         spinner.remove();
       }
     }
@@ -2613,18 +2615,18 @@
     const group = document.getElementById('word-cloud-group');
     if (!svg || !group) {
       console.error('Word cloud SVG structure not found, reinitializing...');
-      wordCloudContainer.innerHTML = `
+      wordCloudContainer.innerHTML = gettext(`
         <svg id="word-cloud-svg">
           <g id="word-cloud-group"></g>
         </svg>
-      `;
+      `);
     }
     
     spinner.style.display = 'block';
     
     const wordDetails = document.getElementById('word-details');
     if (wordDetails) {
-      wordDetails.innerHTML = '<p>Loading word data...</p>';
+      wordDetails.innerHTML = gettext('<p>Loading word data...</p>');
     }
     
     fetch(`/api/dashboard/word_frequencies/?course_id=${courseId}&min_word_length=${minWordLength}&max_words=${maxWords}`)
@@ -2641,7 +2643,7 @@
             group.innerHTML = '';
             const svg = document.getElementById('word-cloud-svg');
             if (svg) {
-              svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">Error: ${data.error}</text>`;
+              svg.innerHTML = gettext(`<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">Error: ${data.error}</text>`);
             }
           }
           console.error("Error in word cloud data:", data.error);
@@ -2654,7 +2656,7 @@
             group.innerHTML = '';
             const svg = document.getElementById('word-cloud-svg');
             if (svg) {
-              svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">No word data available. Please ensure there are enough student messages.</text>';
+              svg.innerHTML = gettext('<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">No word data available. Please ensure there are enough student messages.</text>');
             }
           }
           console.log("No word data available");
@@ -2670,10 +2672,10 @@
           if (svg) {
             if (group) group.innerHTML = '';
             const errorMessage = error.message ? String(error.message).replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'Unknown error';
-            svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#cc0000" font-size="12px" style="font-family: sans-serif;">
+            svg.innerHTML = gettext(`<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#cc0000" font-size="12px" style="font-family: sans-serif;">
                               <tspan x="50%" dy="-0.6em">Error visualizing word cloud:</tspan>
                               <tspan x="50%" dy="1.2em">${errorMessage}</tspan>
-                           </text>`;
+                           </text>`);
           }
         }
         
@@ -2690,7 +2692,7 @@
           group.innerHTML = '';
           const svg = document.getElementById('word-cloud-svg');
           if (svg) {
-            svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">Error loading word cloud: ${error}</text>`;
+            svg.innerHTML = gettext(`<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">Error loading word cloud: ${error}</text>`);
           }
         }
         console.error('Error fetching word frequencies:', error);
@@ -2727,7 +2729,7 @@
     if (!words || words.length === 0) {
       const svg = document.getElementById('word-cloud-svg');
       if (svg) {
-        svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">No words available for visualization.</text>';
+        svg.innerHTML = gettext('<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">No words available for visualization.</text>');
       }
       return;
     }
@@ -2907,7 +2909,7 @@
     const container = document.getElementById('word-details');
     
     if (!word) {
-      container.innerHTML = '<p>No word selected.</p>';
+      container.innerHTML = gettext('<p>No word selected.</p>');
       return;
     }
     
@@ -2970,7 +2972,7 @@
     chatContainer.innerHTML = '';
     
     if (!messages || messages.length === 0) {
-      chatContainer.innerHTML = '<p>No conversation history available.</p>';
+      chatContainer.innerHTML = gettext('<p>No conversation history available.</p>');
       return;
     }
     
@@ -3016,7 +3018,7 @@
       
       if (activityId === 'all') {
         const summaryContent = document.getElementById('summary-content');
-        summaryContent.innerHTML = '<p class="error" style="color:red;font-weight:bold">Please select a specific activity first. Summaries can only be generated for individual activities.</p>';
+        summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">Please select a specific activity first. Summaries can only be generated for individual activities.</p>');
         return;
       }
       
@@ -3024,7 +3026,7 @@
       const spinner = document.getElementById('summary-spinner');
       
       spinner.style.display = 'block';
-      summaryContent.innerHTML = '<p>Generating summary with AI... This may take a moment.</p>';
+      summaryContent.innerHTML = gettext('<p>Generating summary with AI... This may take a moment.</p>');
       
       fetch(`/api/dashboard/generate_summary/?activity_id=${activityId}`)
         .then(response => response.json())
@@ -3034,7 +3036,7 @@
         })
         .catch(error => {
           spinner.style.display = 'none';
-          summaryContent.innerHTML = `<p class="error" style="color:red">Error generating summary: ${error}</p>`;
+          summaryContent.innerHTML = gettext(`<p class="error" style="color:red">Error generating summary: ${error}</p>`);
         });
     });
   }

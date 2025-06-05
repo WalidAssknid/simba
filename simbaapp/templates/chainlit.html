@@ -1,6 +1,7 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>SIMBA - Chat - {{ activity.title|default:"Activity" }}</title>
@@ -34,8 +35,8 @@
 <body>
     <!-- Loading message -->
     <div id="loading-message" class="loading-message">
-        <h3>Connecting to SIMBA...</h3>
-        <p>Please wait while we set up your chat session.</p>
+        <h3>{% trans 'Connecting to SIMBA...' %}</h3>
+        <p>{% trans 'Please wait while we set up your chat session.' %}</p>
     </div>
     
     <!-- Pass session data to JavaScript -->

@@ -1,7 +1,7 @@
 {% load static %}
 {% load i18n %}
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}">
+<html lang="{{en}}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -35,8 +35,9 @@
         <div class="hero-container">
             <div class="hero-content">
                 <h1 class="hero-title">{% trans "Welcome to SIMBA" %}</h1>
-                <h2 class="hero-subtitle">The AI That Makes Students Think</h2>
+                <h2 class="hero-subtitle">{% trans "The AI That Makes Students Think"%}</h2>
                 <p class="hero-description">
+                    {% blocktrans %}
                     SIMBA is a web and mobile based educational platform that empowers teachers to design, deploy,
                     and analyze <span style="color: black;">pedagogically-grounded</span> chatbots powered by large language models.
                     While generative AI is becoming increasingly available, educators often lack the tools to
@@ -46,10 +47,11 @@
                     thinking and self-reflection through guided dialogue and actionable insights.
 
                     No coding required — just thoughtful pedagogy translated into interactive dialogues.
+                    {% endblocktrans %}
                 </p>
                 <div class="hero-actions">
-                    <a href="{% url 'login' %}" class="btn btn-hero-primary">Get Started</a>
-                    <a href="#about" class="btn btn-hero-secondary">Learn More</a>
+                    <a href="{% url 'login' %}" class="btn btn-hero-primary">{% trans "Get Started"%}</a>
+                    <a href="#about" class="btn btn-hero-secondary">{% trans "Learn More"%}</a>
                 </div>
             </div>
             <div class="hero-visual">
@@ -63,14 +65,14 @@
     <!-- How SIMBA Works -->
     <section class="how-it-works">
         <div class="container">
-            <h2 class="section-title">How Does SIMBA Work?</h2>
+            <h2 class="section-title">{% trans "How Does SIMBA Work?"%}</h2>
             <div class="steps-container">
                 <div class="step">
                     <div class="step-image">
                         <img src="{% load static %}{% static 'images/1.png' %}" alt="Course Management Interface">
                     </div>
                     <div class="step-content">
-                        <h3><span class="step-number">1</span>Access and Manage Courses</h3>
+                        <h3><span class="step-number">1</span>{% trans 'Access and Manage Courses' %}</h3>
                     </div>
                 </div>
                 <div class="step">
@@ -78,7 +80,7 @@
                         <img src="{% load static %}{% static 'images/2.png' %}" alt="AI Chatbot Interface">
                     </div>
                     <div class="step-content">
-                        <h3><span class="step-number">2</span>Engage with our AI Assistant</h3>
+                        <h3><span class="step-number">2</span>{% trans 'Engage with our AI Assistant' %}</h3>
                     </div>
                 </div>
                 <div class="step">
@@ -86,7 +88,7 @@
                         <img src="{% load static %}{% static 'images/3.png' %}" alt="Analytics Dashboard">
                     </div>
                     <div class="step-content">
-                        <h3><span class="step-number">3</span>Track Progress and Insights</h3>
+                        <h3><span class="step-number">3</span>{% trans 'Track Progress and Insights' %}</h3>
                     </div>
                 </div>
             </div>
@@ -96,42 +98,42 @@
     <!-- Manual Section -->
     <section id="manual" class="manual-section">
         <div class="container">
-            <h2 class="section-title">Getting Started with SIMBA</h2>
+            <h2 class="section-title">{% trans 'Getting Started with SIMBA' %}</h2>
             <div class="manual-content">
                 <div class="manual-text">
-                    <h3>Everything You Need to Know</h3>
+                    <h3>{% trans 'Everything You Need to Know' %}</h3>
                     <p>
-                        Whether you're new to educational technology or an experienced educator, our documentation 
+                        {% blocktrans %} 'Whether you're new to educational technology or an experienced educator, our documentation 
                         will help you make the most of SIMBA. We've put together step-by-step guides, practical 
-                        examples, and troubleshooting tips to get you up and running quickly.
+                        examples, and troubleshooting tips to get you up and running quickly.' {% endblocktrans %}
                     </p>
                     
                     <!-- What Makes SIMBA Different Section -->
                     <div class="simba-info-section">
-                        <h4>What Makes SIMBA Different?</h4>
+                        <h4>{% trans 'What Makes SIMBA Different?' %}</h4>
                         <div class="simba-features">
                             <div class="simba-feature">
                                 <span class="feature-emoji">🧠</span>
                                 <div class="feature-content">
-                                    <strong>Pedagogy-first:</strong> Chatbot creation is rooted in instructional strategies defined by the teachers.
+                                    <strong>{% trans 'Pedagogy-first:' %}</strong> {% trans 'Chatbot creation is rooted in instructional strategies defined by the teachers.' %}
                                 </div>
                             </div>
                             <div class="simba-feature">
                                 <span class="feature-emoji">👩‍🏫</span>
                                 <div class="feature-content">
-                                    <strong>Teacher-driven:</strong> Built with and for educators; no AI expertise needed.
+                                    <strong>{% trans 'Teacher-driven:' %}</strong> {% trans 'Built with and for educators; no AI expertise needed.' %}
                                 </div>
                             </div>
                             <div class="simba-feature">
                                 <span class="feature-emoji">📊</span>
                                 <div class="feature-content">
-                                    <strong>Learning Analytics-Ready:</strong> Interactions become evidence for reflection, research, and refinement.
+                                    <strong>{% trans 'Learning Analytics-Ready:' %}</strong> {% trans 'Interactions become evidence for reflection, research, and refinement.' %}
                                 </div>
                             </div>
                             <div class="simba-feature">
                                 <span class="feature-emoji">🔁</span>
                                 <div class="feature-content">
-                                    <strong>Evidence-based and Informed:</strong> The tool evolves based on classroom realities and ongoing research using Design Based Research Methodologies.
+                                    <strong>{% trans 'Evidence-based and Informed:' %}</strong> {% trans 'The tool evolves based on classroom realities and ongoing research using Design Based Research Methodologies.' %}
                                 </div>
                             </div>
                         </div>
@@ -139,12 +141,12 @@
 
                     <!-- Who is SIMBA For Section -->
                     <div class="simba-info-section">
-                        <h4>Who is SIMBA for?</h4>
+                        <h4>{% trans 'Who is SIMBA for?' %}</h4>
                         <div class="simba-audience">
                             <ul>
-                                <li>University instructors, school teachers, and instructional designers.</li>
-                                <li>Education researchers exploring AI-supported teaching.</li>
-                                <li>Innovative institutions piloting future-ready learning tools.</li>
+                                <li>{% trans 'University instructors, school teachers, and instructional designers.' %}</li>
+                                <li>{% trans 'Education researchers exploring AI-supported teaching.' %}</li>
+                                <li>{% trans 'Innovative institutions piloting future-ready learning tools.' %}</li>
                             </ul>
                         </div>
                     </div>
@@ -152,7 +154,7 @@
                     <div class="manual-features">
                         <div class="feature-item">
                             <i class="fas fa-book"></i>
-                            <span>User Guide</span>
+                            <span>{% trans 'User Guide' %}</span>
                         </div>
                     </div>
                 </div>
@@ -239,7 +241,7 @@
             <h2 class="section-title">Team</h2>
             <div class="team-content">
                 <p>
-                    SIMBA was developed and implemented through a series of collaborative research projects involving researchers from Chile, Brazil, and France. This version of the tool was developed by IRIT with support from the ANR JCJC LASER project (France), Chile's Millennium Nucleus of Higher Education (NMEdSup), and the STIC-AmSud LAFE project.
+                    {% blocktrans %} 'SIMBA was developed and implemented through a series of collaborative research projects involving researchers from Chile, Brazil, and France. This version of the tool was developed by IRIT with support from the ANR JCJC LASER project (France), Chile's Millennium Nucleus of Higher Education (NMEdSup), and the STIC-AmSud LAFE project.' {% endblocktrans %}
                 </p>
             </div>
         </div>
@@ -248,7 +250,7 @@
     <!-- Contributors Section -->
     <section id="contributors" class="contributors-section">
         <div class="container">
-            <h2 class="section-title">Contributors</h2>
+            <h2 class="section-title">{% trans 'Contributors' %}</h2>
             <div class="contributors-grid">
                 <div class="contributor-card">
                     <div class="contributor-photo">
@@ -256,7 +258,7 @@
                     </div>
                     <div class="contributor-info">
                         <h4>Mar Pérez-Sanagustín</h4>
-                        <p>Associate Professor at UT, IRIT</p>
+                        <p>{% trans 'Associate Professor at UT, IRIT' %}</p>
                     </div>
                 </div>
                 <div class="contributor-card">
@@ -265,7 +267,7 @@
                     </div>
                     <div class="contributor-info">
                         <h4>Isabel Hilliger Carrasco</h4>
-                        <p>Associate Professor at PUC</p>
+                        <p>{% trans 'Associate Professor at PUC' %}</p>
                     </div>
                 </div>
                 <div class="contributor-card">
@@ -274,7 +276,7 @@
                     </div>
                     <div class="contributor-info">
                         <h4>André Câmara Alves do Nascimento</h4>
-                        <p>Professor at UFRPE University</p>
+                        <p>{% trans 'Professor at UFRPE University' %}</p>
                     </div>
                 </div>
                 <div class="contributor-card">
@@ -283,7 +285,7 @@
                     </div>
                     <div class="contributor-info">
                         <h4>Jean François Parmentier</h4>
-                        <p>PhD, Lecturer at IPSA</p>
+                        <p>{% trans 'PhD, Lecturer at IPSA' %}</p>
                     </div>
                 </div>
                 <div class="contributor-card">
@@ -292,7 +294,7 @@
                     </div>
                     <div class="contributor-info">
                         <h4>Gabriel Ferretini</h4>
-                        <p>Post-Doc researcher at IRIT</p>
+                        <p>{% trans 'Post-Doc researcher at IRIT' %}</p>
                     </div>
                 </div>
                 <div class="contributor-card">
@@ -301,7 +303,7 @@
                     </div>
                     <div class="contributor-info">
                         <h4>Lenon Anthony</h4>
-                        <p>Internship from UFRPE University at IRIT</p>
+                        <p>{% trans 'Internship from UFRPE University at IRIT' %}</p>
                     </div>
                 </div>
                 <div class="contributor-card">
@@ -310,7 +312,7 @@
                     </div>
                     <div class="contributor-info">
                         <h4>Estevan Villalobos</h4>
-                        <p>PhD Student from IRIT</p>
+                        <p>{% trans 'PhD Student from IRIT' %}</p>
                     </div>
                 </div>
             </div>

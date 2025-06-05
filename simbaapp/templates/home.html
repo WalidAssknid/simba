@@ -18,11 +18,11 @@
                 <h1>SIMBA</h1>
             </div>
             <div class="nav-menu">
-                <a href="#manual" class="nav-link">Manual</a>
-                <a href="#papers" class="nav-link">Papers</a>
-                <a href="#partners" class="nav-link">Partners</a>
-                <a href="#about" class="nav-link">About</a>
-                <a href="{% url 'login' %}" class="btn btn-nav-login">Login</a>
+                <a href="#manual" class="nav-link">{% trans 'Manual' %}</a>
+                <a href="#papers" class="nav-link">{% trans 'Papers' %}</a>
+                <a href="#partners" class="nav-link">{% trans 'Partners' %}</a>
+                <a href="#about" class="nav-link">{% trans 'About' %}</a>
+                <a href="{% url 'login' %}" class="btn btn-nav-login">{% trans 'Login' %}</a>
             </div>
             <div class="mobile-nav-toggle">
                 <i class="fas fa-bars"></i>
@@ -37,7 +37,6 @@
                 <h1 class="hero-title">{% trans "Welcome to SIMBA" %}</h1>
                 <h2 class="hero-subtitle">{% trans "The AI That Makes Students Think"%}</h2>
                 <p class="hero-description">
-                    
                     {% trans 'SIMBA is a web and mobile based educational platform that empowers teachers to design, deploy,
                     and analyze' %} <span style="color: black;">{% trans 'pedagogically-grounded' %}</span> {% blocktrans %}chatbots powered by large language models.
                     While generative AI is becoming increasingly available, educators often lack the tools to
@@ -163,9 +162,9 @@
                         <div class="paper-icon">
                             <i class="fas fa-file-pdf"></i>
                         </div>
-                        <h3>SIMBA User Manual</h3>
+                        <h3>{% trans 'SIMBA User Manual' %}</h3>
                         <div class="paper-actions">
-                            <a href="{% load static %}{% static 'images/icons/SIMBA_MANUAL_ENG.pdf' %}" class="btn btn-small btn-secondary" download>Download PDF</a>
+                            <a href="{% load static %}{% static 'images/icons/SIMBA_MANUAL_ENG.pdf' %}" class="btn btn-small btn-secondary" download>{% trans 'Download PDF' %}</a>
                         </div>
                     </div>
                 </div>
@@ -176,9 +175,9 @@
     <!-- Related Papers Section -->
     <section id="papers" class="papers-section">
         <div class="container">
-            <h2 class="section-title">Research Behind SIMBA</h2>
+            <h2 class="section-title">{% trans 'Research Behind SIMBA' %}</h2>
             <p class="section-description">
-                Our work is grounded in educational research and continues to contribute to the field of AI in education
+                {% trans 'Our work is grounded in educational research and continues to contribute to the field of AI in education' %}
             </p>
             <div class="papers-grid">
                 <div class="paper-card">
@@ -190,7 +189,7 @@
                         Literacy and Prior Knowledge</h3>
                     <p class="paper-authors">Anonymous Authors</p>
                     <div class="paper-actions">
-                        <a href="{% load static %}{% static 'images/icons/SIMBA_exploring.pdf' %}" class="btn btn-small btn-secondary" download>Download PDF</a>
+                        <a href="{% load static %}{% static 'images/icons/SIMBA_exploring.pdf' %}" class="btn btn-small btn-secondary" download>{% trans 'Download PDF' %}</a>
                     </div>
                 </div>
                 <div class="paper-card">
@@ -201,7 +200,7 @@
                     <p class="paper-authors">Gabriel Ferrettini, André C. A. Nascimento, Mar Pérez-Sanagustin,
                         Isabel Hilliger</p>
                     <div class="paper-actions">
-                        <a href="{% load static %}{% static 'images/icons/SIMBA_CreatingChatbots.pdf' %}" class="btn btn-small btn-secondary" download>Download PDF</a>
+                        <a href="{% load static %}{% static 'images/icons/SIMBA_CreatingChatbots.pdf' %}" class="btn btn-small btn-secondary" download>{% trans 'Download PDF' %}</a>
                     </div>
                 </div>
             </div>
@@ -211,7 +210,7 @@
     <!-- Partners Section -->
     <section id="partners" class="partners-section">
         <div class="container">
-            <h2 class="section-title">Partners</h2>
+            <h2 class="section-title">{% trans 'Partners' %}</h2>
             <div class="partners-grid">
                 <div class="partner-logo">
                     <img src="{% load static %}{% static 'images/IRIT_logo.png' %}" alt="IRIT" class="partner-image">

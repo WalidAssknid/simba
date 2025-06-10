@@ -714,6 +714,7 @@ def create_new_attempt_api(request, activity_id: str, user_id: str):
         )
         
         return HTTPStatus.CREATED, {
+            "id": str(thread.id),
             "thread_id": str(thread.id),
             "attempt_number": new_attempt_number,
             "message": f"New attempt #{new_attempt_number} created successfully."
@@ -737,7 +738,7 @@ def get_user_attempts_api(request, activity_id: str, user_id: str):
         threads = Thread.objects.filter(
             activity=activity,
             user=user
-        ).order_by('attempt_number')
+        ).order_by('-attempt_number')
         
         attempts = []
         for thread in threads:
@@ -1571,12 +1572,12 @@ def delete_activity_file_api(request, activity_id: str, file_id: str, user_id: s
 # --- Chainlit Session Management ---
 chainlit_router = Router()
 
-# Fila temporária para sessões pendentes - armazena as sessões que estão esperando o Chainlit se conectar
-PENDING_SESSIONS_QUEUE = []
+# Removed global queue - sessions are now handled individually
+# PENDING_SESSIONS_QUEUE = []  # Removed this global queue
 
 @chainlit_router.post("/create-session", response={200: ChainlitSessionResponseSchema, 400: ErrorSchema, 404: ErrorSchema})
 def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
-    """Create a Chainlit session and add it to the pending queue for Chainlit to pick up."""
+    """Create a Chainlit session for a specific user/activity/thread combination."""
     try:
         # Validate activity exists
         activity = Activity.objects.get(id=payload.activity_id)
@@ -1589,31 +1590,15 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
         from django.utils import timezone
         ChainlitSession.objects.filter(expires_at__lt=timezone.now()).delete()
         
-        # Check if there's already a valid session for this user/activity that's not consumed
-        existing_session = ChainlitSession.objects.filter(
-            user=user,
-            activity=activity,
-            expires_at__gt=timezone.now(),
-            is_consumed=False
-        ).first()
-        
-        if existing_session:
-            # Reuse existing session - add back to queue if not already there
-            session_in_queue = any(
-                s.get('session_id') == existing_session.session_id 
-                for s in PENDING_SESSIONS_QUEUE
-            )
-            if not session_in_queue:
-                PENDING_SESSIONS_QUEUE.append(existing_session.session_data)
-            
-            return HTTPStatus.OK, existing_session.session_data
-        
-        # Get or create thread
+        # Get or create thread - ensure thread_id is respected if provided
         if payload.thread_id:
             # Use specific thread if provided
-            thread = Thread.objects.get(id=payload.thread_id, activity=activity, user=user)
+            try:
+                thread = Thread.objects.get(id=payload.thread_id, activity=activity, user=user)
+            except Thread.DoesNotExist:
+                return HTTPStatus.NOT_FOUND, {"message": "Thread not found for this user and activity."}
         else:
-            # Get latest thread or create new one
+            # Get latest thread or create new one (should not happen in normal flow)
             latest_thread = Thread.objects.filter(
                 activity=activity,
                 user=user
@@ -1629,7 +1614,14 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
                     attempt_number=1
                 )
         
-        # Generate session ID (could be more sophisticated)
+        # Clean up any existing session for this exact user/activity/thread combination
+        ChainlitSession.objects.filter(
+            user=user,
+            activity=activity,
+            thread=thread
+        ).delete()
+        
+        # Generate unique session ID
         import uuid
         session_id = str(uuid.uuid4())
         
@@ -1681,41 +1673,33 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
             is_consumed=False
         )
         
-        # Add to pending sessions queue for Chainlit to pick up
-        PENDING_SESSIONS_QUEUE.append(session_data)
-        
         # Track event
         openedChat(user, thread.id, time.time())
         
-        # Return session data without session_id for frontend use
+        # Return session data
         return HTTPStatus.OK, session_data
         
     except Activity.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
     except User.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "User not found."}
-    except Thread.DoesNotExist:
-        return HTTPStatus.NOT_FOUND, {"message": "Thread not found."}
     except Exception as e:
         return HTTPStatus.BAD_REQUEST, {"message": f"Failed to create session: {str(e)}"}
 
 @chainlit_router.get("/next-session", response={200: ChainlitSessionResponseSchema, 404: ErrorSchema})
 def get_next_chainlit_session(request):
-    """Get the next session from the pending queue or database for Chainlit to process."""
+    """Get the oldest pending session from the database for Chainlit to process."""
     try:
-        # First, try to get from the in-memory queue (fastest)
-        if PENDING_SESSIONS_QUEUE:
-            session_data = PENDING_SESSIONS_QUEUE.pop(0)
-            return HTTPStatus.OK, session_data
-        
-        # If queue is empty, try to find a valid session in the database
         from django.utils import timezone
         
-        # Look for unexpired sessions in the database
+        # Clean up expired sessions first
+        ChainlitSession.objects.filter(expires_at__lt=timezone.now()).delete()
+        
+        # Look for the oldest unexpired and unconsumed session
         valid_session = ChainlitSession.objects.filter(
             expires_at__gt=timezone.now(),
             is_consumed=False
-        ).select_related('activity', 'user', 'thread').first()
+        ).select_related('activity', 'user', 'thread').order_by('created_at').first()
         
         if valid_session:
             # Mark session as consumed to prevent reuse

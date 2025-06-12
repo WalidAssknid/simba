@@ -51,11 +51,9 @@
 </div>
 
 <!-- Include the activity creation popup -->
-{% if can_create_activity %}
-    {% with course=None %}
-        {% include 'popup_activity.html' %}
-    {% endwith %}
-{% endif %}
+{% with course=None %}
+    {% include 'popup_activity.html' %}
+{% endwith %}
 
 <!-- Activities and Chainlit Container -->
 <div class="content-container">
@@ -385,13 +383,13 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
                 .then(response => response.json())
                 .then(data => {
-                    chainlitAttemptSelector.innerHTML = gettext('<option value="new">Start New Attempt</option>');
+                    chainlitAttemptSelector.innerHTML = '<option value="new">' + gettext('Start New Attempt') + '</option>';
                     
                     const attempts = data.attempts || [];
                     attempts.forEach(attempt => {
                         const option = document.createElement('option');
                         option.value = attempt.thread_id;
-                        option.textContent =  gettext(`Attempt ${attempt.attempt_number} (${new Date(attempt.created_at).toLocaleDateString()})`);
+                        option.textContent = gettext('Attempt') + ' ' + attempt.attempt_number + ' (' + new Date(attempt.created_at).toLocaleDateString() + ')';
                         chainlitAttemptSelector.appendChild(option);
                     });
                     
@@ -596,7 +594,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const selectedCourseId = document.getElementById('courseSelector').value;
             if (!selectedCourseId) {
-                alert( gettext('Please select a course first to create an activity'));
+                alert(gettext('Please select a course first to create an activity'));
                 return;
             }
             
@@ -627,7 +625,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const courseId = this.action.match(/\/courses\/([^\/]+)\/create_activity\//);
             if (!courseId || !courseId[1]) {
                 e.preventDefault();
-                alert( gettext('Course ID is missing. Please select a course first.'));
+                alert(gettext('Course ID is missing. Please select a course first.'));
             }
         });
     }
@@ -797,7 +795,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert( gettext('Failed to load activity details for editing.'));
+                        alert(gettext('Failed to load activity details for editing.'));
                     });
             } else if (action === 'chat') {
                 const activityItem = document.querySelector(`.activity-item[data-activity-id="${activityId}"]`);
@@ -898,18 +896,18 @@ document.addEventListener('DOMContentLoaded', function() {
                                 
                                 const activitiesList = document.querySelector('.activities-list');
                                 if (activitiesList.querySelectorAll('.activity-item').length === 0) {
-                                    const emptyState = document.createElement('div');
-                                    emptyState.className = 'empty-state';
-                                    emptyState.innerHTML =  gettext(`
-                                        <h3>No activities found</h3>
-                                        <p>
-                                            {% if can_create_activity %}
-                                            Click the <i class="fas fa-plus"></i> button to create a new activity!
-                                            {% else %}
-                                            You don't have any activities yet. Ask your teacher to create one!
-                                            {% endif %}
-                                        </p>
-                                    `);
+                                                                    const emptyState = document.createElement('div');
+                                emptyState.className = 'empty-state';
+                                emptyState.innerHTML = `
+                                    <h3>` + gettext('No activities found') + `</h3>
+                                    <p>
+                                        {% if can_create_activity %}
+                                        ` + gettext('Click the') + ` <i class="fas fa-plus"></i> ` + gettext('button to create a new activity!') + `
+                                        {% else %}
+                                        ` + gettext("You don't have any activities yet. Ask your teacher to create one!") + `
+                                        {% endif %}
+                                    </p>
+                                `;
                                     activitiesList.appendChild(emptyState);
                                 }
                             }
@@ -1212,7 +1210,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
 
-                if (confirm( gettext(`Are you sure you want to remove ${username} from this course?`))) {
+                if (confirm(gettext('Are you sure you want to remove') + ' ' + username + ' ' + gettext('from this course?'))) {
                     fetch(`/api/enrollments/${enrollmentId}?current_user_id=${currentUserId}`, {
                         method: 'DELETE',
                         headers: {

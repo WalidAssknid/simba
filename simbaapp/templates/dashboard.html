@@ -938,7 +938,7 @@
     <h3>{% trans 'Message Summary' %}</h3>
     <div id="summary-content">
       <p><i>{% trans 'Select a specific activity (not "All Activities") and click Generate to create an AI-powered summary of student conversations.' %}</i></p>
-      <p><small>{% trans "This feature uses OpenAI's API to analyze student messages and provide insights." %}</small></p>
+      <p><small>{% trans "This feature uses OpenAI&#39;s API to analyze student messages and provide insights." %}</small></p>
     </div>
     <button id="generate-summary" class="btn-generate">{% trans 'Generate Summary' %}</button>
     <div id="summary-spinner" class="spinner"></div>
@@ -1001,10 +1001,10 @@
         <div id="student-summary-content">
           {% if view_as == 'student' %}
           <p><i>{% trans 'Select a specific activity from the filter above, then click Generate Analysis for an AI-powered assessment of your conversation patterns.' %}</i></p>
-          <p><small>{% trans "This feature uses OpenAI's API to analyze your communication style, engagement level, and identify potential misconceptions." %}</small></p>
+          <p><small>{% trans "This feature uses OpenAI&#39;s API to analyze your communication style, engagement level, and identify potential misconceptions." %}</small></p>
           {% else %}
           <p><i>{% trans 'Select a student above to view their data, then click Generate Analysis for an AI-powered assessment of their conversation patterns.' %}</i></p>
-          <p><small>{% trans 'This feature uses OpenAI's API to analyze the student's communication style, engagement level, and identify potential misconceptions.' %}</small></p>
+          <p><small>{% trans 'This feature uses OpenAI&#39;s API to analyze the student&#39;s communication style, engagement level, and identify potential misconceptions.' %}</small></p>
           {% endif %}
         </div>
         <div class="button-group" style="display: flex; gap: 10px; margin-top: 15px;">

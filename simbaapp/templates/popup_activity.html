@@ -120,6 +120,17 @@
                 </div>
                 <div class="form-group checkbox-group">
                     <div class="checkbox-wrapper">
+                        <input type="checkbox" name="never_answer_directly" id="never-answer-directly" checked>
+                        <label for="never-answer-directly">
+                            {% trans 'Never answer the questions of the student directly' %}
+                        </label>
+                    </div>
+                    <small class="form-text">
+                        {% trans 'If enabled, the assistant will guide students to find answers through hints and questions instead of giving direct answers.' %}
+                    </small>
+                </div>
+                <div class="form-group checkbox-group">
+                    <div class="checkbox-wrapper">
                         <input type="checkbox" name="allow_emojis" id="allow-emojis" checked>
                         <label for="allow-emojis">
                             {% trans 'Can the assistant use emojis?' %}

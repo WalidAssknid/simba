@@ -35,9 +35,15 @@ class User(models.Model):
         return self.get_owned_courses_count() < 3
     
     def can_create_activity(self, course=None):
-        """Check if user can create a new activity (limit: 6 total)"""
+        """Check if user can create a new activity (limit: 10 total) and has access to at least one course"""
         total_activities_count = Activity.objects.filter(owner=self).count()
-        return total_activities_count < 6
+        if total_activities_count >= 10:
+            return False
+        
+        owned_courses = Course.objects.filter(owner=self).exists()
+        teacher_enrollments = CourseEnrollment.objects.filter(user=self, role='teacher').exists()
+        
+        return owned_courses or teacher_enrollments
     
     def can_join_course(self):
         """Check if user can join a new course (limit: 3 total including owned)"""
@@ -89,6 +95,7 @@ class Activity(models.Model):
     subjects = models.TextField(blank=True, null=True)
     restrict_to_subject = models.BooleanField(default=False)
     allow_questions = models.BooleanField(default=True)
+    never_answer_directly = models.BooleanField(default=True)
     allow_emojis = models.BooleanField(default=True)
     trust_document = models.BooleanField(default=True)
     word_limit = models.PositiveIntegerField(default=0)

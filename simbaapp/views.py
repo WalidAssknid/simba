@@ -520,7 +520,7 @@ def create_activity_view(request, course_id):
         # Check if user can create activities (limit check)
         if not user.can_create_activity(course):
             total_activities = Activity.objects.filter(owner=user).count()
-            messages.error(request, f"You can only create up to 6 activities total. You currently have {total_activities} activities.")
+            messages.error(request, f"You can only create up to 10 activities total. You currently have {total_activities} activities.")
             return redirect('course_detail', course_id=course_id)
         
         # Check if user has permission to create activities in this course

@@ -177,8 +177,10 @@ async def _build_system_prompt(activity_data: dict, logger_instance: logging.Log
             nstr += "You should only speak of those listed subjects. Avoid as much as possible speaking of other subjects, and steer back the student to the course subjects if he tries to deviate from them."
         return nstr
 
-    def answersGen_str(is_expert_mode):
-        if is_expert_mode:
+    def answersGen_str(is_expert_mode, never_answer_directly):
+        if never_answer_directly:
+            return "You should never give direct answers to the questions. Instead, guide the student to discover the answer through questioning and hints."
+        elif is_expert_mode:
             return "You should not give the answer, but guide the student to answer."
         else:
             return "You can provide an answer to the provided questions if the student asks for it."
@@ -229,7 +231,8 @@ async def _build_system_prompt(activity_data: dict, logger_instance: logging.Log
     questions_str = questionsGen_str(questions_list)
     subjects_str = subjectsGen_str(activity_subjects, restrict_to_subject_flag)
     teaching_adj_str = teachingAdjGen_str(expert_mode)
-    answers_text = answersGen_str(expert_mode)
+    never_answer_directly_flag = activity_data.get('never_answer_directly', True)
+    answers_text = answersGen_str(expert_mode, never_answer_directly_flag)
     teaching_type_text = teachTypeGen_str(expert_mode)
     documents_str = docsGen_str(trust_document_flag, has_files)
     files_str = filesGen_str(has_files)

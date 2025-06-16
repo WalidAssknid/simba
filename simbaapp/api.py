@@ -379,6 +379,11 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
         
         if not can_create:
             return HTTPStatus.FORBIDDEN, {"message": "Only the course owner or teachers can create activities."}
+        
+        # Check activity limit (10 total activities per user)
+        total_activities_count = Activity.objects.filter(owner=user).count()
+        if total_activities_count >= 10:
+            return HTTPStatus.FORBIDDEN, {"message": f"You can only create up to 10 activities total. You currently have {total_activities_count} activities."}
 
         assistant_id = None
         vector_store_id = None

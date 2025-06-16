@@ -2,6 +2,25 @@
 {% block title %}Activities | SIMBA{% endblock %}
 {% block content %}
 {% load i18n %}
+
+<!-- DEBUG INFO - REMOVER APÓS DEBUGGING -->
+<div id="debug-info" style="display: none; background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;">
+    <h4>Debug Information</h4>
+    <p><strong>can_create_activity:</strong> {{ can_create_activity|yesno:"true,false" }}</p>
+    <p><strong>user_id:</strong> {{ request.session.user_id }}</p>
+    <p><strong>username:</strong> {{ request.session.username }}</p>
+    <p><strong>courses_count:</strong> {{ courses|length }}</p>
+    <p><strong>activities_count:</strong> {{ activities_with_roles|length }}</p>
+    <details>
+        <summary>Courses Details</summary>
+        {% for course in courses %}
+        <div>{{ course.title }} (ID: {{ course.id }})</div>
+        {% endfor %}
+    </details>
+</div>
+<button onclick="document.getElementById('debug-info').style.display = document.getElementById('debug-info').style.display === 'none' ? 'block' : 'none'">Toggle Debug</button>
+<!-- FIM DEBUG INFO -->
+
 <div class="action-bar" data-is-teacher="{{ is_teacher|lower }}">
     <h3>Activities</h3>
     <!-- Filtro de cursos disponível para todos os usuários -->
@@ -12,7 +31,7 @@
         {% endfor %}
     </select>
     
-    {% if can_create_activity %}
+    {% if can_create_activity or courses %}
     <div class="action-buttons">
         <button id="showEnrollmentCode" class="btn btn-secondary">
             {% trans 'Show Enrollment Code' %}
@@ -20,9 +39,11 @@
         <button id="showParticipants" class="btn btn-secondary">
             {% trans 'Show Participants' %}
         </button>
+        {% if can_create_activity %}
         <a href="#" id="createActivityBtn" class="add-button hidden" title="Create Activity">
             <i class="fas fa-plus"></i>
         </a>
+        {% endif %}
     </div>
     {% endif %}
 </div>
@@ -279,10 +300,23 @@
 <script type="text/javascript" src="{% url 'javascript-catalog' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Debug - DOM loaded, checking elements...');
+    console.log('Debug - can_create_activity:', '{{ can_create_activity|yesno:"true,false" }}');
+    console.log('Debug - courses count:', '{{ courses|length }}');
+    console.log('Debug - activities count:', '{{ activities_with_roles|length }}');
+    
     const questionsHidden = document.getElementById('questions-hidden');
     if (questionsHidden) {
         questionsHidden.value = JSON.stringify([]);
     }
+    
+    // Check if required elements exist
+    console.log('Debug - Elements check:', {
+        courseSelector: !!document.getElementById('courseSelector'),
+        createActivityBtn: !!document.getElementById('createActivityBtn'),
+        showEnrollmentCodeBtn: !!document.getElementById('showEnrollmentCode'),
+        showParticipantsBtn: !!document.getElementById('showParticipants')
+    });
     
     const activitiesContainer = document.getElementById('activities-container');
     const chainlitContainer = document.getElementById('chainlit-container');
@@ -529,9 +563,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedCourseId = courseSelector.value;
             const createBtn = document.getElementById('createActivityBtn');
             
-            if (!createBtn) return;
+            console.log('Debug - checkCreatePermission called', {
+                selectedCourseId,
+                createBtnExists: !!createBtn,
+                canCreateActivity: '{{ can_create_activity|yesno:"true,false" }}'
+            });
+            
+            if (!createBtn) {
+                console.log('Debug - createBtn not found');
+                return;
+            }
             
             if (!selectedCourseId) {
+                console.log('Debug - no course selected, hiding button');
                 createBtn.classList.add('hidden');
                 return;
             }
@@ -540,10 +584,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const courseActivities = document.querySelectorAll(`.activity-item[data-course-id="${selectedCourseId}"]`);
             let canCreate = false;
             
+            console.log('Debug - course activities found:', courseActivities.length);
+            
             courseActivities.forEach(item => {
                 const roleElement = item.querySelector('.role-badge');
                 if (roleElement) {
                     const role = roleElement.textContent.toLowerCase().trim();
+                    console.log('Debug - found role:', role);
                     if (role === 'owner' || role === 'teacher') {
                         canCreate = true;
                     }
@@ -557,9 +604,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (courseOption) {
                     // Assume user can create if course is in their list (they have some access)
                     // This will be validated server-side anyway
+                    console.log('Debug - no activities but course exists in selector, allowing creation');
                     canCreate = true;
                 }
             }
+            
+            console.log('Debug - final canCreate decision:', canCreate);
             
             if (canCreate) {
                 createBtn.classList.remove('hidden');

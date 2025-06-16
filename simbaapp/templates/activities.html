@@ -3,24 +3,6 @@
 {% block content %}
 {% load i18n %}
 
-<!-- DEBUG INFO - REMOVER APÓS DEBUGGING -->
-<div id="debug-info" style="display: none; background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;">
-    <h4>Debug Information</h4>
-    <p><strong>can_create_activity:</strong> {{ can_create_activity|yesno:"true,false" }}</p>
-    <p><strong>user_id:</strong> {{ request.session.user_id }}</p>
-    <p><strong>username:</strong> {{ request.session.username }}</p>
-    <p><strong>courses_count:</strong> {{ courses|length }}</p>
-    <p><strong>activities_count:</strong> {{ activities_with_roles|length }}</p>
-    <details>
-        <summary>Courses Details</summary>
-        {% for course in courses %}
-        <div>{{ course.title }} (ID: {{ course.id }})</div>
-        {% endfor %}
-    </details>
-</div>
-<button onclick="document.getElementById('debug-info').style.display = document.getElementById('debug-info').style.display === 'none' ? 'block' : 'none'">Toggle Debug</button>
-<!-- FIM DEBUG INFO -->
-
 <div class="action-bar" data-is-teacher="{{ is_teacher|lower }}">
     <h3>Activities</h3>
     <!-- Filtro de cursos disponível para todos os usuários -->

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-06-05 18:32+0200\n"
+"POT-Creation-Date: 2025-06-19 16:02+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,93 +19,93 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? "
 "1 : 2;\n"
 
-#: .\simbaapp\templates\activities.html:9
+#: .\simbaapp\templates\activities.html:10
 #: .\simbaapp\templates\dashboard.html:842
 msgid "All Courses"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:18
+#: .\simbaapp\templates\activities.html:19
 #: .\simbaapp\templates\course_detail.html:38
 msgid "Show Enrollment Code"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:21
+#: .\simbaapp\templates\activities.html:22
 #: .\simbaapp\templates\course_detail.html:41
 msgid "Show Participants"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:34
+#: .\simbaapp\templates\activities.html:37
 #: .\simbaapp\templates\course_detail.html:96
 msgid "Course Enrollment Code"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:36
+#: .\simbaapp\templates\activities.html:39
 #: .\simbaapp\templates\course_detail.html:98
 msgid "Share this code with students to join your course:"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:46
+#: .\simbaapp\templates\activities.html:49
 #: .\simbaapp\templates\course_detail.html:108
 msgid "Course Participants"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:77
+#: .\simbaapp\templates\activities.html:78
 msgid "Edit"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:80
+#: .\simbaapp\templates\activities.html:81
 msgid "Chat with Activity"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:83
+#: .\simbaapp\templates\activities.html:84
 msgid "Get Activity Link"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:86
+#: .\simbaapp\templates\activities.html:87
 msgid "Delete"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:102
+#: .\simbaapp\templates\activities.html:103
 #: .\simbaapp\templates\course_detail.html:114
 msgid "Owner"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:113
+#: .\simbaapp\templates\activities.html:114
 #: .\simbaapp\templates\course_detail.html:184
 msgid "No activities found"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:116
+#: .\simbaapp\templates\activities.html:117
 #: .\simbaapp\templates\course_detail.html:187
 msgid ""
 " Click the <i class=\"fas fa-plus\"></i> button to create a new activity! "
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:118
+#: .\simbaapp\templates\activities.html:119
 msgid "You don't have any activities yet. Ask your teacher to create one!"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:132
+#: .\simbaapp\templates\activities.html:133
 #: .\simbaapp\templates\course_detail.html:203
 msgid "Back to Activities"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:142
+#: .\simbaapp\templates\activities.html:143
 #: .\simbaapp\templates\course_detail.html:214
 msgid "Re-do Activity"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:146
+#: .\simbaapp\templates\activities.html:147
 #: .\simbaapp\templates\course_detail.html:218
 msgid "Start New Attempt"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:149
+#: .\simbaapp\templates\activities.html:150
 #: .\simbaapp\templates\course_detail.html:221
 msgid "Start"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:152
+#: .\simbaapp\templates\activities.html:153
 #: .\simbaapp\templates\course_detail.html:224
 #: .\simbaapp\templates\courses.html:83 .\simbaapp\templates\courses.html:98
 #: .\simbaapp\templates\create_course.html:20
@@ -114,67 +114,67 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:272
+#: .\simbaapp\templates\activities.html:273
 #: .\simbaapp\templates\course_detail.html:242
 msgid "Share this link with students to access the activity:"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:274
+#: .\simbaapp\templates\activities.html:275
 #: .\simbaapp\templates\course_detail.html:69
 #: .\simbaapp\templates\course_detail.html:83
 #: .\simbaapp\templates\course_detail.html:244
 msgid "Copy Link"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:30
+#: .\simbaapp\templates\base.html:32
 msgid "Courses"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:43 .\simbaapp\templates\dashboard.html:965
+#: .\simbaapp\templates\base.html:45 .\simbaapp\templates\dashboard.html:965
 msgid "Activities"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:46
+#: .\simbaapp\templates\base.html:48
 msgid "Dashboard"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:55
+#: .\simbaapp\templates\base.html:57
 msgid "Admin Dashboard"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:60 .\simbaapp\templates\home.html:25
+#: .\simbaapp\templates\base.html:62 .\simbaapp\templates\home.html:25
 #: .\simbaapp\templates\home.html:374 .\simbaapp\templates\login.html:3
-#: .\simbaapp\templates\login.html:39 .\simbaapp\templates\register.html:51
+#: .\simbaapp\templates\login.html:40 .\simbaapp\templates\register.html:52
 msgid "Login"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:63 .\simbaapp\templates\home.html:375
-#: .\simbaapp\templates\login.html:44 .\simbaapp\templates\register.html:2
-#: .\simbaapp\templates\register.html:46
+#: .\simbaapp\templates\base.html:65 .\simbaapp\templates\home.html:375
+#: .\simbaapp\templates\login.html:45 .\simbaapp\templates\register.html:3
+#: .\simbaapp\templates\register.html:47
 msgid "Register"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:107 .\simbaapp\templates\profile.html:3
+#: .\simbaapp\templates\base.html:111 .\simbaapp\templates\profile.html:3
 msgid "Manage Account"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:108
+#: .\simbaapp\templates\base.html:112
 #: .\simbaapp\templates\email_verification_status.html:159
 #: .\simbaapp\templates\email_verification_status.html:165
 msgid "Logout"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:131
+#: .\simbaapp\templates\base.html:135
 msgid "Email Verification Required:"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:131
+#: .\simbaapp\templates\base.html:135
 msgid ""
 "Please verify your email address to confirm your account. Otherwise, you "
 "will not be able to log in again."
 msgstr ""
 
-#: .\simbaapp\templates\base.html:132
+#: .\simbaapp\templates\base.html:136
 msgid "Resend verification email"
 msgstr ""
 
@@ -258,7 +258,7 @@ msgid ""
 msgstr ""
 
 #: .\simbaapp\templates\courses.html:59
-msgid "Activities: Up to 6 per course"
+msgid "Activities: Up to 10 total"
 msgstr ""
 
 #: .\simbaapp\templates\courses.html:70
@@ -456,7 +456,9 @@ msgid ""
 msgstr ""
 
 #: .\simbaapp\templates\dashboard.html:1007
-msgid "This feature uses OpenAI"
+msgid ""
+"This feature uses OpenAI's API to analyze the student's "
+"communication style, engagement level, and identify potential misconceptions."
 msgstr ""
 
 #: .\simbaapp\templates\dashboard.html:1011
@@ -942,20 +944,20 @@ msgstr ""
 msgid "Login to your account to access the platform"
 msgstr ""
 
-#: .\simbaapp\templates\login.html:26 .\simbaapp\templates\profile.html:11
-#: .\simbaapp\templates\register.html:27
+#: .\simbaapp\templates\login.html:27 .\simbaapp\templates\profile.html:11
+#: .\simbaapp\templates\register.html:28
 msgid "Username"
 msgstr ""
 
-#: .\simbaapp\templates\login.html:31
+#: .\simbaapp\templates\login.html:32
 msgid "Password:"
 msgstr ""
 
-#: .\simbaapp\templates\login.html:36
+#: .\simbaapp\templates\login.html:37
 msgid "Forgot your password?"
 msgstr ""
 
-#: .\simbaapp\templates\login.html:44
+#: .\simbaapp\templates\login.html:45
 msgid "Don't have an account?"
 msgstr ""
 
@@ -1141,72 +1143,82 @@ msgid "If enabled, the assistant can suggest questions to students."
 msgstr ""
 
 #: .\simbaapp\templates\popup_activity.html:125
-msgid "Can the assistant use emojis?"
+msgid "Never answer the questions of the student directly"
 msgstr ""
 
 #: .\simbaapp\templates\popup_activity.html:129
-msgid "If enabled, the assistant can use emojis in its answers."
+msgid ""
+"If enabled, the assistant will guide students to find answers through hints "
+"and questions instead of giving direct answers."
 msgstr ""
 
 #: .\simbaapp\templates\popup_activity.html:136
-msgid "Should the assistant trust the provided document?"
+msgid "Can the assistant use emojis?"
 msgstr ""
 
 #: .\simbaapp\templates\popup_activity.html:140
-msgid ""
-"If enabled, the assistant will use the provided document as a trusted source."
+msgid "If enabled, the assistant can use emojis in its answers."
 msgstr ""
 
 #: .\simbaapp\templates\popup_activity.html:147
-msgid "Allow students to redo this activity"
+msgid "Should the assistant trust the provided document?"
 msgstr ""
 
 #: .\simbaapp\templates\popup_activity.html:151
 msgid ""
+"If enabled, the assistant will use the provided document as a trusted source."
+msgstr ""
+
+#: .\simbaapp\templates\popup_activity.html:158
+msgid "Allow students to redo this activity"
+msgstr ""
+
+#: .\simbaapp\templates\popup_activity.html:162
+msgid ""
 "If enabled, students can start the activity again with a fresh conversation."
 msgstr ""
 
-#: .\simbaapp\templates\popup_activity.html:156
+#: .\simbaapp\templates\popup_activity.html:167
 msgid "Word limit for assistant responses"
 msgstr ""
 
-#: .\simbaapp\templates\popup_activity.html:160
+#: .\simbaapp\templates\popup_activity.html:171
 msgid "0 = no limit. Set a value to limit responses."
 msgstr ""
 
-#: .\simbaapp\templates\popup_activity.html:166
+#: .\simbaapp\templates\popup_activity.html:177
 msgid "Activity Files"
 msgstr ""
 
-#: .\simbaapp\templates\popup_activity.html:168
+#: .\simbaapp\templates\popup_activity.html:179
 msgid "Upload Files (PDF, TXT, DOC, etc.)"
 msgstr ""
 
-#: .\simbaapp\templates\popup_activity.html:170
+#: .\simbaapp\templates\popup_activity.html:181
 msgid "Upload documents that the assistant can reference during conversations."
 msgstr ""
 
-#: .\simbaapp\templates\popup_activity.html:176
+#: .\simbaapp\templates\popup_activity.html:187
 msgid "Activity Schedule & Settings"
 msgstr ""
 
-#: .\simbaapp\templates\popup_activity.html:178
+#: .\simbaapp\templates\popup_activity.html:189
 msgid "Start Date (Optional)"
 msgstr ""
 
-#: .\simbaapp\templates\popup_activity.html:180
+#: .\simbaapp\templates\popup_activity.html:191
 msgid "When should this activity become available to students?"
 msgstr ""
 
-#: .\simbaapp\templates\popup_activity.html:183
+#: .\simbaapp\templates\popup_activity.html:194
 msgid "End Date (Optional)"
 msgstr ""
 
-#: .\simbaapp\templates\popup_activity.html:185
+#: .\simbaapp\templates\popup_activity.html:196
 msgid "When should this activity stop being available to students?"
 msgstr ""
 
-#: .\simbaapp\templates\popup_activity.html:189
+#: .\simbaapp\templates\popup_activity.html:200
 msgid "Create Activity"
 msgstr ""
 
@@ -1214,7 +1226,7 @@ msgstr ""
 msgid "Manage Your Account"
 msgstr ""
 
-#: .\simbaapp\templates\profile.html:16 .\simbaapp\templates\register.html:32
+#: .\simbaapp\templates\profile.html:16 .\simbaapp\templates\register.html:33
 msgid "Email:"
 msgstr ""
 
@@ -1246,23 +1258,23 @@ msgstr ""
 msgid "Update Profile"
 msgstr ""
 
-#: .\simbaapp\templates\register.html:8
+#: .\simbaapp\templates\register.html:9
 msgid "Create your account"
 msgstr ""
 
-#: .\simbaapp\templates\register.html:9
+#: .\simbaapp\templates\register.html:10
 msgid "Join SIMBA and start learning"
 msgstr ""
 
-#: .\simbaapp\templates\register.html:37
+#: .\simbaapp\templates\register.html:38
 msgid "Password"
 msgstr ""
 
-#: .\simbaapp\templates\register.html:42
+#: .\simbaapp\templates\register.html:43
 msgid "Confirm password:"
 msgstr ""
 
-#: .\simbaapp\templates\register.html:51
+#: .\simbaapp\templates\register.html:52
 msgid "Already have an account?"
 msgstr ""
 

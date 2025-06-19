@@ -1,6 +1,7 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>SIMBA - Chat - {{ activity.title|default:"Activity" }}</title>
@@ -17,59 +18,78 @@
             height: 100vh;
             border: none;
         }
+        .loading-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 1000;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
-    <!-- JavaScript to check and log iframe URL -->
+    <!-- Loading message -->
+    <div id="loading-message" class="loading-message">
+        <h3>{% trans 'Connecting to SIMBA...' %}</h3>
+        <p>{% trans 'Please wait while we set up your chat session.' %}</p>
+    </div>
+    
+    <!-- Pass session data to JavaScript -->
+    <script id="session-data" type="application/json">{{ session_data|safe }}</script>
     <script>
-        console.log("Activity ID parameter:", "{{ activity_id }}");
-        console.log("User ID parameter:", "{{ user_id }}");
-        console.log("Username parameter:", "{{ username }}");
-        console.log("Chainlit URL parameter:", "{{ chainlit_url }}");
-        console.log("Thread ID parameter:", "{{ thread_id }}");
+        // Store session data globally for Chainlit access
+        window.SIMBA_SESSION_DATA = JSON.parse(document.getElementById('session-data').textContent);
+        console.log("Session Data loaded:", window.SIMBA_SESSION_DATA);
+            
+        // Store in localStorage for Chainlit to access
+            try {
+            localStorage.setItem('simba_session_data', JSON.stringify(window.SIMBA_SESSION_DATA));
+            console.log("Session data stored in localStorage for Chainlit access");
+            } catch (e) {
+                console.warn("Could not save session data to localStorage:", e);
+            }
         
-        // Create global parameters that can be accessed by Chainlit
-        window.SIMBA_PARAMS = {
-            activity_id: "{{ activity_id }}",
-            user_id: "{{ user_id }}",
-            username: "{{ username }}",
-            thread_id: "{{ thread_id }}"
-        };
-        
-        // Also set URL params in localStorage as a backup
-        try {
-            localStorage.setItem('simba_activity_id', "{{ activity_id }}");
-            localStorage.setItem('simba_user_id', "{{ user_id }}");
-            localStorage.setItem('simba_username', "{{ username }}");
-            localStorage.setItem('simba_thread_id', "{{ thread_id }}");
-        } catch (e) {
-            console.warn("Could not save parameters to localStorage:", e);
+        // Function to load Chainlit iframe
+        function loadChainlit() {
+            const iframe = document.createElement('iframe');
+            iframe.id = 'chainlitFrame';
+            // Construct Chainlit URL based on current location or use template variable
+            iframe.src = '{{ chainlit_url }}'
+            iframe.width = '100%';
+            iframe.height = '100%';
+            iframe.frameBorder = '0';
+            iframe.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%;';
+            iframe.allow = 'clipboard-read; clipboard-write';
+            iframe.referrerPolicy = 'origin';
+            
+            // Hide loading message and show iframe when loaded
+            iframe.onload = function() {
+                console.log("Chainlit iframe loaded successfully");
+                document.getElementById('loading-message').style.display = 'none';
+            };
+            
+            // Handle iframe load errors
+            iframe.onerror = function() {
+                console.error("Failed to load Chainlit iframe");
+                const loadingMsg = document.getElementById('loading-message');
+                loadingMsg.innerHTML = '<h3>Connection Error</h3><p>Failed to connect to chat. Please refresh the page.</p>';
+            };
+            
+            const container = document.querySelector('.chat-frame-container');
+            container.appendChild(iframe);
         }
+        
+        // Load Chainlit after a short delay to ensure localStorage is set
+        setTimeout(loadChainlit, 100);
     </script>
     
     <div class="chat-frame-container">
-        <iframe 
-            id="chainlitFrame"
-            src="{{ chainlit_url }}" 
-            width="100%" 
-            height="100%"
-            frameborder="0"
-            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
-            allow="clipboard-read; clipboard-write"
-            referrerpolicy="origin"
-        ></iframe>
+        <!-- Iframe will be dynamically inserted here -->
     </div>
-    
-    <!-- Additional script to verify the iframe URL is correct -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const iframe = document.getElementById('chainlitFrame');
-            console.log("Iframe src:", iframe.src);
-            
-            if (!iframe.src.includes('activity_id={{ activity_id }}')) {
-                console.error("Parameters missing from iframe URL!");
-            }
-        });
-    </script>
 </body>
 </html>

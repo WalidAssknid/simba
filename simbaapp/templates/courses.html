@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load i18n %}
 {% block title %}Courses | SIMBA{% endblock %}
 
 {% block header_title %}
@@ -26,7 +27,7 @@
                         <p class="teacher-name">
                             {{ course.owner.username }} - 
                             {% if course_info.is_owner %}
-                                OWNER
+                                {% trans 'TEACHER EDITOR' %}
                             {% elif course_info.enrollment_role %}
                                 {{ course_info.enrollment_role|upper }}
                             {% endif %}
@@ -46,16 +47,16 @@
             <h3>No courses found</h3>
             <p>
                 {% if can_create_course %}
-                    Click the <i class="fas fa-plus"></i> button to create a new course!
+                    {% blocktrans %} Click the <i class="fas fa-plus"></i> button to create a new course! {% endblocktrans %}
                 {% endif %}
                 {% if can_join_course %}
-                    {% if can_create_course %}Or{% endif %} Click the <i class="fas fa-plus"></i> button to join a course!
+                    {% if can_create_course %}Or{% endif %} {% blocktrans %} Click the <i class="fas fa-plus"></i> button to join a course! {% endblocktrans %}
                 {% endif %}
             </p>
             <div class="limits-info">
                 <p><small>
-                    Courses: {{ owned_courses_count }}/3 owned, {{ enrolled_courses_count }} enrolled<br>
-                    Activities: Up to 6 per course
+                    {% blocktrans %} Courses: {{ owned_courses_count }}/3 owned, {{ enrolled_courses_count }} enrolled {% endblocktrans %}<br>
+                    {% trans 'Activities: Up to 10 total' %}
                 </small></p>
             </div>
         </div>
@@ -66,21 +67,21 @@
 <div id="editCourseModal" class="modal">
     <div class="modal-content">
         <span class="close" id="closeEditModal">&times;</span>
-        <h3 class="modal-title">Edit Course</h3>
+        <h3 class="modal-title">{% trans 'Edit Course' %}</h3>
         <form id="editCourseForm">
             <div class="form-group">
-                <label for="edit-title">Title:</label>
+                <label for="edit-title">{% trans 'Title:' %}</label>
                 <input type="text" id="edit-title" name="title" class="form-control" required>
             </div>
             
             <div class="form-group">
-                <label for="edit-description">Description:</label>
+                <label for="edit-description">{% trans 'Description:' %}</label>
                 <textarea id="edit-description" name="description" rows="5" class="form-control"></textarea>
             </div>
             
             <div class="form-actions">
-                <button type="button" id="cancelEditBtn" class="btn btn-danger">Cancel</button>
-                <button type="submit" class="btn btn-success">Update Course</button>
+                <button type="button" id="cancelEditBtn" class="btn btn-danger">{% trans 'Cancel' %}</button>
+                <button type="submit" class="btn btn-success">{% trans 'Update Course' %}</button>
             </div>
         </form>
     </div>
@@ -90,12 +91,12 @@
 <div id="deleteCourseModal" class="modal">
     <div class="modal-content">
         <span class="close" id="closeDeleteModal">&times;</span>
-        <h3 class="modal-title">Delete Course</h3>
-        <p>Are you sure you want to delete <strong id="courseToDeleteName"></strong>?</p>
-        <p>This action cannot be undone.</p>
+        <h3 class="modal-title">{% trans 'Delete Course' %}</h3>
+        <p>{% trans 'Are you sure you want to delete' %} <strong id="courseToDeleteName"></strong>?</p>
+        <p>{% trans 'This action cannot be undone.' %}</p>
         <div class="form-actions">
-            <button type="button" id="cancelDeleteBtn" class="btn btn-secondary">Cancel</button>
-            <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Delete Course</button>
+            <button type="button" id="cancelDeleteBtn" class="btn btn-secondary">{% trans 'Cancel' %}</button>
+            <button type="button" id="confirmDeleteBtn" class="btn btn-danger">{% trans 'Delete Course' %}</button>
         </div>
     </div>
 </div>
@@ -334,6 +335,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script type="text/javascript" src="{% url 'javascript-catalog' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.card-options').forEach(optionsEl => {
@@ -389,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         if (!courseToEditId) {
-            alert('Error: Course ID is missing.');
+            alert(gettext('Error: Course ID is missing.'));
             return;
         }
         
@@ -447,7 +449,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
         if (!courseToDeleteId) {
-            alert('Error: Course ID is missing.');
+            alert(gettext('Error: Course ID is missing.'));
             return;
         }
         

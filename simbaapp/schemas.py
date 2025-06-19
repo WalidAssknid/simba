@@ -30,6 +30,42 @@ class UserUpdateSchema(Schema):
     new_password: Optional[str] = None
     new_password_confirm: Optional[str] = None
 
+class PasswordResetRequestSchema(Schema):
+    email: EmailStr
+
+class PasswordResetSchema(Schema):
+    token: str
+    new_password: str
+    new_password_confirm: str
+
+class EmailVerificationSchema(Schema):
+    token: str
+
+class ResendVerificationSchema(Schema):
+    email: EmailStr
+
+class AdminCreateUserSchema(Schema):
+    username: str
+    email: EmailStr
+    password: str
+    is_admin: bool = False
+
+# --- Chainlit Session Schemas ---
+
+class ChainlitSessionInitSchema(Schema):
+    activity_id: str
+    user_id: str
+    username: str
+    thread_id: Optional[str] = None
+
+class ChainlitSessionResponseSchema(Schema):
+    session_id: str
+    activity_id: str
+    user_id: str
+    username: str
+    thread_id: str
+    activity_data: Dict[str, Any]
+
 # --- Input Schemas ---
 
 class CourseCreateSchema(Schema):
@@ -45,7 +81,7 @@ class CourseEnrollmentSchema(Schema):
     role: str = 'student' 
 
 class ActivityCreateSchema(Schema):
-    course_id: int 
+    course_id: str 
     title: Optional[str] = None
     description: Optional[str] = None
     expert_mode: bool = False
@@ -62,6 +98,7 @@ class ActivityCreateSchema(Schema):
     end_date: Optional[datetime] = None
     is_visible: bool = True
     allow_redo: bool = True
+    ai_model: str = 'gpt'
     files: List[str] = Field(default_factory=list)  
 
 class ActivityUpdateSchema(Schema):
@@ -81,25 +118,26 @@ class ActivityUpdateSchema(Schema):
     end_date: Optional[datetime] = None
     is_visible: bool = True
     allow_redo: bool = True
+    ai_model: str = 'gpt'
     files: List[str] = Field(default_factory=list) 
 
 class ThreadGetOrCreateSchema(Schema):
-    activity_id: int
-    user_id: int
+    activity_id: str
+    user_id: str
     attempt_number: Optional[int] = 1
 
 class MessageCreateSchema(Schema):
-    thread_id: int
+    thread_id: str
     content: str
     role: str
-    user_id: int
+    user_id: str
     username: Optional[str] = None 
     model: Optional[str] = None
 
 # --- Output Schemas ---
 
 class UserOutSchema(Schema):
-    id: int
+    id: str
     username: str
     email: str
 
@@ -107,9 +145,9 @@ class ErrorSchema(Schema):
     message: str
 
 class CourseOutSchema(ModelSchema):
-    class Config:
+    class Meta:
         model = Course
-        model_fields = ["id", "title", "description", "owner", "created_at", "enrollment_code"]
+        fields = ["id", "title", "description", "owner", "created_at", "enrollment_code"]
 
 class ActivityOutSchema(ModelSchema):
     class Meta:
@@ -117,7 +155,7 @@ class ActivityOutSchema(ModelSchema):
         fields = "__all__"
 
 class ActivityDetailSchema(ModelSchema):
-    id: int
+    id: str
     title: Optional[str]
     description: Optional[str]
     expert_mode: bool
@@ -134,6 +172,7 @@ class ActivityDetailSchema(ModelSchema):
     end_date: Optional[datetime]
     is_visible: bool
     allow_redo: bool
+    ai_model: str
 
     class Meta:
         model = Activity
@@ -154,7 +193,8 @@ class ActivityDetailSchema(ModelSchema):
             "start_date",
             "end_date",
             "is_visible",
-            "allow_redo"
+            "allow_redo",
+            "ai_model"
         ]
 
 class ThreadSchema(ModelSchema):
@@ -173,24 +213,24 @@ class MessageSchema(ModelSchema):
 # --- Model Schemas ---
 
 class UserSchema(ModelSchema):
-    class Config:
+    class Meta:
         model = User
-        model_fields = "__all__"
+        fields = "__all__"
 
 class CourseSchema(ModelSchema):
-    class Config:
+    class Meta:
         model = Course
-        model_fields = ["id", "title", "description", "owner", "created_at", "enrollment_code"]
+        fields = ["id", "title", "description", "owner", "created_at", "enrollment_code"]
 
 class ActivitySchema(ModelSchema):
-    class Config:
+    class Meta:
         model = Activity
-        model_fields = "__all__"
+        fields = "__all__"
 
 class AnalyticsSchema(ModelSchema):
-    class Config:
+    class Meta:
         model = Analytics
-        model_fields = "__all__"
+        fields = "__all__"
 
 
 class StudentDataSchema(Schema):

@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans 'Resend Email Verification' %} - Simba{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Fix button hover issues */
+.btn-primary:hover {
+    background-color: #ac3300 !important;
+    border-color: #ac3300 !important;
+    color: white !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    color: white !important;
+}
+
+/* Hide sidebar navigation items during email verification */
+.sidebar-nav .sidebar-item {
+    display: none !important;
+}
+
+/* Hide mobile menu toggle button */
+.mobile-menu-toggle {
+    display: none !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 15px;
+    }
+    
+    .card {
+        margin: 0 10px;
+        border-radius: 10px;
+    }
+    
+    .card-body {
+        padding: 1.5rem !important;
+    }
+    
+    .btn {
+        padding: 12px 20px;
+        font-size: 16px;
+    }
+    
+    .form-control {
+        padding: 12px 15px;
+        font-size: 16px;
+    }
+    
+    .mb-7 {
+        margin-bottom: 2rem !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-6 col-lg-5">
+            <div class="text-center mb-7">
+                <a href="{% url 'login' %}" class="text-dark text-decoration-none">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    {% trans 'Back to Login' %}
+                </a>
+            </div>
+            
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4 class="mb-0">{% trans 'Resend Email Verification' %}</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <p class="text-muted">
+                            {% trans 'Enter your email address to receive a new verification link.' %}
+                        </p>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="email" class="form-label">{% trans 'Email Address' %}</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                {% trans 'Send Verification Email' %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

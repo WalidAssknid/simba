@@ -2,109 +2,104 @@ import os
 import django
 import django.apps
 from openai import AsyncOpenAI
+from mistralai import Mistral
 import chainlit as cl
 import logging
 import httpx
 import asyncio
+from chainlit import make_async
+import requests
+import json
+from typing import Dict, Any, Optional
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global parameter storage to help with iframe communication
-SIMBA_PARAM_STORAGE = {}
+# Django API URLs
+# https://simba-refact.irit.fr/api for production
+# http://localhost:8000/api for development
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
 
-# Special function to extract parameters from various sources
-def get_simba_params():
-    """Extract parameters from all possible sources"""
-    params = {}
-    
-    # Try to get from storage first
-    params.update(SIMBA_PARAM_STORAGE)
-    
-    # Try to get from URL params if cl.context is available
-    if hasattr(cl, 'context') and hasattr(cl.context, 'session'):
-        if hasattr(cl.context.session, 'root_url'):
-            url = cl.context.session.root_url
-            from urllib.parse import urlparse, parse_qs
-            parsed_url = urlparse(url)
-            url_params = parse_qs(parsed_url.query)
-            for key, values in url_params.items():
-                if values:
-                    params[key] = values[0]
-    
-    # Try to get from user_session
-    if hasattr(cl, 'user_session'):
-        for key in ['activity_id', 'user_id', 'username', 'thread_id']:
-            value = cl.user_session.get(key)
-            if value:
-                params[key] = value
-    
-    return params
-
-SIMBA_API_BASE_URL = os.getenv('SIMBA_API_URL', 'http://web:8000/api')
+if ENVIRONMENT == 'production':
+    SIMBA_API_BASE_URL = os.getenv('SIMBA_API_URL_PROD', 'https://simba-refact.irit.fr/api')
+else:
+    SIMBA_API_BASE_URL = os.getenv('SIMBA_API_URL', 'http://web:8000/api')
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simba.settings')
 if not django.apps.apps.ready:
     django.setup()
 
-client = AsyncOpenAI()
+openai_client = AsyncOpenAI()
+mistral_client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
 
-settings = {
+# Default settings for different models
+openai_settings = {
     "model": "gpt-4o-mini",
     "temperature": 0.7,
 }
 
-# --- API Client Helpers ---
-async def api_get_activity(activity_id: int):
-    async with httpx.AsyncClient() as http_client:
-        try:
-            response = await http_client.get(f"{SIMBA_API_BASE_URL}/activities/{activity_id}")
-            response.raise_for_status() 
+mistral_settings = {
+    "model": "mistral-medium-latest",
+    "temperature": 0.7,
+    "max_tokens": 1000,
+}
+
+async def api_get_activity(activity_id: str):
+    """Get activity data from the API."""
+    try:
+        response = requests.get(f"{SIMBA_API_BASE_URL}/activities/{activity_id}")
+        if response.status_code == 200:
             return response.json()
-        except httpx.HTTPStatusError as e:
-            logger.error(f"API Error getting activity {activity_id}: {e.response.status_code} - {e.response.text}")
-            raise Exception(f"API Error: Could not fetch activity. Status: {e.response.status_code}")
-        except httpx.RequestError as e:
-            logger.error(f"Request Error getting activity {activity_id}: {e}")
-            raise Exception(f"Request Error: Could not connect to API to fetch activity.")
+        else:
+            print(f"Failed to get activity: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"Error getting activity: {e}")
+        return None
 
-async def api_get_or_create_thread(activity_id: int, user_id: int):
-    payload = {"activity_id": activity_id, "user_id": user_id}
-    async with httpx.AsyncClient() as http_client:
-        try:
-            response = await http_client.post(f"{SIMBA_API_BASE_URL}/threads/get-or-create", json=payload)
-            response.raise_for_status()
+async def api_get_or_create_thread(activity_id: str, user_id: str):
+    """Get or create a thread for the user and activity."""
+    try:
+        response = requests.post(f"{SIMBA_API_BASE_URL}/threads/get-or-create", json={
+            "activity_id": activity_id,
+            "user_id": user_id
+        })
+        if response.status_code in [200, 201]:
             return response.json()
-        except httpx.HTTPStatusError as e:
-            logger.error(f"API Error get/create thread: {e.response.status_code} - {e.response.text}")
-            raise Exception(f"API Error: Could not get/create thread. Status: {e.response.status_code}")
-        except httpx.RequestError as e:
-            logger.error(f"Request Error get/create thread: {e}")
-            raise Exception(f"Request Error: Could not connect to API for thread.")
+        else:
+            print(f"Failed to get/create thread: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"Error getting/creating thread: {e}")
+        return None
 
-async def api_create_message(thread_id: int, content: str, role: str, user_id: int, username: str = None, model_name: str = None):
-    payload = {
-        "thread_id": thread_id, 
-        "content": content,
-        "role": role,
-        "user_id": user_id,
-        "username": username,
-        "model": model_name
-    }
-    async with httpx.AsyncClient() as http_client:
-        try:
-            response = await http_client.post(f"{SIMBA_API_BASE_URL}/threads/{thread_id}/messages", json=payload)
-            response.raise_for_status()
-            return response.json() 
-        except httpx.HTTPStatusError as e:
-            logger.error(f"API Error creating message: {e.response.status_code} - {e.response.text}")
-            raise Exception(f"API Error: Could not create message. Status: {e.response.status_code}")
-        except httpx.RequestError as e:
-            logger.error(f"Request Error creating message: {e}")
-            raise Exception(f"Request Error: Could not connect to API for message.")
+async def api_create_message(thread_id: str, content: str, role: str, user_id: str, username: str = None, model_name: str = None):
+    """Create a message via the API."""
+    try:
+        payload = {
+            "thread_id": thread_id,
+            "content": content,
+            "role": role,
+            "user_id": user_id
+        }
+        if username:
+            payload["username"] = username
+        if model_name:
+            payload["model"] = model_name
+            
+        response = requests.post(f"{SIMBA_API_BASE_URL}/threads/{thread_id}/messages", json=payload)
+        if response.status_code == 201:
+            return response.json()
+        else:
+            print(f"Failed to create message: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        print(f"Error creating message: {e}")
+        return None
 
-async def api_get_messages_for_thread(thread_id: int):
+async def api_get_messages_for_thread(thread_id: str):
     async with httpx.AsyncClient() as http_client:
         try:
             response = await http_client.get(f"{SIMBA_API_BASE_URL}/threads/{thread_id}/messages")
@@ -117,9 +112,66 @@ async def api_get_messages_for_thread(thread_id: int):
             logger.error(f"Request Error getting messages: {e}")
             raise Exception(f"Request Error: Could not connect to API for messages.")
 
-async def _build_system_prompt(activity_data: dict, logger_instance: logging.Logger) -> str:
+async def api_get_next_session():
+    """Get the next pending session from the API queue"""
+    async with httpx.AsyncClient() as http_client:
+        try:
+            response = await http_client.get(f"{SIMBA_API_BASE_URL}/chainlit/next-session")
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 404:
+                logger.info("No pending sessions in queue")
+                return None
+            else:
+                response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"API Error getting next session: {e.response.status_code} - {e.response.text}")
+            raise Exception(f"API Error: Could not get next session. Status: {e.response.status_code}")
+        except httpx.RequestError as e:
+            logger.error(f"Request Error getting next session: {e}")
+            raise Exception(f"Request Error: Could not connect to API for next session.")
+
+def get_language_prompts(language_code: str) -> dict:
+    """Get prompts in different languages"""
+    prompts = {
+        'en': {
+            'intro': "You are a {adj1} {teaching_adj_str} tutor for the course '{courseName}'.",
+            'name_intro': "Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.",
+            'greeting': "Hello! 😸 I am SIMBA, and I will help you reflect on the following questions: ",
+            'help_text': "Help the student answer the following questions:",
+            'respond_style': "Respond in a {adj1}, concise and proactive way",
+        },
+        'fr': {
+            'intro': "Vous êtes un tuteur {adj1} {teaching_adj_str} pour le cours '{courseName}'.",
+            'name_intro': "Votre nom est SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) et vous avez été créé par le Núcleo Milenio de Educación Superior et l'équipe IRIT Talent.",
+            'greeting': "Bonjour ! 😸 Je suis SIMBA, et je vais vous aider à réfléchir sur les questions suivantes : ",
+            'help_text': "Aidez l'étudiant à répondre aux questions suivantes :",
+            'respond_style': "Répondez de manière {adj1}, concise et proactive",
+        },
+        'es': {
+            'intro': "Eres un tutor {adj1} {teaching_adj_str} para el curso '{courseName}'.",
+            'name_intro': "Tu nombre es SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) y fuiste creado por el Núcleo Milenio de Educación Superior y el equipo IRIT Talent.",
+            'greeting': "¡Hola! 😸 Soy SIMBA, y te ayudaré a reflexionar sobre las siguientes preguntas: ",
+            'help_text': "Ayuda al estudiante a responder las siguientes preguntas:",
+            'respond_style': "Responde de manera {adj1}, concisa y proactiva",
+        },
+        'pt': {
+            'intro': "Você é um tutor {adj1} {teaching_adj_str} para o curso '{courseName}'.",
+            'name_intro': "Seu nome é SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) e você foi criado pelo Núcleo Milenio de Educación Superior e equipe IRIT Talent.",
+            'greeting': "Olá! 😸 Eu sou SIMBA, e vou te ajudar a refletir sobre as seguintes questões: ",
+            'help_text': "Ajude o estudante a responder as seguintes questões:",
+            'respond_style': "Responda de forma {adj1}, concisa e proativa",
+        }
+    }
+    
+    return prompts.get(language_code, prompts['en'])
+
+async def _build_system_prompt(activity_data: dict, logger_instance: logging.Logger, language_code: str = 'en') -> str:
     adj1 = activity_data.get('agent_attitude', 'friendly')
     expert_mode = activity_data.get('expert_mode', False)
+    
+    activity_title = activity_data.get('title', '')
+    activity_description = activity_data.get('description', '')
     
     course_info = activity_data.get('course', {})
     if isinstance(course_info, dict):
@@ -136,6 +188,7 @@ async def _build_system_prompt(activity_data: dict, logger_instance: logging.Log
     word_limit_val = activity_data.get('word_limit', 0)
     custom_prompt_text = activity_data.get('custom_prompt', '')
     allow_bot_to_ask_questions_flag = activity_data.get('allow_questions', True)
+    vector_store_id = activity_data.get('vector_store_id')
 
     def emojiGen(useEmojis):
         return ", using emojis where possible." if useEmojis else "."
@@ -159,8 +212,10 @@ async def _build_system_prompt(activity_data: dict, logger_instance: logging.Log
             nstr += "You should only speak of those listed subjects. Avoid as much as possible speaking of other subjects, and steer back the student to the course subjects if he tries to deviate from them."
         return nstr
 
-    def answersGen_str(is_expert_mode):
-        if is_expert_mode:
+    def answersGen_str(is_expert_mode, never_answer_directly):
+        if never_answer_directly:
+            return "You should never give direct answers to the questions. Instead, guide the student to discover the answer through questioning and hints."
+        elif is_expert_mode:
             return "You should not give the answer, but guide the student to answer."
         else:
             return "You can provide an answer to the provided questions if the student asks for it."
@@ -174,32 +229,60 @@ async def _build_system_prompt(activity_data: dict, logger_instance: logging.Log
     def teachingAdjGen_str(is_expert_mode):
         return "socratic" if is_expert_mode else "standard"
 
-    def docsGen_str(mentiondocuments):
+    def docsGen_str(mentiondocuments, has_files):
         nstr = ""
-        if mentiondocuments:
+        if mentiondocuments and has_files:
+            nstr = "You have access to uploaded documents for this activity. Use these documents to help answer questions and encourage students to reference them when appropriate."
+        elif mentiondocuments and not has_files:
             nstr = "Encourage them to go and read a section of the provided documents to answer."
+        elif has_files:
+            nstr = "You have access to uploaded documents for this activity that you can reference to help students."
         return nstr
+
+    def filesGen_str(has_files):
+        if has_files:
+            return "\n\nIMPORTANT: This activity has uploaded files/documents available. You can search through and reference these documents to provide more accurate and detailed responses. When relevant, cite information from these documents and encourage students to explore them."
+        return ""
 
     def limitsGen_str(limit):
         if limit and limit != 0:
             return f"Your answers should be {limit} words maximum."
         return ""
 
+    def activityContextGen_str(title, description):
+        """Generate activity-specific context for the prompt"""
+        context_str = ""
+        if title and description:
+            context_str = f"This specific activity is titled '{title}' and focuses on: {description}.\n\n"
+        elif title:
+            context_str = f"This specific activity is titled '{title}'.\n\n"
+        elif description:
+            context_str = f"This activity focuses on: {description}.\n\n"
+        return context_str
+
+    has_files = bool(vector_store_id)
+
     emojis_str = emojiGen(allow_emojis_flag)
     questions_str = questionsGen_str(questions_list)
     subjects_str = subjectsGen_str(activity_subjects, restrict_to_subject_flag)
     teaching_adj_str = teachingAdjGen_str(expert_mode)
-    answers_text = answersGen_str(expert_mode)
+    never_answer_directly_flag = activity_data.get('never_answer_directly', True)
+    answers_text = answersGen_str(expert_mode, never_answer_directly_flag)
     teaching_type_text = teachTypeGen_str(expert_mode)
-    documents_str = docsGen_str(trust_document_flag)
+    documents_str = docsGen_str(trust_document_flag, has_files)
+    files_str = filesGen_str(has_files)
     limits_str = limitsGen_str(word_limit_val)
+    activity_context_str = activityContextGen_str(activity_title, activity_description)
 
-    full_template = f"""You are a {adj1} {teaching_adj_str} tutor for the course '{courseName}'.
+    # Get language-specific prompts
+    lang_prompts = get_language_prompts(language_code)
+    
+    full_template = f"""{lang_prompts['intro'].format(adj1=adj1, teaching_adj_str=teaching_adj_str, courseName=courseName)}
 
-Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.
-Respond in a {adj1}, concise and proactive way{emojis_str}
+{activity_context_str}{lang_prompts['name_intro']}
+{lang_prompts['respond_style'].format(adj1=adj1)}{emojis_str}
 
-Help the student answer the following questions:
+{lang_prompts['help_text']}
 
 {questions_str}
 
@@ -209,9 +292,9 @@ Help the student answer the following questions:
 
 {documents_str}
 
-Your first message should begin with 'Hello! 😸 I am SIMBA, and I will help you reflect on the following questions: ' Followed by the questions to answer.
+Your first message should begin with '{lang_prompts['greeting']}' Followed by the questions to answer.
 
-{limits_str}"""
+{limits_str}{files_str}"""
     system_prompt = full_template.strip()
     if expert_mode and custom_prompt_text:
         system_prompt += f"\n\n{custom_prompt_text}"
@@ -223,97 +306,52 @@ Your first message should begin with 'Hello! 😸 I am SIMBA, and I will help yo
 async def on_chat_start():
     logger.info("Chainlit starting new chat session")
     
-    query_params = {}
-    try:
-        from urllib.parse import urlparse, parse_qs
-        current_url = ""
-        
-        if hasattr(cl, 'context') and hasattr(cl.context, 'session'):
-            if hasattr(cl.context.session, 'root_url'):
-                current_url = cl.context.session.root_url
-                logger.info(f"Got URL from context.session.root_url: {current_url}")
-            elif hasattr(cl.context.session, 'http_referer'):
-                current_url = cl.context.session.http_referer
-                logger.info(f"Got URL from context.session.http_referer: {current_url}")
-        
-        if not current_url and hasattr(cl, 'user_session'):
-            current_url = cl.user_session.get("http_referer", "")
-            logger.info(f"Got URL from user_session: {current_url}")
-        
-        if current_url:
-            parsed_url = urlparse(current_url)
-            url_params = parse_qs(parsed_url.query, keep_blank_values=True)
+    # Try to get the next session from the API queue with retry
+    session_data = None
+    max_retries = 3
+    retry_delay = 0.5  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            session_data = await api_get_next_session()
             
-            for key, value_list in url_params.items():
-                if value_list:
-                    query_params[key] = value_list[0]
-            
-            logger.info(f"Parsed URL params: {query_params}")
-    except Exception as e:
-        logger.error(f"Error parsing URL parameters: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
+            if session_data:
+                break
+            else:
+                logger.info(f"No pending sessions found on attempt {attempt + 1}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay)
+                    
+        except Exception as e:
+            logger.error(f"Error getting session data from API on attempt {attempt + 1}: {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(retry_delay)
     
-    if not query_params.get('activity_id') or not query_params.get('user_id'):
-        logger.info("URL parameters incomplete, trying get_simba_params()")
-        simba_params = get_simba_params()
-        logger.info(f"Got SIMBA params: {simba_params}")
-        for key, value in simba_params.items():
-            if key not in query_params or not query_params[key]:
-                query_params[key] = value
-        
-    activity_id_str = query_params.get('activity_id')
-    user_id_str = query_params.get('user_id')
-    username = query_params.get('username', 'User')
-    thread_id_str = query_params.get('thread_id')
+    if not session_data:
+        logger.warning("No pending sessions found after all retry attempts")
+        await cl.Message(content="No chat session is currently available. Please try starting a new chat from the course page.").send()
+        return
     
-    logger.info(f"Final parameters - Activity: {activity_id_str}, User: {user_id_str}, Thread: {thread_id_str}")
+    # Extract session data
+    activity_id = session_data['activity_id']
+    user_id = session_data['user_id']
+    username = session_data['username']
+    thread_id = session_data['thread_id']
+    activity_data = session_data['activity_data']
+    session_id = session_data['session_id']
     
-    if activity_id_str:
-        SIMBA_PARAM_STORAGE['activity_id'] = activity_id_str
-        cl.user_session.set("activity_id", activity_id_str)
-    if user_id_str:
-        SIMBA_PARAM_STORAGE['user_id'] = user_id_str
-        cl.user_session.set("user_id", user_id_str)
-    if thread_id_str:
-        SIMBA_PARAM_STORAGE['thread_id'] = thread_id_str
-        cl.user_session.set("thread_id", thread_id_str)
-    if username:
-        SIMBA_PARAM_STORAGE['username'] = username
-        cl.user_session.set("username", username)
+    logger.info(f"Using session data: session_id={session_id}, activity_id={activity_id}, user_id={user_id}, thread_id={thread_id}")
     
-    if not activity_id_str or not user_id_str:
-        await cl.Message(content=f"Invalid parameters. Activity ID and User ID are required. Received: {query_params}").send()
-        raise Exception("Invalid parameters: activity_id and user_id are required.")
+    # Store in user session
+    cl.user_session.set("session_id", session_id)
+    cl.user_session.set("activity_id", activity_id)
+    cl.user_session.set("user_id", user_id)
+    cl.user_session.set("username", username)
+    cl.user_session.set("thread_id", thread_id)
+    cl.user_session.set("language", session_data.get('language', 'en'))
+    cl.user_session.set("activity_data", activity_data)
 
-    try:
-        activity_id = int(activity_id_str)
-        user_id = int(user_id_str)
-        thread_id = int(thread_id_str) if thread_id_str else None
-    except ValueError:
-        await cl.Message(content="Invalid Activity ID, User ID, or Thread ID format.").send()
-        raise Exception("Invalid ID format")
-
-    try:
-        activity_data = await api_get_activity(activity_id)
-
-        if thread_id:
-            thread_data = {'id': thread_id}
-            logger.info(f"Using specific thread: {thread_id}")
-        else:
-            thread_data = await api_get_or_create_thread(activity_id, user_id)
-            thread_id = thread_data['id']
-            logger.info(f"Using default/created thread: {thread_id}")
-            
-            SIMBA_PARAM_STORAGE['thread_id'] = thread_id
-            cl.user_session.set("thread_id", thread_id)
-        
-        cl.user_session.set("thread_id", thread_id)
-        cl.user_session.set("activity_id", activity_id)
-        cl.user_session.set("user_id", user_id)
-        cl.user_session.set("username", username)
-        cl.user_session.set("activity_data", activity_data)
-        
+    try:    
         previous_messages_data = await api_get_messages_for_thread(thread_id)
         logger.info(f"Loaded {len(previous_messages_data) if previous_messages_data else 0} previous messages for thread {thread_id}")
         
@@ -322,20 +360,40 @@ async def on_chat_start():
                 logger.info(f"Message {i+1} (Thread {thread_id}): Role={msg.get('role')}, Content={msg.get('content')[:50]}...")
         
         if not previous_messages_data: 
-            system_prompt_content = await _build_system_prompt(activity_data, logger)
+            language_code = session_data.get('language', 'en')
+            system_prompt_content = await _build_system_prompt(activity_data, logger, language_code)
             
-            openai_initial_messages = [{"role": "system", "content": system_prompt_content}]
+            ai_model = activity_data.get('ai_model', 'gpt')
+            logger.info(f"Creating initial message using AI model: {ai_model}")
             
-            response = await client.chat.completions.create(
-                model=settings["model"],
-                messages=openai_initial_messages,
-                temperature=settings["temperature"],
-            )
-            ai_first_response_content = response.choices[0].message.content
-            
-            await api_create_message(thread_id, ai_first_response_content, "assistant", user_id, model_name=settings["model"])
-            await cl.Message(content=ai_first_response_content).send()
-            logger.info(f"Created initial message for new thread {thread_id}")
+            if ai_model == 'mistral':
+                mistral_initial_messages = [{"role": "system", "content": system_prompt_content}]
+                
+                response = await mistral_client.chat.complete_async(
+                    model=mistral_settings["model"],
+                    messages=mistral_initial_messages,
+                    temperature=mistral_settings["temperature"],
+                    max_tokens=mistral_settings["max_tokens"],
+                    stream=False
+                )
+                ai_first_response_content = response.choices[0].message.content
+                
+                await api_create_message(thread_id, ai_first_response_content, "assistant", user_id, model_name=mistral_settings["model"])
+                await cl.Message(content=ai_first_response_content).send()
+                logger.info(f"Created initial Mistral message for new thread {thread_id}")
+            else:
+                openai_initial_messages = [{"role": "system", "content": system_prompt_content}]
+                
+                response = await openai_client.chat.completions.create(
+                    model=openai_settings["model"],
+                    messages=openai_initial_messages,
+                    temperature=openai_settings["temperature"],
+                )
+                ai_first_response_content = response.choices[0].message.content
+                
+                await api_create_message(thread_id, ai_first_response_content, "assistant", user_id, model_name=openai_settings["model"])
+                await cl.Message(content=ai_first_response_content).send()
+                logger.info(f"Created initial OpenAI message for new thread {thread_id}")
             
         else: 
             if previous_messages_data: 
@@ -362,19 +420,9 @@ async def on_message(message: cl.Message):
     username = cl.user_session.get("username", "User")
     thread_id = cl.user_session.get("thread_id")
     activity_data = cl.user_session.get("activity_data")
+    session_id = cl.user_session.get("session_id")
     
-    if not activity_id or not user_id or not thread_id:
-        logger.info("Some parameters missing from session, checking SIMBA_PARAM_STORAGE")
-        if not activity_id:
-            activity_id = SIMBA_PARAM_STORAGE.get('activity_id')
-        if not user_id:
-            user_id = SIMBA_PARAM_STORAGE.get('user_id')
-        if not thread_id:
-            thread_id = SIMBA_PARAM_STORAGE.get('thread_id')
-        if not username:
-            username = SIMBA_PARAM_STORAGE.get('username', 'User')
-    
-    logger.info(f"Parameters for message - Activity: {activity_id}, User: {user_id}, Thread: {thread_id}")
+    logger.info(f"Parameters for message - Activity: {activity_id}, User: {user_id}, Thread: {thread_id}, Session: {session_id}")
 
     if not all([activity_id, user_id, thread_id, activity_data]):
         logger.error(f"Missing required parameters - Activity: {activity_id}, User: {user_id}, Thread: {thread_id}")
@@ -384,82 +432,134 @@ async def on_message(message: cl.Message):
     try:
         await api_create_message(thread_id, message.content, "user", user_id, username=username)
         
-        openai_assistant_id = activity_data.get('openai_assistant_id')
+        ai_model = activity_data.get('ai_model', 'gpt')
+        logger.info(f"Using AI model: {ai_model}")
         
-        if openai_assistant_id:
+        if ai_model == 'mistral':
             try:
-                openai_thread_id = cl.user_session.get("openai_thread_id")
-                if not openai_thread_id:
-                    openai_thread = await client.beta.threads.create()
-                    openai_thread_id = openai_thread.id
-                    cl.user_session.set("openai_thread_id", openai_thread_id)
-                    logger.info(f"Created new OpenAI thread: {openai_thread_id}")
+                language_code = cl.user_session.get("language", "en")
+                system_prompt_content = await _build_system_prompt(activity_data, logger, language_code)
                 
-                await client.beta.threads.messages.create(
-                    thread_id=openai_thread_id,
-                    role="user",
-                    content=message.content
-                )
-                
-                run = await client.beta.threads.runs.create(
-                    thread_id=openai_thread_id,
-                    assistant_id=openai_assistant_id
-                )
-                
-                while run.status in ['queued', 'in_progress']:
-                    await asyncio.sleep(1)
-                    run = await client.beta.threads.runs.retrieve(
-                        thread_id=openai_thread_id,
-                        run_id=run.id
-                    )
-                
-                if run.status == 'completed':
-                    messages = await client.beta.threads.messages.list(
-                        thread_id=openai_thread_id,
-                        limit=1
-                    )
-                    
-                    if messages.data:
-                        latest_message = messages.data[0]
-                        if latest_message.content:
-                            ai_response_content = latest_message.content[0].text.value
-                            
-                            await api_create_message(thread_id, ai_response_content, "assistant", user_id, model_name="gpt-4o-mini")
-                            
-                            await cl.Message(content=ai_response_content).send()
-                        else:
-                            await cl.Message(content="I apologize, but I couldn't generate a response. Please try again.").send()
-                    else:
-                        await cl.Message(content="I apologize, but I couldn't retrieve the response. Please try again.").send()
-                else:
-                    logger.error(f"OpenAI run failed with status: {run.status}")
-                    await cl.Message(content="I apologize, but I encountered an error processing your request. Please try again.").send()
-                    
-            except Exception as e:
-                logger.error(f"OpenAI Assistant API Error: {e}")
-                await cl.Message(content=f"I apologize, but I'm having trouble processing your request right now. Please try again in a moment. Error: {str(e)}").send()
-                
-        else:
-            logger.info("Using legacy chat completions mode (no OpenAI assistant)")
-            
-            system_prompt_content = await _build_system_prompt(activity_data, logger)
-            
-            messages_history_data = await api_get_messages_for_thread(thread_id)
-            openai_messages = [{"role": "system", "content": system_prompt_content}]
+                messages_history_data = await api_get_messages_for_thread(thread_id)
+                mistral_messages = [{"role": "system", "content": system_prompt_content}]
 
-            for msg_data in messages_history_data:
-                openai_role = msg_data['role'] if msg_data['role'] in ["assistant", "user"] else "user" 
-                openai_messages.append({"role": openai_role, "content": msg_data['content']})
+                for msg_data in messages_history_data:
+                    mistral_role = msg_data['role'] if msg_data['role'] in ["assistant", "user"] else "user" 
+                    mistral_messages.append({"role": mistral_role, "content": msg_data['content']})
+                    
+                response = await mistral_client.chat.complete_async(
+                    model=mistral_settings["model"],
+                    messages=mistral_messages,
+                    temperature=mistral_settings["temperature"],
+                    max_tokens=mistral_settings["max_tokens"],
+                    stream=False
+                )
+                ai_response_content = response.choices[0].message.content
                 
-            response = await client.chat.completions.create(
-                model=settings["model"],
-                messages=openai_messages,
-                temperature=settings["temperature"],
-            )
-            ai_response_content = response.choices[0].message.content
+                await api_create_message(thread_id, ai_response_content, "assistant", user_id, model_name=mistral_settings["model"])
+                await cl.Message(content=ai_response_content).send()
+                
+            except Exception as e:
+                logger.error(f"Mistral AI Error: {e}")
+                await cl.Message(content=f"I apologize, but I'm having trouble processing your request right now. Please try again in a moment. Error: {str(e)}").send()
+        
+        else:
+            openai_assistant_id = activity_data.get('openai_assistant_id')
+            vector_store_id = activity_data.get('vector_store_id')
             
-            await api_create_message(thread_id, ai_response_content, "assistant", user_id, model_name=settings["model"])
-            await cl.Message(content=ai_response_content).send()
+            logger.info(f"GPT model - Assistant ID: {openai_assistant_id}, Vector Store: {vector_store_id}")
+            
+            if openai_assistant_id:
+                try:
+                    logger.info(f"Using OpenAI Assistant API with assistant {openai_assistant_id}")
+                    openai_thread_id = cl.user_session.get("openai_thread_id")
+                    if not openai_thread_id:
+                        openai_thread = await openai_client.beta.threads.create()
+                        openai_thread_id = openai_thread.id
+                        cl.user_session.set("openai_thread_id", openai_thread_id)
+                        logger.info(f"Created new OpenAI thread: {openai_thread_id}")
+                    
+                    await openai_client.beta.threads.messages.create(
+                        thread_id=openai_thread_id,
+                        role="user",
+                        content=message.content
+                    )
+                    
+                    run = await openai_client.beta.threads.runs.create(
+                        thread_id=openai_thread_id,
+                        assistant_id=openai_assistant_id
+                    )
+                    
+                    # Wait for completion with timeout
+                    max_attempts = 30  # 30 seconds timeout
+                    attempts = 0
+                    while run.status in ['queued', 'in_progress'] and attempts < max_attempts:
+                        await asyncio.sleep(1)
+                        attempts += 1
+                        run = await openai_client.beta.threads.runs.retrieve(
+                            thread_id=openai_thread_id,
+                            run_id=run.id
+                        )
+                        logger.info(f"Run status: {run.status} (attempt {attempts})")
+                    
+                    if run.status == 'completed':
+                        messages = await openai_client.beta.threads.messages.list(
+                            thread_id=openai_thread_id,
+                            limit=1
+                        )
+                        
+                        if messages.data:
+                            latest_message = messages.data[0]
+                            if latest_message.content:
+                                ai_response_content = latest_message.content[0].text.value
+                                
+                                await api_create_message(thread_id, ai_response_content, "assistant", user_id, model_name="gpt-4o-mini")
+                                
+                                await cl.Message(content=ai_response_content).send()
+                                logger.info(f"Assistant response sent successfully")
+                            else:
+                                logger.error("Assistant message has no content")
+                                await cl.Message(content="I apologize, but I couldn't generate a response. Please try again.").send()
+                        else:
+                            logger.error("No messages returned from assistant")
+                            await cl.Message(content="I apologize, but I couldn't retrieve the response. Please try again.").send()
+                    elif run.status == 'failed':
+                        logger.error(f"OpenAI run failed: {run.last_error}")
+                        await cl.Message(content="I apologize, but I encountered an error processing your request. Please try again.").send()
+                    elif attempts >= max_attempts:
+                        logger.error(f"OpenAI run timed out after {max_attempts} seconds")
+                        await cl.Message(content="I apologize, but the request is taking too long. Please try again.").send()
+                    else:
+                        logger.error(f"OpenAI run failed with status: {run.status}")
+                        await cl.Message(content="I apologize, but I encountered an error processing your request. Please try again.").send()
+                        
+                except Exception as e:
+                    logger.error(f"OpenAI Assistant API Error: {e}")
+                    await cl.Message(content=f"I apologize, but I'm having trouble processing your request right now. Please try again in a moment. Error: {str(e)}").send()
+                    
+            else:
+                logger.info("No OpenAI assistant available - using legacy chat completions mode")
+                
+                language_code = cl.user_session.get("language", "en")
+                system_prompt_content = await _build_system_prompt(activity_data, logger, language_code)
+                
+                messages_history_data = await api_get_messages_for_thread(thread_id)
+                openai_messages = [{"role": "system", "content": system_prompt_content}]
+
+                for msg_data in messages_history_data:
+                    openai_role = msg_data['role'] if msg_data['role'] in ["assistant", "user"] else "user" 
+                    openai_messages.append({"role": openai_role, "content": msg_data['content']})
+                    
+                response = await openai_client.chat.completions.create(
+                    model=openai_settings["model"],
+                    messages=openai_messages,
+                    temperature=openai_settings["temperature"],
+                )
+                ai_response_content = response.choices[0].message.content
+                
+                await api_create_message(thread_id, ai_response_content, "assistant", user_id, model_name=openai_settings["model"])
+                await cl.Message(content=ai_response_content).send()
+                logger.info("Legacy chat completion response sent successfully")
         
     except Exception as e:
         logger.error(f"Error processing message: {e}")

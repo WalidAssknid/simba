@@ -1,4 +1,5 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,14 +20,16 @@
     <!-- Sidebar -->
     <nav class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-            <span>SIMBA</span>
+            <a href="{% url 'home' %}?force=true" style="color: inherit; text-decoration: none;">
+                <span>SIMBA</span>
+            </a>
             <!-- <div class="sidebar-tagline"></div> maybe a logo in the future -->
         </div>
         <div class="sidebar-nav">
             {% if request.session.user_id %}
                 <!-- Main navigation -->
                         <a href="{% url 'courses' %}" class="sidebar-item {% if request.resolver_match.url_name == 'courses' %}active{% endif %}">
-                    Courses
+                    {% trans 'Courses' %}
                         </a>
                 
                 {% if enrolled_courses and request.resolver_match.url_name == 'course_detail' %}
@@ -39,17 +42,25 @@
                 {% endif %}
                 
                 <a href="{% url 'activities' %}" class="sidebar-item {% if request.resolver_match.url_name == 'activities' %}active{% endif %}">
-                    Activities
+                    {% trans 'Activities' %}
                     </a>
                     <a href="{% url 'dashboard' %}" class="sidebar-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                        Dashboard
+                        {% trans 'Dashboard' %}
                     </a>
+                    
+                    {% comment %} Show admin dashboard link only for admin users {% endcomment %}
+                    {% if request.session.user_id %}
+                        {% comment %} Check if user is admin - we'll do this via JS for now {% endcomment %}
+                        <a href="{% url 'admin_dashboard' %}" class="sidebar-item admin-only {% if 'admin' in request.resolver_match.url_name %}active{% endif %}" id="adminDashboardLink" style="display: none;">
+                            {% trans 'Admin Dashboard' %}
+                        </a>
+                    {% endif %}
             {% else %}
                 <a href="{% url 'login' %}" class="sidebar-item {% if request.resolver_match.url_name == 'login' %}active{% endif %}">
-                    <i class="fas fa-sign-in-alt"></i> Login
+                    {% trans 'Login' %}
                 </a>
                 <a href="{% url 'register' %}" class="sidebar-item {% if request.resolver_match.url_name == 'register' %}active{% endif %}">
-                    <i class="fas fa-user-plus"></i> Register
+                    {% trans 'Register' %}
                 </a>
             {% endif %}
         </div>
@@ -73,7 +84,39 @@
             {% endif %}
             
             <div class="header-brand">
-                <span>SIMBA</span>
+                <!-- Language Selector -->
+                <div class="language-selector">
+                    <div class="language-dropdown">
+                        <button class="language-toggle" type="button">
+                            {% if CURRENT_LANGUAGE == 'en' %}🇬🇧
+                            {% elif CURRENT_LANGUAGE == 'fr' %}🇫🇷
+                            {% elif CURRENT_LANGUAGE == 'es' %}🇪🇸
+                            {% elif CURRENT_LANGUAGE == 'pt' %}🇧🇷
+                            {% else %}🇬🇧{% endif %}
+                        </button>
+                        <div class="language-menu">
+                            <form method="post" action="{% url 'set_language' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" name="language" value="en" class="language-option {% if CURRENT_LANGUAGE == 'en' %}active{% endif %}">
+                                    🇬🇧 English
+                                </button>
+                                <button type="submit" name="language" value="fr" class="language-option {% if CURRENT_LANGUAGE == 'fr' %}active{% endif %}">
+                                    🇫🇷 Français
+                                </button>
+                                <button type="submit" name="language" value="es" class="language-option {% if CURRENT_LANGUAGE == 'es' %}active{% endif %}">
+                                    🇪🇸 Español
+                                </button>
+                                <button type="submit" name="language" value="pt" class="language-option {% if CURRENT_LANGUAGE == 'pt' %}active{% endif %}">
+                                    🇧🇷 Português
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <a href="{% url 'home' %}?force=true" style="color: inherit; text-decoration: none;">
+                    <span>SIMBA</span>
+                </a>
             </div>
             <div class="header-actions">
                 {% if request.session.user_id %}
@@ -93,8 +136,8 @@
                     <div class="user-profile" id="userMenu">
                         {{ request.session.username|first|upper }}
                         <div class="user-menu-content">
-                            <a href="{% url 'profile' %}">Manage Account</a>
-                            <a href="{% url 'logout' %}">Logout</a>
+                            <a href="{% url 'profile' %}">{% trans 'Manage Account' %}</a>
+                            <a href="{% url 'logout' %}">{% trans 'Logout' %}</a>
                         </div>
                     </div>
                 {% endif %}
@@ -112,6 +155,15 @@
             {% endfor %}
         {% endif %}
         
+        {% comment %} Email verification warning - persistent until email is verified {% endcomment %}
+        {% if request.session.email_verification_warning and request.session.user_id and not request.resolver_match.url_name == 'login' and not request.resolver_match.url_name == 'register' and not request.resolver_match.url_name == 'home' %}
+            <div class="alert alert-warning email-verification-warning persistent-alert">
+                <i class="fas fa-exclamation-triangle" style="margin-right: 8px; color: #d64000;"></i>
+                <strong style="color: #ac3300;">{% trans 'Email Verification Required:' %} </strong>{% trans 'Please verify your email address to confirm your account. Otherwise, you will not be able to log in again.' %}
+                <a href="{% url 'resend_verification' %}" style="color: #ac3300; text-decoration: underline; margin-left: 10px;">{% trans 'Resend verification email' %}</a>
+            </div>
+        {% endif %}
+        
         {% block content %}{% endblock %}
     </main>
     
@@ -120,8 +172,7 @@
     {# Script for menus and interactions #}
     <script>
         document.addEventListener('DOMContentLoaded', (event) => {
-            // Fade out alerts
-            const alerts = document.querySelectorAll('.alert');
+            const alerts = document.querySelectorAll('.alert:not(.persistent-alert)');
             alerts.forEach(alert => {
                 setTimeout(() => {
                     alert.classList.add('fade-out');
@@ -146,6 +197,23 @@
                     if (userMenu && !userMenu.contains(e.target)) {
                         const content = userMenu.querySelector('.user-menu-content');
                         if (content) content.style.display = 'none';
+                    }
+                });
+            }
+
+            // Language menu functionality
+            const languageToggle = document.querySelector('.language-toggle');
+            const languageMenu = document.querySelector('.language-menu');
+            
+            if (languageToggle && languageMenu) {
+                languageToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    languageMenu.classList.toggle('show');
+                });
+                
+                document.addEventListener('click', (e) => {
+                    if (!languageToggle.contains(e.target) && !languageMenu.contains(e.target)) {
+                        languageMenu.classList.remove('show');
                     }
                 });
             }

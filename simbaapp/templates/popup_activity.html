@@ -1,30 +1,31 @@
 {% load static %}
-<div class="modal" id="activityModal">
+{% load i18n %}
+<div class="modal" id="activityModal" lang="en">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <h2 class="modal-title">Create New Activity</h2>
+        <h2 class="modal-title">{% trans 'Create New Activity' %}</h2>
         <form method="post" action="{% if course.id %}{% url 'create_activity' course.id %}{% else %}#{% endif %}" id="create-activity-form">
             {% csrf_token %}
             <div class="form-group">
-                <label for="activity-title">Activity Title</label>
+                <label for="activity-title">{% trans 'Activity Title' %}</label>
                 <input type="text" name="activity_title" id="activity-title" class="form-control" required>
-                <small class="form-text">The name of your activity.</small>
+                <small class="form-text">{% trans 'The name of your activity.' %}</small>
             </div>
             <div class="form-group">
-                <label for="activity-description">Activity Description</label>
+                <label for="activity-description">{% trans 'Activity Description' %}</label>
                 <textarea name="activity_description" id="activity-description" class="form-control" required></textarea>
-                <small class="form-text">Briefly explain the purpose or context of this activity.</small>
+                <small class="form-text">{% trans 'Briefly explain the purpose or context of this activity.' %}</small>
             </div>
             
             <div class="form-group checkbox-group">
                 <div class="checkbox-wrapper">
                     <input type="checkbox" name="is_visible" id="is-visible" checked>
                     <label for="is-visible">
-                        Make activity visible to students
+                        {% trans 'Make activity visible to students' %}
                     </label>
                 </div>
                 <small class="form-text">
-                    Uncheck to hide this activity from students until you're ready.
+                    {% trans "Uncheck to hide this activity from students until you're ready." %}
                 </small>
             </div>
             
@@ -32,54 +33,66 @@
                 <div class="checkbox-wrapper">
                     <input type="checkbox" name="expert_mode" id="activity-expert-mode">
                     <label for="activity-expert-mode">
-                        Allows you to customize the assistant's instructions for this activity.
+                        {% trans "Allows you to customize the assistant's instructions for this activity." %}
                     </label>
                 </div>
                 <small class="form-text">
-                    Expert Mode enables advanced customization options for the activity.
+                    {% trans 'Expert Mode enables advanced customization options for the activity.' %}
                 </small>
             </div>
             <div class="form-group" id="custom-prompt-group" style="display:none;">
-                <label for="custom-prompt">Custom assistant instructions</label>
-                <textarea name="custom_prompt" id="custom-prompt" class="form-control"></textarea>
-                <small class="form-text">Describe how the assistant should behave in this activity.</small>
+                <label for="custom-prompt">{% trans 'Custom assistant instructions' %}</label>
+                <textarea name="custom-prompt" id="custom-prompt" class="form-control"></textarea>
+                <small class="form-text">{% trans 'Describe how the assistant should behave in this activity.' %}</small>
             </div>
             <div class="form-group">
-                <label>Activity Questions</label>
+                <label>{% trans 'Activity Questions' %}</label>
                 <div id="questions-list" class="questions-list"></div>
                 <div class="question-input-group">
                     <input type="text" id="new-question" class="form-control" placeholder="Add a question...">
-                    <button type="button" id="add-question" class="btn btn-secondary">
+                    <button type="button" id="add-question" class="btn btn-add-question">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
                 <input type="hidden" name="questions[]" id="questions-hidden">
                 <small class="form-text">
-                    Add questions that the assistant can use to guide students (for example, "What is light?").
+                    {% trans 'Add questions that the assistant can use to guide students (for example, "Who is the inventor of penicilin?").' %}
                 </small>
             </div>
             <hr>
-            <h3 class="section-title">Advanced Assistant Options</h3>
+            <h3 class="section-title">{% trans 'Advanced Assistant Options' %}</h3>
             <div class="form-group">
                 <label for="agent-attitude">
-                    What attitude should the assistant have toward students?
+                    {% trans 'What attitude should the assistant have toward students?' %}
                 </label>
                 <select name="agent_attitude" id="agent-attitude" class="form-control">
-                    <option value="friendly">Friendly</option>
-                    <option value="informal">Informal</option>
-                    <option value="formal">Formal</option>
+                    <option value="friendly">{% trans 'Friendly' %}</option>
+                    <option value="informal">{% trans 'Informal' %}</option>
+                    <option value="formal">{% trans 'Formal' %}</option>
                 </select>
                 <small class="form-text">
-                    Choose the assistant's tone for this activity.
+                    {% trans "Choose the assistant's tone for this activity." %}
+                </small>
+            </div>
+            <div class="form-group">
+                <label for="ai-model">
+                    {% trans 'AI Model' %}
+                </label>
+                <select name="ai_model" id="ai-model" class="form-control">
+                    <option value="gpt">{% trans 'GPT (OpenAI)' %}</option>
+                    <option value="mistral">{% trans 'Mistral AI' %}</option>
+                </select>
+                <small class="form-text">
+                    {% trans 'Choose the AI model to power this activity. GPT supports file uploads and advanced features, while Mistral provides fast and efficient responses.' %}
                 </small>
             </div>
             <div class="form-group">
                 <label for="subjects">
-                    Course or activity subjects (comma separated)
+                    {% trans 'Course or activity subjects (comma separated).' %}
                 </label>
                 <input type="text" name="subjects" id="subjects" class="form-control">
                 <small class="form-text">
-                    List subjects to guide the assistant (for example, optics, energy).
+                    {% trans 'List subjects to guide the assistant (for example, optics, energy).' %}
                 </small>
             </div>
             <div class="advanced-options">
@@ -87,93 +100,104 @@
                     <div class="checkbox-wrapper">
                         <input type="checkbox" name="restrict_to_subject" id="restrict-to-subject">
                         <label for="restrict-to-subject">
-                            Restrict assistant to course subjects?
+                            {% trans 'Restrict assistant to course subjects?' %}
                         </label>
                     </div>
                     <small class="form-text">
-                        The assistant will only answer questions related to the subjects above.
+                        {% trans 'The assistant will only answer questions related to the subjects above.' %}
                     </small>
                 </div>
                 <div class="form-group checkbox-group">
                     <div class="checkbox-wrapper">
                         <input type="checkbox" name="allow_questions" id="allow-questions" checked>
                         <label for="allow-questions">
-                            Can the assistant ask questions to the student?
+                            {% trans 'Can the assistant ask questions to the student?' %}
                         </label>
                     </div>
                     <small class="form-text">
-                        If enabled, the assistant can suggest questions to students.
+                        {% trans 'If enabled, the assistant can suggest questions to students.' %}
+                    </small>
+                </div>
+                <div class="form-group checkbox-group">
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" name="never_answer_directly" id="never-answer-directly" checked>
+                        <label for="never-answer-directly">
+                            {% trans 'Never answer the questions of the student directly' %}
+                        </label>
+                    </div>
+                    <small class="form-text">
+                        {% trans 'If enabled, the assistant will guide students to find answers through hints and questions instead of giving direct answers.' %}
                     </small>
                 </div>
                 <div class="form-group checkbox-group">
                     <div class="checkbox-wrapper">
                         <input type="checkbox" name="allow_emojis" id="allow-emojis" checked>
                         <label for="allow-emojis">
-                            Can the assistant use emojis?
+                            {% trans 'Can the assistant use emojis?' %}
                         </label>
                     </div>
                     <small class="form-text">
-                        If enabled, the assistant can use emojis in its answers.
+                        {% trans 'If enabled, the assistant can use emojis in its answers.' %}
                     </small>
                 </div>
                 <div class="form-group checkbox-group">
                     <div class="checkbox-wrapper">
                         <input type="checkbox" name="trust_document" id="trust-document" checked>
                         <label for="trust-document">
-                            Should the assistant trust the provided document?
+                            {% trans 'Should the assistant trust the provided document?' %}
                         </label>
                     </div>
                     <small class="form-text">
-                        If enabled, the assistant will use the provided document as a trusted source.
+                        {% trans 'If enabled, the assistant will use the provided document as a trusted source.' %}
+                    </small>
+                </div>
+                <div class="form-group checkbox-group">
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" name="allow_redo" id="allow-redo" checked>
+                        <label for="allow-redo">
+                            {% trans 'Allow students to redo this activity' %}
+                        </label>
+                    </div>
+                    <small class="form-text">
+                        {% trans 'If enabled, students can start the activity again with a fresh conversation.' %}
                     </small>
                 </div>
                 <div class="form-group">
                     <label for="word-limit">
-                        Word limit for assistant responses
+                        {% trans 'Word limit for assistant responses' %}
                     </label>
                     <input type="number" name="word_limit" id="word-limit" class="form-control" min="0" step="50" value="0">
                     <small class="form-text">
-                        0 = no limit. Set a value to limit responses.
+                        {% trans '0 = no limit. Set a value to limit responses.' %}
                     </small>
                 </div>
             </div>
             
             <hr>
-            <h3 class="section-title">Activity Schedule & Settings</h3>
+            <h3 class="section-title">{% trans 'Activity Files' %}</h3>
             <div class="form-group">
-                <label for="start-date">Start Date (Optional)</label>
-                <input type="datetime-local" name="start_date" id="start-date" class="form-control">
-                <small class="form-text">When should this activity become available to students?</small>
-            </div>
-            <div class="form-group">
-                <label for="end-date">End Date (Optional)</label>
-                <input type="datetime-local" name="end_date" id="end-date" class="form-control">
-                <small class="form-text">When should this activity stop being available to students?</small>
-            </div>
-            <div class="form-group checkbox-group">
-                <div class="checkbox-wrapper">
-                    <input type="checkbox" name="allow_redo" id="allow-redo" checked>
-                    <label for="allow-redo">
-                        Allow students to redo this activity
-                    </label>
-                </div>
-                <small class="form-text">
-                    If enabled, students can start the activity again with a fresh conversation.
-                </small>
-            </div>
-            
-            <hr>
-            <h3 class="section-title">Activity Files</h3>
-            <div class="form-group">
-                <label for="activity-files">Upload Files (PDF, TXT, DOC, etc.)</label>
-                <input type="file" id="activity-files" class="form-control" multiple accept=".pdf,.txt,.doc,.docx,.ppt,.pptx,.xls,.xlsx">
-                <small class="form-text">Upload documents that the assistant can reference during conversations.</small>
+                <label for="activity-files">{% trans 'Upload Files (PDF, TXT, DOC, etc.)' %}</label>
+                <input type="file" id="activity-files" class="form-control" multiple accept=".c,.cs,.cpp,.doc,.docx,.html,.java,.json,.md,.pdf,.php,.pptx,.py,.rb,.tex,.txt,.css,.js,.sh,.ts">
+                <small class="form-text">{% trans 'Upload documents that the assistant can reference during conversations.' %}</small>
                 <div id="files-list" class="files-list"></div>
                 <input type="hidden" name="files[]" id="files-hidden">
             </div>
             
+            <hr>
+            <h3 class="section-title">{% trans 'Activity Schedule & Settings' %}</h3>
+            <div class="form-group">
+                <label for="start-date">{% trans 'Start Date (Optional)' %}</label>
+                <input type="datetime-local" name="start_date" id="start-date" class="form-control">
+                <small class="form-text">{% trans 'When should this activity become available to students?' %}</small>
+            </div>
+            <div class="form-group">
+                <label for="end-date">{% trans 'End Date (Optional)' %}</label>
+                <input type="datetime-local" name="end_date" id="end-date" class="form-control">
+                <small class="form-text">{% trans 'When should this activity stop being available to students?' %}</small>
+            </div>
+            
             <div class="form-actions">
-                <button type="submit" class="btn">Create Activity</button>
+                <button type="submit" class="btn">{% trans 'Create Activity' %}</button>
             </div>
         </form>
     </div>
@@ -194,8 +218,24 @@
         const activityFiles = document.getElementById('activity-files');
         const filesList = document.getElementById('files-list');
         const filesHidden = document.getElementById('files-hidden');
+        const aiModelSelect = document.getElementById('ai-model');
         let questions = [];
         let files = [];
+
+        // Debug: Check if all elements exist
+        console.log('Elements check:', {
+            modal: !!modal,
+            questionsList: !!questionsList,
+            newQuestion: !!newQuestion,
+            addQuestionBtn: !!addQuestionBtn,
+            questionsHidden: !!questionsHidden
+        });
+
+        // Only add event listeners if elements exist
+        if (!addQuestionBtn || !newQuestion || !questionsList) {
+            console.error('Required elements for questions functionality not found');
+            return;
+        }
 
         // Open modal
         if (openModalBtn) {
@@ -217,33 +257,44 @@
         });
 
         // Expert mode toggle
-        expertMode.addEventListener('change', function() {
-            customPromptGroup.style.display = this.checked ? 'block' : 'none';
-        });
+        if (expertMode && customPromptGroup) {
+            expertMode.addEventListener('change', function() {
+                customPromptGroup.style.display = this.checked ? 'block' : 'none';
+            });
+        }
 
         // Add question
-        addQuestionBtn.addEventListener('click', function() {
-            const questionText = newQuestion.value.trim();
-            if (questionText) {
-                addQuestion(questionText);
-                newQuestion.value = '';
-                newQuestion.focus();
-            }
-        });
+        if (addQuestionBtn && newQuestion) {
+            addQuestionBtn.addEventListener('click', function() {
+                console.log('Add question button clicked'); // Debug log
+                const questionText = newQuestion.value.trim();
+                console.log('Question text:', questionText); // Debug log
+                if (questionText) {
+                    addQuestion(questionText);
+                    newQuestion.value = '';
+                    newQuestion.focus();
+                } else {
+                    console.log('Question text is empty'); // Debug log
+                }
+            });
 
-        // Enter key for adding questions
-        newQuestion.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                addQuestionBtn.click();
-            }
-        });
+            // Enter key for adding questions
+            newQuestion.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    console.log('Enter key pressed'); // Debug log
+                    addQuestionBtn.click();
+                }
+            });
+        }
 
         // Add a question to the list
         function addQuestion(text) {
+            console.log('Adding question:', text); // Debug log
             questions.push(text);
             updateQuestionsList();
             updateHiddenField();
+            console.log('Current questions array:', questions); // Debug log
         }
 
         // Remove a question from the list
@@ -284,13 +335,15 @@
         }
 
         // Handle file uploads
-        activityFiles.addEventListener('change', function(e) {
-            const selectedFiles = Array.from(e.target.files);
-            selectedFiles.forEach(file => {
-                addFile(file);
+        if (activityFiles) {
+            activityFiles.addEventListener('change', function(e) {
+                const selectedFiles = Array.from(e.target.files);
+                selectedFiles.forEach(file => {
+                    addFile(file);
+                });
+                e.target.value = ''; // Reset input
             });
-            e.target.value = ''; // Reset input
-        });
+        }
 
         // Add a file to the list
         function addFile(file) {
@@ -366,11 +419,76 @@
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
+
+        // Handle AI model selection
+        function handleAiModelChange() {
+            const selectedModel = aiModelSelect.value;
+            const filesSection = document.querySelector('h3.section-title:nth-of-type(2)'); // Activity Files section
+            const filesGroup = activityFiles ? activityFiles.closest('.form-group') : null;
+            const filesSectionHr = filesSection ? filesSection.previousElementSibling : null; // The hr before files section
+            
+            if (selectedModel === 'mistral') {
+                // Hide file upload for Mistral
+                if (filesSection) filesSection.style.display = 'none';
+                if (filesGroup) filesGroup.style.display = 'none';
+                if (filesSectionHr) filesSectionHr.style.display = 'none';
+                
+                // Only clear files if user is actively switching to Mistral (not on initial load)
+                if (aiModelSelect.dataset.initialized === 'true' && files.length > 0) {
+                    if (confirm('Switching to Mistral will remove all uploaded files. Continue?')) {
+                        files = [];
+                        updateFilesList();
+                        updateFilesHiddenField();
+                    } else {
+                        // User cancelled, switch back to GPT
+                        aiModelSelect.value = 'gpt';
+                        return;
+                    }
+                }
+                
+                // Show notice about Mistral limitations
+                if (!document.getElementById('mistral-notice')) {
+                    const notice = document.createElement('div');
+                    notice.id = 'mistral-notice';
+                    notice.className = 'model-notice';
+                    notice.innerHTML = `
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Mistral AI:</strong> File uploads are not supported with Mistral. The assistant will rely on its training data and your instructions.
+                    `;
+                    aiModelSelect.parentNode.appendChild(notice);
+                }
+            } else {
+                // Show file upload for GPT
+                if (filesSection) filesSection.style.display = 'block';
+                if (filesGroup) filesGroup.style.display = 'block';
+                if (filesSectionHr) filesSectionHr.style.display = 'block';
+                
+                // Remove Mistral notice
+                const mistralNotice = document.getElementById('mistral-notice');
+                if (mistralNotice) {
+                    mistralNotice.remove();
+                }
+            }
+            
+            // Mark as initialized after first run
+            aiModelSelect.dataset.initialized = 'true';
+        }
+
+        // Initialize AI model handler
+        if (aiModelSelect) {
+            aiModelSelect.addEventListener('change', handleAiModelChange);
+            // Set initial state
+            handleAiModelChange();
+        }
     });
 </script>
 
 <style>
-    /* Estilos específicos para o modal de atividades */
+    #activityModal .modal-content {
+        max-width: 700px;
+        width: 95%;
+    }
+    
     .questions-list {
         margin-bottom: 12px;
     }
@@ -458,7 +576,6 @@
         justify-content: flex-end;
     }
     
-    /* File upload styles */
     .files-list {
         margin-top: 12px;
     }
@@ -505,5 +622,54 @@
     
     .remove-file:hover {
         color: var(--danger-color);
+    }
+    
+    .model-notice {
+        background-color: #fff3e0;
+        border: 1px solid #ffcc80;
+        border-radius: 4px;
+        padding: 12px;
+        margin-top: 8px;
+        font-size: 0.9rem;
+        color: #e65100;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .model-notice i {
+        margin-top: 2px;
+        color: #ff6b35;
+    }
+
+    .btn-add-question {
+        background-color: #ff6b35 !important;
+        border: 2px solid #ff6b35 !important;
+        color: white !important;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        min-width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .btn-add-question:hover {
+        background-color: #e55a2b !important;
+        border-color: #e55a2b !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+    }
+    
+    .btn-add-question:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3);
+    }
+    
+    .btn-add-question i {
+        font-size: 16px;
+        color: white !important;
     }
 </style>

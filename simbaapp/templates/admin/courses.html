@@ -1,0 +1,437 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Course Management - Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-courses {
+    padding: 2rem 0;
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.admin-header h1 {
+    color: #d64000;
+    margin: 0;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb a {
+    color: #d64000;
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.courses-table-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.courses-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.courses-table th,
+.courses-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.courses-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.courses-table tr:hover {
+    background: #f8f9fa;
+}
+
+.course-title {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+.course-description {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.owner-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.owner-name {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.owner-email {
+    font-size: 0.8rem;
+    color: #7f8c8d;
+}
+
+.stats-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.stat-badge {
+    background: #ecf0f1;
+    color: #2c3e50;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    min-width: 2rem;
+    text-align: center;
+}
+
+.enrollment-code {
+    font-family: 'Courier New', monospace;
+    background: #ecf0f1;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #2c3e50;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    transition: all 0.2s;
+    min-width: 50px;
+    text-align: center;
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+    color: white;
+}
+
+.btn-info {
+    background: #d64000;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #ac3300;
+    color: white;
+}
+
+.no-courses {
+    text-align: center;
+    padding: 2rem;
+    color: #7f8c8d;
+}
+
+.search-filter-container {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.search-filter {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.search-input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+@media (max-width: 768px) {
+    .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .courses-table-container {
+        overflow-x: auto;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .search-filter {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-courses">
+    <div class="breadcrumb">
+        <a href="{% url 'admin_dashboard' %}"><i class="fas fa-shield-alt"></i> Admin Dashboard</a>
+        <i class="fas fa-chevron-right"></i>
+        <span>Course Management</span>
+    </div>
+
+    <div class="admin-header">
+        <h1><i class="fas fa-graduation-cap"></i> Course Management</h1>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="search-filter-container">
+        <div class="search-filter">
+            <input type="text" id="courseSearch" class="search-input" placeholder="Search courses by title, description, or owner...">
+            <button onclick="clearSearch()" class="btn btn-info">
+                <i class="fas fa-times"></i> Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- Courses Table -->
+    <div class="courses-table-container">
+        {% if courses %}
+        <table class="courses-table" id="coursesTable">
+            <thead>
+                <tr>
+                    <th>Course Details</th>
+                    <th>Owner</th>
+                    <th>Statistics</th>
+                    <th>Enrollment Code</th>
+                    <th>Created Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in courses %}
+                <tr class="course-row">
+                    <td>
+                        <div class="course-title">{{ course.title }}</div>
+                        <div class="course-description" title="{{ course.description }}">
+                            {{ course.description|default:"No description available" }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="owner-info">
+                            <div class="owner-name">{{ course.owner_username }}</div>
+                            <div class="owner-email">ID: {{ course.owner_id|slice:":8" }}...</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="stats-row">
+                            <div class="stat-item">
+                                <i class="fas fa-users"></i>
+                                <span class="stat-badge">{{ course.enrollment_count }}</span>
+                                <span>Students</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-tasks"></i>
+                                <span class="stat-badge">{{ course.activity_count }}</span>
+                                <span>Activities</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="enrollment-code">{{ course.enrollment_code }}</span>
+                    </td>
+                    <td>
+                        {% if course.created_at %}
+                            {{ course.created_at|slice:":10" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button onclick="downloadCourseCSV('{{ course.id }}', '{{ course.title|escapejs }}')" 
+                                    class="btn btn-info">
+                                <i class="fas fa-download"></i> Download CSV
+                            </button>
+                            <a href="{% url 'admin_delete_course' course.id %}" 
+                               class="btn btn-danger"
+                               onclick="return confirm('Are you sure you want to delete course \'{{ course.title }}\'? This action cannot be undone and will delete all associated activities and data.');">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-courses">
+            <i class="fas fa-graduation-cap" style="font-size: 3rem; color: #bdc3c7; margin-bottom: 1rem;"></i>
+            <p>No courses found in the system.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Show admin link
+document.addEventListener('DOMContentLoaded', function() {
+    const adminLink = document.getElementById('adminDashboardLink');
+    if (adminLink) {
+        adminLink.style.display = 'block';
+    }
+    
+    // Initialize search functionality
+    const searchInput = document.getElementById('courseSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', filterCourses);
+    }
+});
+
+function filterCourses() {
+    const searchTerm = document.getElementById('courseSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('.course-row');
+    
+    rows.forEach(row => {
+        const title = row.querySelector('.course-title').textContent.toLowerCase();
+        const description = row.querySelector('.course-description').textContent.toLowerCase();
+        const owner = row.querySelector('.owner-name').textContent.toLowerCase();
+        const enrollmentCode = row.querySelector('.enrollment-code').textContent.toLowerCase();
+        
+        const matches = title.includes(searchTerm) || 
+                       description.includes(searchTerm) || 
+                       owner.includes(searchTerm) ||
+                       enrollmentCode.includes(searchTerm);
+        
+        row.style.display = matches ? '' : 'none';
+    });
+}
+
+function clearSearch() {
+    document.getElementById('courseSearch').value = '';
+    filterCourses();
+}
+
+function downloadCourseCSV(courseId, courseTitle) {
+    const cleanCourseTitle = courseTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    
+    // Show loading state
+    const button = event.target.closest('button');
+    const originalContent = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Downloading...';
+    button.disabled = true;
+    
+    // Use the same API endpoint as dashboard
+    fetch(`/api/dashboard/raw_messages/?course_id=${courseId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (!data.messages || data.messages.length === 0) {
+                alert('No conversation data available for this course.');
+                return;
+            }
+            
+            // Create CSV content with same structure as dashboard
+            const headers = ['Role', 'Content', 'Timestamp', 'Course', 'Activity', 'Thread ID', 'Message Number', 'Username'];
+            const rows = data.messages.map(msg => [
+                `"${msg.role || ''}"`,
+                `"${(msg.content || '').replace(/"/g, '""')}"`,
+                `"${msg.timestamp || new Date().toISOString()}"`,
+                `"${msg.course_title || 'Unknown Course'}"`,
+                `"${msg.activity_title || 'Unknown Activity'}"`,
+                `"${msg.thread_id || ''}"`,
+                `"${msg.message_number || ''}"`,
+                `"${msg.username || ''}"`,
+            ]);
+            
+            const csvContent = [
+                headers.join(','),
+                ...rows.map(row => row.join(','))
+            ].join('\n');
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `course_conversations_${cleanCourseTitle}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        })
+        .catch(error => {
+            console.error('Error downloading course CSV:', error);
+            alert('Failed to download course conversation data. Please try again.');
+        })
+        .finally(() => {
+            // Restore button state
+            button.innerHTML = originalContent;
+            button.disabled = false;
+        });
+}
+</script>
+{% endblock %} 

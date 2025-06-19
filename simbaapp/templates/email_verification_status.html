@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans 'Email Verification Required - Simba' %}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Fix button hover issues */
+.btn-primary:hover {
+    background-color: #ac3300 !important;
+    border-color: #ac3300 !important;
+    color: white !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    color: white !important;
+}
+
+/* Hide sidebar navigation items during email verification */
+.sidebar-nav .sidebar-item {
+    display: none !important;
+}
+
+/* Hide mobile menu toggle button */
+.mobile-menu-toggle {
+    display: none !important;
+}
+
+/* Center SIMBA title in header */
+.header-brand {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    font-size: 1.5rem !important;
+    font-weight: bold !important;
+}
+
+/* Better spacing for buttons */
+.btn-spacing {
+    margin-bottom: 1rem !important;
+}
+
+/* Improve email display */
+.email-display {
+    color: #d64000;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 15px;
+    }
+    
+    .card {
+        margin: 0 10px;
+        border-radius: 10px;
+    }
+    
+    .card-body {
+        padding: 1.5rem !important;
+    }
+    
+    .btn {
+        padding: 12px 20px;
+        font-size: 16px;
+        margin-bottom: 1rem !important;
+    }
+    
+    .alert {
+        padding: 1rem;
+        margin: 1rem 0;
+        font-size: 14px;
+    }
+    
+    .fa-2x {
+        font-size: 1.8em !important;
+    }
+    
+    .col-4 {
+        padding: 0 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .col-4 small {
+        font-size: 0.8rem;
+        display: block;
+        margin-top: 8px;
+    }
+    
+    h6 {
+        font-size: 1.1rem !important;
+        font-weight: 600 !important;
+    }
+    
+    .email-display {
+        font-size: 14px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-6 col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark text-center">
+                    <h4 class="mb-0">{% trans 'Email Verification Required' %}</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <h5 class="text-muted">Hi <strong>{{ user.username }}</strong>!</h5>
+                        <p class="mb-0">{% trans 'Please verify your email address to continue' %}</p>
+                    </div>
+                    
+                    <div class="alert" style="background-color: #fff3e0; border: 1px solid #d64000; color: #d64000;" class="text-center">
+                        <p class="mb-2">
+                            {% trans "We've sent a verification email to:" %}
+                        </p>
+                        <div class="email-display">
+                            {{ user.email }}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5 class="text-center mb-4 fw-bold">{% trans 'What to do next:' %}</h5>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="mb-3">
+                                    <i class="fas fa-envelope fa-2x" style="color: #d64000;"></i>
+                                </div>
+                                <small class="fw-medium">{% trans 'Check your email inbox' %}</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="mb-3">
+                                    <i class="fas fa-mouse-pointer fa-2x" style="color: #d64000;"></i>
+                                </div>
+                                <small class="fw-medium">{% trans 'Click "Verify Email"' %}</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="mb-3">
+                                    <i class="fas fa-check-circle fa-2x" style="color: #d64000;"></i>
+                                </div>
+                                <small class="fw-medium">{% trans 'Then you just need to refresh this page!' %}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <a href="{% url 'resend_verification' %}" class="btn btn-primary btn-spacing">
+                            {% trans 'Resend Verification Email' %}
+                        </a>
+                        
+                        <a href="{% url 'logout' %}" class="btn btn-outline-secondary btn-spacing">
+                            {% trans 'Logout' %}
+                        </a>
+                        
+                        <div class="text-center mt-3">
+                            <small class="text-muted">
+                                {% trans 'Need to change your email? ' %}
+                                <a href="{% url 'logout' %}" class="text-decoration-none">{% trans 'Logout' %}</a> {% trans 'and register again.' %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh page every 30 seconds to check if email was verified
+setTimeout(function() {
+    window.location.reload();
+}, 30000);
+</script>
+{% endblock %} 

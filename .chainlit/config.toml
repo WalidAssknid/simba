@@ -15,7 +15,7 @@ user_session_timeout = 1296000  # 15 days
 # Enable third parties caching (e.g., LangChain cache)
 cache = false
 
-# Authorized origins
+# Authorized origins - Allow all for development
 allow_origins = ["*"]
 
 [features]
@@ -66,7 +66,7 @@ edit_message = true
 
 [UI]
 # Name of the assistant.
-name = "Assistant"
+name = "SIMBA"
 
 default_theme = "light"
 
@@ -75,7 +75,7 @@ default_theme = "light"
 # default_sidebar_state = "open"
 
 # Description of the assistant. This is used for HTML tags.
-# description = ""
+description = "SIMBA - Sistema Inteligente de Medición, Bienestar y Apoyo"
 
 # Chain of Thought (CoT) display mode. Can be "hidden", "tool_call" or "full".
 cot = "full"
@@ -89,7 +89,7 @@ custom_css = "/public/stylesheet.css"
 # custom_js = "/public/test.js"
 
 # Custom login page image, relative to public directory or external URL
-login_page_image = "public/simba.png"
+login_page_image = "/public/simba.png"
 
 # Custom login page image filter (Tailwind internal filters, no dark/light variants)
 # login_page_image_filter = "brightness-50 grayscale"

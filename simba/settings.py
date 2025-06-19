@@ -33,7 +33,11 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'db').split(',')
 
-CSRF_TRUSTED_ORIGINS = ['https://simba-refact.irit.fr']
+CSRF_TRUSTED_ORIGINS = [
+    'https://simba-refact.irit.fr',
+    'https://simba-refact.irit.fr:8500', 
+    'http://chainlit:8500',  
+]
 
 # SESSION_COOKIE_SECURE = True
 
@@ -58,12 +62,14 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'simba.middleware.ForceEnglishDefaultMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'simba.middleware.LanguageMiddleware',
+    'simba.middleware.ErrorEmailMiddleware',
 ]
 
 # Allow iframe embedding
@@ -85,6 +91,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'simbaapp.context_processors.version_context',
+                'simbaapp.context_processors.language_context',
             ],
         },
     },
@@ -130,13 +137,34 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'en'
+
+# Supported languages
+LANGUAGES = [
+    ('en', 'English'),
+    ('fr', 'Français'),
+    ('es', 'Español'),
+    ('pt', 'Português')
+]
+
+# Path to locale files
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
+
+# Disable Django's built-in language detection from headers
+USE_I18N = True
+USE_L10N = True
+USE_TZ = True
+
+# Force fallback to English when no translation is available
+LANGUAGE_FALLBACKS = {
+    'fr': ['en'],
+    'es': ['en'], 
+    'pt': ['en'],
+}
 
 TIME_ZONE = 'UTC'
-
-USE_I18N = True
-
-USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
@@ -155,8 +183,101 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Environment-specific URLs
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+
+import logging
+logger = logging.getLogger(__name__)
+logger.info(f"ENVIRONMENT detected: {ENVIRONMENT}")
+logger.info(f"CHAINLIT_URL_PROD from env: {os.getenv('CHAINLIT_URL_PROD')}")
+
+if ENVIRONMENT == 'production':
+    SIMBA_API_URL = os.getenv('SIMBA_API_URL_PROD', 'https://simba-refact.irit.fr/api')
+    CHAINLIT_URL = os.getenv('CHAINLIT_URL_PROD', 'https://simba-refact.irit.fr/chainlit')
+    logger.info(f"Production mode - CHAINLIT_URL set to: {CHAINLIT_URL}")
+else:
+    SIMBA_API_URL = os.getenv('SIMBA_API_URL', 'http://localhost:8000/api')
+    CHAINLIT_URL = os.getenv('CHAINLIT_URL', 'http://localhost:8500')
+    logger.info(f"Development mode - CHAINLIT_URL set to: {CHAINLIT_URL}")
+
 # Add JWT settings if needed later
 # NINJA_JWT = {
 #     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
 #     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 # }
+
+# Email configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL')
+EMAIL_HOST_PASSWORD = os.getenv('EMAILAPPPWD')
+DEFAULT_FROM_EMAIL = os.getenv('EMAIL')
+
+# Base URL for email links
+BASE_URL = os.getenv('BASE_URL', 'http://localhost:8000' if ENVIRONMENT == 'development' else 'https://simba-refact.irit.fr')
+
+# Error email configuration
+ADMINS = [
+    ('SIMBA Admin', os.getenv('EMAIL')),
+]
+MANAGERS = ADMINS
+
+# Send error emails only in production or when DEBUG is False
+SEND_BROKEN_LINK_EMAILS = not DEBUG
+SERVER_EMAIL = os.getenv('EMAIL')
+
+# Logging configuration for error emails
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'mail_admins': {
+            'level': 'ERROR',
+            'class': 'django.utils.log.AdminEmailHandler',
+            'formatter': 'verbose',
+            'include_html': True,
+        },
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'django_errors.log',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'mail_admins'] if not DEBUG else ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['mail_admins'] if not DEBUG else ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'simbaapp': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

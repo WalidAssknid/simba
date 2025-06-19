@@ -7,13 +7,22 @@ services:
       - .env
     environment:
       - DB_HOST=db
+      - SIMBA_API_URL=http://web:8000/api
+      - ENVIRONMENT=development
+      - BASE_URL=http://localhost:8000
+      - EMAIL=${EMAIL}
+      - EMAILAPPPWD=${EMAILAPPPWD}
     volumes:
       - web:/code
+      - static_volume:/app/static
+      - media_volume:/app/media
     entrypoint: ["sh", "/code/entrypoint.sh"]
     ports:
       - "8000:8000"
     depends_on:
       - db
+    networks:
+      - simba-network
   
   chainlit:
     build: .
@@ -21,6 +30,11 @@ services:
       - .env
     environment:
       - DB_HOST=db
+      - SIMBA_API_URL=http://web:8000/api
+      - ENVIRONMENT=development
+      - BASE_URL=http://localhost:8000
+      - EMAIL=${EMAIL}
+      - EMAILAPPPWD=${EMAILAPPPWD}
     volumes:
       - web:/code
     command: ["chainlit", "run", "chainlit_app.py", "--host", "0.0.0.0", "--port", "8500"]
@@ -29,6 +43,8 @@ services:
     depends_on:
       - db
       - web
+    networks:
+      - simba-network
   
   db:
     image: postgres:16
@@ -43,7 +59,15 @@ services:
     ports:
       - "5433:5433"
     command: ["postgres", "-c", "port=5433"]
+    networks:
+      - simba-network
 
 volumes:
   web:
   db:
+  static_volume:
+  media_volume:
+
+networks:
+  simba-network:
+    driver: bridge

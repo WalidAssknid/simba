@@ -1,28 +1,31 @@
 {% extends 'base.html' %}
 {% block title %}Activities | SIMBA{% endblock %}
-
 {% block content %}
+{% load i18n %}
+
 <div class="action-bar" data-is-teacher="{{ is_teacher|lower }}">
     <h3>Activities</h3>
     <!-- Filtro de cursos disponível para todos os usuários -->
     <select id="courseSelector" class="form-control course-selector">
-        <option value="">All Courses</option>
+        <option value="">{% trans 'All Courses' %}</option>
         {% for course in courses %}
         <option value="{{ course.id }}">{{ course.title }}</option>
         {% endfor %}
     </select>
     
-    {% if can_create_activity %}
+    {% if can_create_activity or courses %}
     <div class="action-buttons">
         <button id="showEnrollmentCode" class="btn btn-secondary">
-            Show Enrollment Code
+            {% trans 'Show Enrollment Code' %}
         </button>
         <button id="showParticipants" class="btn btn-secondary">
-            Show Participants
+            {% trans 'Show Participants' %}
         </button>
-        <a href="#" id="createActivityBtn" class="add-button" title="Create Activity">
+        {% if can_create_activity %}
+        <a href="#" id="createActivityBtn" class="add-button hidden" title="Create Activity">
             <i class="fas fa-plus"></i>
         </a>
+        {% endif %}
     </div>
     {% endif %}
 </div>
@@ -31,9 +34,9 @@
 <div id="enrollmentCodeModal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <h3 class="modal-title">Course Enrollment Code</h3>
+        <h3 class="modal-title">{% trans 'Course Enrollment Code' %}</h3>
         <div class="enrollment-code">
-            <p>Share this code with students to join your course:</p>
+            <p>{% trans 'Share this code with students to join your course:' %}</p>
             <div id="enrollmentCodeDisplay" class="code-display"></div>
         </div>
     </div>
@@ -43,7 +46,7 @@
 <div id="participantsModal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <h3 class="modal-title">Course Participants</h3>
+        <h3 class="modal-title">{% trans 'Course Participants' %}</h3>
         <div id="participantsList" class="participants-list">
             <!-- Participants will be dynamically loaded here -->
         </div>
@@ -51,11 +54,113 @@
 </div>
 
 <!-- Include the activity creation popup -->
-{% if can_create_activity %}
-    {% with course=None %}
-        {% include 'popup_activity.html' %}
-    {% endwith %}
-{% endif %}
+{% with course=None %}
+    {% include 'popup_activity.html' %}
+{% endwith %}
+
+<!-- Activities and Chainlit Container -->
+<div class="content-container">
+    <!-- Activities list container -->
+    <div id="activities-container">
+        <div class="activities-list">
+            {% for activity_info in activities_with_roles %}
+                {% with activity=activity_info.activity course=activity_info.course %}
+                <div class="activity-item" data-course-id="{{ course.id }}" data-activity-id="{{ activity.id }}" data-allow-redo="{{ activity.allow_redo|yesno:'true,false' }}">
+                <div class="activity-options">
+                        {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
+                    <button class="activity-menu-toggle">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    {% endif %}
+                    <div class="activity-menu">
+                            {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
+                        <a href="#" class="activity-menu-item" data-action="edit" data-activity-id="{{ activity.id }}">
+                            <i class="fas fa-edit"></i> {% trans 'Edit' %}
+                        </a>
+                        <a href="#" class="activity-menu-item" data-action="chat" data-activity-id="{{ activity.id }}">
+                            <i class="fas fa-comment"></i> {% trans 'Chat with Activity' %}
+                        </a>
+                        <a href="#" class="activity-menu-item" data-action="link" data-activity-id="{{ activity.id }}">
+                            <i class="fas fa-link"></i> {% trans 'Get Activity Link' %}
+                        </a>
+                        <a href="#" class="activity-menu-item delete-activity" data-action="delete" data-activity-id="{{ activity.id }}">
+                            <i class="fas fa-trash"></i> {% trans 'Delete' %}
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
+                <div class="activity-visibility-toggle" data-activity-id="{{ activity.id }}" data-is-visible="{{ activity.is_visible|yesno:'true,false' }}" title="{% if activity.is_visible %}Hide from students{% else %}Show to students{% endif %}">
+                    <i class="fas fa-eye{% if not activity.is_visible %}-slash{% endif %}"></i>
+                </div>
+                {% endif %}
+                <div class="activity-content">
+                    <h3 class="activity-title">{{ activity.title }}</h3>
+                        <p class="activity-course">{{ course.title }}</p>
+                        <div class="role-info">
+                            <span class="role-badge badge-{{ activity_info.user_role }}">
+                                {% if activity_info.is_owner %}
+                                    {% trans 'Owner' %}
+                                {% else %}
+                                    {{ activity_info.user_role|capfirst }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endwith %}
+            {% empty %}
+            <div class="empty-state">
+                <h3>{% trans 'No activities found' %}</h3>
+                <p>
+                    {% if can_create_activity %}
+                        {% blocktrans %} Click the <i class="fas fa-plus"></i> button to create a new activity! {% endblocktrans %}
+                    {% else %}
+                        {% trans "You don't have any activities yet. Ask your teacher to create one!" %}
+                    {% endif %}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Chainlit Container -->
+    <div id="chainlit-container" class="chainlit-container">
+        <div class="chainlit-header">
+            <div class="header-left">
+                <div class="back-link">
+                    <a href="#" id="back-to-activities">
+                        <i class="fas fa-arrow-left"></i> <span class="back-text">{% trans 'Back to Activities' %}</span>
+                    </a>
+                </div>
+            </div>
+            <div class="header-center">
+                <h3 id="activity-title-header"></h3>
+            </div>
+            <div class="header-right">
+                <div class="redo-controls" style="display: none;">
+                    <button class="btn btn-secondary redo-activity-btn" id="chainlit-redo-btn">
+                        <i class="fas fa-redo"></i> <span class="redo-text">{% trans 'Re-do Activity' %}</span>
+                    </button>
+                    <div class="attempt-dropdown" id="chainlit-attempt-dropdown" style="display: none;">
+                        <select class="form-control attempt-selector" id="chainlit-attempt-selector">
+                            <option value="new">{% trans 'Start New Attempt' %}</option>
+                        </select>
+                        <button class="btn btn-primary start-attempt-btn" id="chainlit-start-btn">
+                            {% trans 'Start' %}
+                        </button>
+                        <button class="btn btn-secondary cancel-attempt-btn" id="chainlit-cancel-btn">
+                            {% trans 'Cancel' %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="chainlit-frame-container">
+            <iframe id="chainlit-frame" frameborder="0"></iframe>
+        </div>
+    </div>
+</div>
 
 <style>
 .participants-list {
@@ -106,6 +211,12 @@
     margin-top: 5%;
 }
 
+#editActivityModal .modal-content {
+    margin-top: 5%;
+    max-width: 700px;
+    width: 95%;
+}
+
 .role-info {
     margin-top: 8px;
 }
@@ -126,7 +237,7 @@
 }
 
 .badge-teacher {
-    background-color: #007bff;
+    background-color: #d64000;
     color: white;
 }
 
@@ -134,100 +245,294 @@
     background-color: #6c757d;
     color: white;
 }
-</style>
 
-<div class="activities-list">
-    {% for activity_info in activities_with_roles %}
-        {% with activity=activity_info.activity course=activity_info.course %}
-        <div class="activity-item" data-course-id="{{ course.id }}" data-activity-id="{{ activity.id }}">
-        <div class="activity-options">
-                {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
-            <button class="activity-menu-toggle">
-                <i class="fas fa-ellipsis-v"></i>
-            </button>
-            {% endif %}
-            <div class="activity-menu">
-                    {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
-                <a href="#" class="activity-menu-item" data-action="edit" data-activity-id="{{ activity.id }}">
-                    <i class="fas fa-edit"></i> Edit
-                </a>
-                <a href="#" class="activity-menu-item" data-action="chat" data-activity-id="{{ activity.id }}">
-                    <i class="fas fa-comment"></i> Chat with Activity
-                </a>
-                <a href="#" class="activity-menu-item" data-action="visibility" data-activity-id="{{ activity.id }}" data-is-visible="{{ activity.is_visible|yesno:'true,false' }}">
-                    <i class="fas fa-eye{% if not activity.is_visible %}-slash{% endif %}"></i> 
-                    {% if activity.is_visible %}Hide from Students{% else %}Show to Students{% endif %}
-                </a>
-                <a href="#" class="activity-menu-item" data-action="link" data-activity-id="{{ activity.id }}">
-                    <i class="fas fa-link"></i> Get Activity Link
-                </a>
-                <a href="#" class="activity-menu-item delete-activity" data-action="delete" data-activity-id="{{ activity.id }}">
-                    <i class="fas fa-trash"></i> Delete
-                </a>
-                {% endif %}
-            </div>
-        </div>
-        <div class="activity-content">
-            <h3 class="activity-title">{{ activity.title }}</h3>
-                <p class="activity-course">{{ course.title }}</p>
-                <div class="role-info">
-                    <span class="role-badge badge-{{ activity_info.user_role }}">
-                        {% if activity_info.is_owner %}
-                            Owner
-                        {% else %}
-                            {{ activity_info.user_role|capfirst }}
-                        {% endif %}
-                    </span>
-                </div>
-            </div>
-        </div>
-        {% endwith %}
-    {% empty %}
-    <div class="empty-state">
-        <h3>No activities found</h3>
-        <p>
-            {% if can_create_activity %}
-                Click the <i class="fas fa-plus"></i> button to create a new activity!
-            {% else %}
-                You don't have any activities yet. Ask your teacher to create one!
-            {% endif %}
-        </p>
-    </div>
-    {% endfor %}
-</div>
+/* Activity Link Modal Styles */
+#activityLinkModal .code-display {
+    word-break: break-all;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    max-width: 100%;
+    padding: 12px;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+    max-height: 100px;
+    overflow-y: auto;
+}
+</style>
 
 <!-- Activity Link Modal -->
 <div id="activityLinkModal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
         <h3 class="modal-title">Activity Link</h3>
-        <p>Share this link with students to access the activity:</p>
+        <p>{% trans 'Share this link with students to access the activity:' %}</p>
         <div class="code-display" id="activityLinkDisplay"></div>
-        <button class="btn btn-primary copy-link-btn">Copy Link</button>
+        <button class="btn btn-primary copy-link-btn" data-target="activityLinkDisplay">{% trans 'Copy Link' %}</button>
     </div>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
+<script type="text/javascript" src="{% url 'javascript-catalog' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Debug - DOM loaded, checking elements...');
+    console.log('Debug - can_create_activity:', '{{ can_create_activity|yesno:"true,false" }}');
+    console.log('Debug - courses count:', '{{ courses|length }}');
+    console.log('Debug - activities count:', '{{ activities_with_roles|length }}');
+    
     const questionsHidden = document.getElementById('questions-hidden');
     if (questionsHidden) {
         questionsHidden.value = JSON.stringify([]);
     }
     
+    // Check if required elements exist
+    console.log('Debug - Elements check:', {
+        courseSelector: !!document.getElementById('courseSelector'),
+        createActivityBtn: !!document.getElementById('createActivityBtn'),
+        showEnrollmentCodeBtn: !!document.getElementById('showEnrollmentCode'),
+        showParticipantsBtn: !!document.getElementById('showParticipants')
+    });
+    
+    const activitiesContainer = document.getElementById('activities-container');
+    const chainlitContainer = document.getElementById('chainlit-container');
+    const activityTitleHeader = document.getElementById('activity-title-header');
+    const chainlitFrame = document.getElementById('chainlit-frame');
+    const backToActivitiesBtn = document.getElementById('back-to-activities');
+    
+    // Function to force complete iframe reload (clears Chainlit session)
+    function forceChainlitReload() {
+        console.log('Reloading Chainlit iframe');
+        
+        // First clear the iframe
+        chainlitFrame.src = 'about:blank';
+        
+        // Wait a moment then load the base URL
+        setTimeout(() => {
+            chainlitFrame.src = '{{ chainlit_url }}';
+        }, 200);
+    }
+    
+    // Function to create session and navigate to Chainlit
+    async function startChainlitSession(activityId, threadId = null) {
+        const userId = '{{ request.session.user_id }}';
+        const username = '{{ request.session.username }}';
+        
+        try {
+            const payload = {
+                activity_id: activityId,
+                user_id: userId,
+                username: username
+            };
+            
+            if (threadId) {
+                payload.thread_id = threadId;
+            }
+            
+            console.log('Creating Chainlit session with payload:', payload);
+            
+            const response = await fetch('/api/chainlit/create-session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to create session');
+            }
+            
+            const sessionData = await response.json();
+            console.log('Session created successfully:', sessionData);
+            
+            // Load Chainlit iframe with base URL (no parameters)
+            forceChainlitReload();
+            
+        } catch (error) {
+            console.error('Error creating session:', error);
+            alert(`Failed to start chat session: ${error.message}`);
+        }
+    }
+    
+    // Back to activities button
+    backToActivitiesBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        chainlitContainer.classList.remove('active');
+        activitiesContainer.classList.remove('hidden');
+        document.body.classList.remove('chainlit-active');
+        
+        const redoControls = document.querySelector('.redo-controls');
+        if (redoControls) {
+            redoControls.style.display = 'none';
+        }
+        
+        setTimeout(() => {
+            chainlitFrame.src = '';
+        }, 300);
+    });
+    
+    // Redo functionality
+    const chainlitRedoBtn = document.getElementById('chainlit-redo-btn');
+    const chainlitAttemptDropdown = document.getElementById('chainlit-attempt-dropdown');
+    const chainlitAttemptSelector = document.getElementById('chainlit-attempt-selector');
+    const chainlitStartBtn = document.getElementById('chainlit-start-btn');
+    const chainlitCancelBtn = document.getElementById('chainlit-cancel-btn');
+    
+    if (chainlitRedoBtn) {
+        chainlitRedoBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (!window.currentActivity) return;
+            
+            const activityId = window.currentActivity.id;
+            const userId = '{{ request.session.user_id }}';
+            
+            fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
+                .then(response => response.json())
+                .then(data => {
+                    chainlitAttemptSelector.innerHTML = '<option value="new">' + gettext('Start New Attempt') + '</option>';
+                    
+                    const attempts = data.attempts || [];
+                    attempts.forEach(attempt => {
+                        const option = document.createElement('option');
+                        option.value = attempt.thread_id;
+                        option.textContent = gettext('Attempt') + ' ' + attempt.attempt_number + ' (' + new Date(attempt.created_at).toLocaleDateString() + ')';
+                        chainlitAttemptSelector.appendChild(option);
+                    });
+                    
+                    chainlitRedoBtn.style.display = 'none';
+                    chainlitAttemptDropdown.style.display = 'flex';
+                })
+                .catch(error => {
+                    console.error('Error loading attempts:', error);
+                    alert('Failed to load previous attempts');
+                });
+        });
+    }
+    
+    if (chainlitStartBtn) {
+        chainlitStartBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (!window.currentActivity) return;
+            
+            const activityId = window.currentActivity.id;
+            const userId = '{{ request.session.user_id }}';
+            const selectedValue = chainlitAttemptSelector.value;
+            
+            if (selectedValue === 'new') {
+                fetch(`/api/threads/new-attempt?activity_id=${activityId}&user_id=${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.message || 'Failed to create new attempt');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(newThread => {
+                    startChainlitSession(activityId, newThread.id);
+                    chainlitAttemptDropdown.style.display = 'none';
+                    chainlitRedoBtn.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error creating new attempt:', error);
+                    alert(`Failed to create new attempt: ${error.message}`);
+                });
+            } else {
+                startChainlitSession(activityId, selectedValue);
+                chainlitAttemptDropdown.style.display = 'none';
+                chainlitRedoBtn.style.display = 'block';
+            }
+        });
+    }
+    
+    if (chainlitCancelBtn) {
+        chainlitCancelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            chainlitAttemptDropdown.style.display = 'none';
+            chainlitRedoBtn.style.display = 'block';
+        });
+    }
+    
     document.querySelectorAll('.activity-item').forEach(item => {
         item.addEventListener('click', function(e) {
-            if (!e.target.closest('.activity-options')) {
+            if (!e.target.closest('.activity-options') && !e.target.closest('.activity-visibility-toggle')) {
                 const activityId = this.dataset.activityId;
+                const courseId = this.dataset.courseId;
                 const roleElement = this.querySelector('.role-badge');
                 const userRole = roleElement ? roleElement.textContent.toLowerCase().trim() : 'student';
+                const activityTitle = this.querySelector('.activity-title').textContent;
+                
+                console.log('Activity clicked:', activityId, activityTitle, 'Role:', userRole);
                 
                 if (userRole === 'owner' || userRole === 'teacher') {
+                    // Default click behavior for teachers/owners
                     window.location.href = `/dashboard/?activity_id=${activityId}&active_tab=conversation-stats`;
                 } else {
-                    window.location.href = `/chainlit/?activity_id=${activityId}`;
+                    // Students - open Chainlit interface directly
+                    activityTitleHeader.textContent = activityTitle;
+                    
+                    window.currentActivity = {
+                        id: activityId,
+                        title: activityTitle,
+                        allowRedo: this.dataset.allowRedo === 'true'
+                    };
+                    
+                    // Show redo controls if activity allows redo
+                    const redoControls = document.querySelector('.redo-controls');
+                    if (redoControls && window.currentActivity.allowRedo) {
+                        redoControls.style.display = 'flex';
+                    }
+                    
+                    // Get the latest thread for this user and activity
+                    const userId = '{{ request.session.user_id }}';
+                    fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            const attempts = data.attempts || [];
+                            if (attempts && attempts.length > 0) {
+                                const latestThread = attempts[0];
+                                startChainlitSession(activityId, latestThread.thread_id);
+                            } else {
+                                fetch(`/api/threads/new-attempt?activity_id=${activityId}&user_id=${userId}`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                })
+                                .then(response => response.json())
+                                .then(newThread => {
+                                    startChainlitSession(activityId, newThread.id);
+                                })
+                                .catch(error => {
+                                    console.error('Error creating first attempt:', error);
+                                    startChainlitSession(activityId);
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error loading attempts:', error);
+                            startChainlitSession(activityId);
+                        });
+                    
+                    activitiesContainer.classList.add('hidden');
+                    chainlitContainer.classList.add('active');
+                    document.body.classList.add('chainlit-active');
                 }
             }
         });
@@ -235,6 +540,69 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const courseSelector = document.getElementById('courseSelector');
     if (courseSelector) {
+        // Function to check if user can create activities in selected course
+        function checkCreatePermission() {
+            const selectedCourseId = courseSelector.value;
+            const createBtn = document.getElementById('createActivityBtn');
+            
+            console.log('Debug - checkCreatePermission called', {
+                selectedCourseId,
+                createBtnExists: !!createBtn,
+                canCreateActivity: '{{ can_create_activity|yesno:"true,false" }}'
+            });
+            
+            if (!createBtn) {
+                console.log('Debug - createBtn not found');
+                return;
+            }
+            
+            if (!selectedCourseId) {
+                console.log('Debug - no course selected, hiding button');
+                createBtn.classList.add('hidden');
+                return;
+            }
+            
+            // Check if user has teacher/owner role in any activity of the selected course
+            const courseActivities = document.querySelectorAll(`.activity-item[data-course-id="${selectedCourseId}"]`);
+            let canCreate = false;
+            
+            console.log('Debug - course activities found:', courseActivities.length);
+            
+            courseActivities.forEach(item => {
+                const roleElement = item.querySelector('.role-badge');
+                if (roleElement) {
+                    const role = roleElement.textContent.toLowerCase().trim();
+                    console.log('Debug - found role:', role);
+                    if (role === 'owner' || role === 'teacher') {
+                        canCreate = true;
+                    }
+                }
+            });
+            
+            // If no activities exist for this course, check if user owns any course with this ID
+            if (courseActivities.length === 0) {
+                // Get all courses from the selector options to check ownership
+                const courseOption = courseSelector.querySelector(`option[value="${selectedCourseId}"]`);
+                if (courseOption) {
+                    // Assume user can create if course is in their list (they have some access)
+                    // This will be validated server-side anyway
+                    console.log('Debug - no activities but course exists in selector, allowing creation');
+                    canCreate = true;
+                }
+            }
+            
+            console.log('Debug - final canCreate decision:', canCreate);
+            
+            if (canCreate) {
+                createBtn.classList.remove('hidden');
+            } else {
+                createBtn.classList.add('hidden');
+            }
+        }
+        
+        // Check permission on page load
+        checkCreatePermission();
+        
         courseSelector.addEventListener('change', function() {
             const selectedCourseId = this.value;
             const activityItems = document.querySelectorAll('.activity-item');
@@ -246,6 +614,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     item.style.display = 'none';
                 }
             });
+            
+            // Check create permission when course changes
+            checkCreatePermission();
         });
     }
     
@@ -255,7 +626,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const selectedCourseId = document.getElementById('courseSelector').value;
             if (!selectedCourseId) {
-                alert('Please select a course first to create an activity');
+                alert(gettext('Please select a course first to create an activity'));
                 return;
             }
             
@@ -283,10 +654,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const createActivityForm = document.getElementById('create-activity-form');
     if (createActivityForm) {
         createActivityForm.addEventListener('submit', function(e) {
-            const courseId = this.action.match(/\/courses\/(\d+)\/create_activity\//);
+            const courseId = this.action.match(/\/courses\/([^\/]+)\/create_activity\//);
             if (!courseId || !courseId[1]) {
                 e.preventDefault();
-                alert('Course ID is missing. Please select a course first.');
+                alert(gettext('Course ID is missing. Please select a course first.'));
             }
         });
     }
@@ -301,7 +672,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     document.addEventListener('click', function(e) {
-        if (!e.target.closest('.activity-options')) {
+        if (!e.target.closest('.activity-options') && !e.target.closest('.activity-visibility-toggle')) {
             closeAllMenus();
         }
     });
@@ -379,6 +750,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         
                         form.querySelector('#agent-attitude').value = activity.agent_attitude;
+                        form.querySelector('#ai-model').value = activity.ai_model || 'gpt';
                         form.querySelector('#subjects').value = activity.subjects || '';
                         form.querySelector('#restrict-to-subject').checked = activity.restrict_to_subject;
                         form.querySelector('#allow-questions').checked = activity.allow_questions;
@@ -399,6 +771,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 custom_prompt: form.querySelector('#custom-prompt').value,
                                 questions: form.querySelector('#questions-hidden').value ? JSON.parse(form.querySelector('#questions-hidden').value) : [],
                                 agent_attitude: form.querySelector('#agent-attitude').value,
+                                ai_model: form.querySelector('#ai-model').value,
                                 subjects: form.querySelector('#subjects').value,
                                 restrict_to_subject: form.querySelector('#restrict-to-subject').checked,
                                 allow_questions: form.querySelector('#allow-questions').checked,
@@ -431,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 
                                 document.body.removeChild(editModal);
                                 
-                                alert('Activity updated successfully!');
+                                alert( gettext('Activity updated successfully!'));
                                 
                                 window.location.reload();
                             })
@@ -454,25 +827,69 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Failed to load activity details for editing.');
+                        alert(gettext('Failed to load activity details for editing.'));
                     });
             } else if (action === 'chat') {
                 const activityItem = document.querySelector(`.activity-item[data-activity-id="${activityId}"]`);
-                const courseId = activityItem ? activityItem.dataset.courseId : null;
+                const activityTitle = activityItem ? activityItem.querySelector('.activity-title').textContent : 'Activity';
                 
-                if (courseId) {
-                    window.location.href = `/courses/${courseId}/?expand_activity=${activityId}`;
-                } else {
-                    const userId = '{{ request.session.user_id }}';
-                    const username = '{{ request.session.username }}';
-                    window.location.href = `/chainlit/?activity_id=${activityId}&user_id=${userId}&username=${username}`;
-                }
-            } else if (action === 'visibility') {
-                const isVisible = this.dataset.isVisible === 'true';
+                console.log('Chat with activity clicked:', activityId, activityTitle);
+                
+                // Set activity title in chainlit view
+                activityTitleHeader.textContent = activityTitle;
+                
+                // Store current activity data
+                window.currentActivity = {
+                    id: activityId,
+                    title: activityTitle,
+                    allowRedo: false
+                };
+                
+                // Get the latest thread for this user and activity
                 const userId = '{{ request.session.user_id }}';
+                fetch(`/api/threads/user-attempts/${activityId}/${userId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const attempts = data.attempts || [];
+                        if (attempts && attempts.length > 0) {
+                            const latestThread = attempts[0];
+                            console.log('Loading existing attempt:', latestThread.thread_id);
+                            startChainlitSession(activityId, latestThread.thread_id);
+                        } else {
+                            console.log('No previous attempts, creating first attempt');
+                            fetch(`/api/threads/new-attempt?activity_id=${activityId}&user_id=${userId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                            })
+                            .then(response => response.json())
+                            .then(newThread => {
+                                console.log('Loading new first attempt:', newThread.id);
+                                startChainlitSession(activityId, newThread.id);
+                            })
+                            .catch(error => {
+                                console.error('Error creating first attempt:', error);
+                                startChainlitSession(activityId);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading attempts:', error);
+                        startChainlitSession(activityId);
+                    });
                 
-                fetch(`/api/activities/${activityId}/visibility?user_id=${userId}&is_visible=${!isVisible}`, {
-                    method: 'PUT',
+                // Show Chainlit container and hide activities
+                activitiesContainer.classList.add('hidden');
+                chainlitContainer.classList.add('active');
+                document.body.classList.add('chainlit-active');
+                
+                // Close any open menus
+                closeAllMenus();
+            } else if (action === 'link') {
+                // Generate activity token and show the link
+                fetch(`/api/activities/${activityId}/activity-tokens`, {
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
@@ -480,39 +897,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(response => {
                     if (!response.ok) {
                         return response.json().then(data => {
-                            throw new Error(data.message || 'Failed to update activity visibility');
+                            throw new Error(data.message || 'Failed to generate activity link');
                         });
                     }
                     return response.json();
                 })
-                .then(updatedActivity => {
-                    const menuItem = document.querySelector(`.activity-menu-item[data-action="visibility"][data-activity-id="${activityId}"]`);
-                    if (menuItem) {
-                        const newIsVisible = !isVisible;
-                        menuItem.dataset.isVisible = newIsVisible.toString();
-                        
-                        const icon = menuItem.querySelector('i');
-                        const text = menuItem.childNodes[menuItem.childNodes.length - 1];
-                        
-                        if (newIsVisible) {
-                            icon.className = 'fas fa-eye';
-                            text.textContent = ' Hide from Students';
-                        } else {
-                            icon.className = 'fas fa-eye-slash';
-                            text.textContent = ' Show to Students';
-                        }
-                    }
-                    
-                    alert(`Activity ${!isVisible ? 'shown to' : 'hidden from'} students successfully!`);
+                .then(data => {
+                    document.getElementById('activityLinkDisplay').textContent = data.activity_url;
+                    document.getElementById('activityLinkModal').style.display = 'block';
                 })
                 .catch(error => {
-                    console.error('Error updating activity visibility:', error);
-                    alert(`Failed to update activity visibility: ${error.message}`);
+                    console.error('Error generating activity link:', error);
+                    alert(`Failed to generate activity link: ${error.message}`);
                 });
-            } else if (action === 'link') {
-                document.getElementById('activityLinkDisplay').textContent = 
-                    `${window.location.origin}/chainlit/?activity_id=${activityId}`;
-                document.getElementById('activityLinkModal').style.display = 'block';
             } else if (action === 'delete') {
                 if (confirm('Are you sure you want to delete this activity?')) {
                     const userId = '{{ request.session.user_id }}';
@@ -531,23 +928,23 @@ document.addEventListener('DOMContentLoaded', function() {
                                 
                                 const activitiesList = document.querySelector('.activities-list');
                                 if (activitiesList.querySelectorAll('.activity-item').length === 0) {
-                                    const emptyState = document.createElement('div');
-                                    emptyState.className = 'empty-state';
-                                    emptyState.innerHTML = `
-                                        <h3>No activities found</h3>
-                                        <p>
-                                            {% if can_create_activity %}
-                                            Click the <i class="fas fa-plus"></i> button to create a new activity!
-                                            {% else %}
-                                            You don't have any activities yet. Ask your teacher to create one!
-                                            {% endif %}
-                                        </p>
-                                    `;
+                                                                    const emptyState = document.createElement('div');
+                                emptyState.className = 'empty-state';
+                                emptyState.innerHTML = `
+                                    <h3>` + gettext('No activities found') + `</h3>
+                                    <p>
+                                        {% if can_create_activity %}
+                                        ` + gettext('Click the') + ` <i class="fas fa-plus"></i> ` + gettext('button to create a new activity!') + `
+                                        {% else %}
+                                        ` + gettext("You don't have any activities yet. Ask your teacher to create one!") + `
+                                        {% endif %}
+                                    </p>
+                                `;
                                     activitiesList.appendChild(emptyState);
                                 }
                             }
                             
-                            alert('Activity deleted successfully!');
+                            alert( gettext('Activity deleted successfully!'));
                             
                             window.location.reload();
                         } else {
@@ -558,10 +955,58 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .catch(error => {
                         console.error('Error deleting activity:', error);
-                        alert('An unexpected error occurred while trying to delete the activity.');
+                        alert( gettext('An unexpected error occurred while trying to delete the activity.'));
                     });
                 }
             }
+        });
+    });
+    
+    // Activity visibility toggle (new eye icon)
+    document.querySelectorAll('.activity-visibility-toggle').forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent activity item click
+            
+            const activityId = this.dataset.activityId;
+            const isVisible = this.dataset.isVisible === 'true';
+            const userId = '{{ request.session.user_id }}';
+            
+            fetch(`/api/activities/${activityId}/visibility?user_id=${userId}&is_visible=${!isVisible}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Failed to update activity visibility');
+                    });
+                }
+                return response.json();
+            })
+            .then(updatedActivity => {
+                // Update the visibility toggle icon
+                const newIsVisible = !isVisible;
+                this.dataset.isVisible = newIsVisible.toString();
+                
+                const icon = this.querySelector('i');
+                if (newIsVisible) {
+                    icon.className = 'fas fa-eye';
+                    this.title = 'Hide from students';
+                } else {
+                    icon.className = 'fas fa-eye-slash';
+                    this.title = 'Show to students';
+                }
+                
+                // Show success message
+                alert(`Activity ${newIsVisible ? 'shown to' : 'hidden from'} students successfully!`);
+            })
+            .catch(error => {
+                console.error('Error updating activity visibility:', error);
+                alert(`Failed to update activity visibility: ${error.message}`);
+            });
         });
     });
     
@@ -685,7 +1130,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showEnrollmentCodeBtn.addEventListener('click', function() {
             const selectedCourseId = document.getElementById('courseSelector').value;
             if (!selectedCourseId) {
-                alert('Please select a course first');
+                alert( gettext('Please select a course first'));
                 return;
             }
             
@@ -702,7 +1147,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .catch(error => {
                     console.error('Error fetching course data:', error);
-                    alert('Failed to load enrollment code');
+                    alert( gettext('Failed to load enrollment code'));
                 });
         });
     }
@@ -712,7 +1157,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showParticipantsBtn.addEventListener('click', function() {
             const selectedCourseId = document.getElementById('courseSelector').value;
             if (!selectedCourseId) {
-                alert('Please select a course first');
+                alert( gettext('Please select a course first'));
                 return;
             }
             
@@ -728,6 +1173,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(data => {
                     const participantsList = document.getElementById('participantsList');
                     participantsList.innerHTML = '';
+                    
+                    const courseOwnerIdApi = data.owner_id; // Owner ID returned by API
                     
                     data.participants.forEach(participant => {
                         const participantCard = document.createElement('div');
@@ -750,7 +1197,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         participantCard.appendChild(participantInfo);
                         
-                        if (participant.role === 'student' && 
+                        // Only show remove button if:
+                        // 1. Current user is the course owner
+                        // 2. Participant is a student (not teacher or owner)
+                        // 3. Participant has an enrollment_id (not the course owner)
+                        if (currentUserId === courseOwnerIdApi && 
+                            participant.role === 'student' && 
                             !participant.is_owner && 
                             participant.enrollment_id) {
                             
@@ -786,11 +1238,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const currentUserId = '{{ request.session.user_id }}';
 
                 if (!currentUserId) {
-                    alert("Error: Could not verify current user. Please re-login.");
+                    alert( gettext("Error: Could not verify current user. Please re-login."));
                     return;
                 }
 
-                if (confirm(`Are you sure you want to remove ${username} from this course?`)) {
+                if (confirm(gettext('Are you sure you want to remove') + ' ' + username + ' ' + gettext('from this course?'))) {
                     fetch(`/api/enrollments/${enrollmentId}?current_user_id=${currentUserId}`, {
                         method: 'DELETE',
                         headers: {
@@ -828,7 +1280,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .catch(error => {
                         console.error('Error removing student:', error);
-                        alert('An unexpected error occurred while trying to remove the student.');
+                        alert( gettext('An unexpected error occurred while trying to remove the student.'));
                     });
                 }
             }
@@ -841,23 +1293,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    const copyLinkBtn = document.querySelector('.copy-link-btn');
-    if (copyLinkBtn) {
-        copyLinkBtn.addEventListener('click', function() {
-            const linkText = document.getElementById('activityLinkDisplay').textContent;
-            navigator.clipboard.writeText(linkText)
-                .then(() => {
-                    this.textContent = 'Copied!';
-                    setTimeout(() => {
-                        this.textContent = 'Copy Link';
-                    }, 2000);
-                })
-                .catch(err => {
-                    console.error('Failed to copy link:', err);
-                    alert('Failed to copy link to clipboard');
-                });
+    // Copy link buttons
+    document.querySelectorAll('.copy-link-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetId = this.dataset.target;
+            if (targetId) {
+                const linkElement = document.getElementById(targetId);
+                const linkText = linkElement.textContent;
+                
+                navigator.clipboard.writeText(linkText)
+                    .then(() => {
+                        const originalText = this.textContent;
+                        this.textContent = 'Copied!';
+                        setTimeout(() => {
+                            this.textContent = originalText;
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy link:', err);
+                        alert( gettext('Failed to copy link to clipboard'));
+                    });
+            }
         });
-    }
+    });
 });
 </script>
 {% endblock %} 

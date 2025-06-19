@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
-{% block title %}Analytics Dashboard{% endblock %}
+{% load i18n %}
+{% block title %}{% trans 'Analytics Dashboard' %}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" type="text/script" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">
@@ -38,8 +39,8 @@
   }
   
   .tab.active {
-    border-bottom: 3px solid #4a6cf7;
-    color: #4a6cf7;
+    border-bottom: 3px solid #ff7043;
+    color: #ff7043;
   }
   
   .tab-content {
@@ -196,7 +197,7 @@
   
   .btn-generate {
     padding: 10px 20px;
-    background-color: #4a6cf7;
+    background-color: #ff7043;
     color: white;
     border: none;
     border-radius: 6px;
@@ -206,13 +207,13 @@
   }
   
   .btn-generate:hover {
-    background-color: #3a57cf;
+    background-color: #e55a2b;
   }
   
   .spinner {
     display: none;
     border: 4px solid #f3f3f3;
-    border-top: 4px solid #4a6cf7;
+    border-top: 4px solid #ff7043;
     border-radius: 50%;
     width: 30px;
     height: 30px;
@@ -245,25 +246,84 @@
     border-radius: 12px;
     background: linear-gradient(to right, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.6) 100%);
     backdrop-filter: blur(5px);
+    cursor: grab;
+  }
+  
+  .word-cloud:active {
+    cursor: grabbing;
+  }
+  
+  .word-cloud svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
   }
   
   .word {
-    position: absolute;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: text-shadow 0.1s ease, letter-spacing 0.1s ease, filter 0.1s ease; /* Faster, more specific transition */
     text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
     font-family: 'Arial', sans-serif;
-    white-space: nowrap;
     user-select: none;
-    z-index: 1;
     letter-spacing: 0.5px;
+    text-anchor: middle;
+    dominant-baseline: central;
+    transform-origin: center center;
+    transform-box: fill-box;
+    transform: rotate(var(--word-rotation, 0deg)); 
   }
   
   .word:hover {
-    transform: scale(1.15) !important;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.15);
-    z-index: 10 !important;
-    letter-spacing: 1px;
+    /* No scale, only subtle shadow and spacing changes */
+    transform: rotate(var(--word-rotation, 0deg)); /* Keep initial rotation */
+    text-shadow: 2px 2px 3px rgba(0,0,0,0.2);
+    letter-spacing: 0.75px;
+    filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.2));
+  }
+  
+  .zoom-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    z-index: 10;
+  }
+  
+  .zoom-btn {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    transition: all 0.2s;
+    backdrop-filter: blur(5px);
+  }
+  
+  .zoom-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  .zoom-info {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #666;
+    z-index: 10;
+    backdrop-filter: blur(5px);
   }
   
   .word-details {
@@ -296,7 +356,7 @@
     margin: 4px 0;
     background-color: #f8f9fa;
     border-radius: 4px;
-    border-left: 3px solid #4a6cf7;
+    border-left: 3px solid #ff7043;
   }
   
   .word-details p {
@@ -534,6 +594,25 @@
       margin-bottom: 20px;
     }
     
+    .zoom-controls {
+      top: 5px;
+      right: 5px;
+      gap: 3px;
+    }
+    
+    .zoom-btn {
+      width: 35px;
+      height: 35px;
+      font-size: 16px;
+    }
+    
+    .zoom-info {
+      bottom: 5px;
+      left: 5px;
+      padding: 6px 10px;
+      font-size: 11px;
+    }
+    
     .word-details {
       padding: 16px;
       margin-bottom: 20px;
@@ -743,30 +822,34 @@
 
 {% block content %}
 <div class="dashboard-header">
-  <h2>Analytics Dashboard</h2>
+  <h2>{% trans 'Analytics Dashboard' %}</h2>
 </div>
 
 <div class="filters">
   <div>
-    <label for="view-as-filter">View as:</label>
-    <select id="view-as-filter" onchange="updateDashboard()">
-      <option value="teacher" {% if view_as == 'teacher' %}selected{% endif %}>Teacher</option>
-      <option value="student" {% if view_as == 'student' %}selected{% endif %}>Student</option>
+    <label for="view-as-filter">{% trans 'View as:' %}</label>
+    <select id="view-as-filter" class="form-control" onchange="updateDashboard()">
+        <option value="teacher" {% if view_as == 'teacher' %}selected{% endif %} {% if not has_teacher_role %}disabled title="You need to own a course or be enrolled as a teacher"{% endif %}>
+            {% trans 'Teacher View' %}
+        </option>
+        <option value="student" {% if view_as == 'student' %}selected{% endif %} {% if not has_student_role %}disabled title="You need to be enrolled as a student in a course"{% endif %}>
+            {% trans 'Student View' %}
+        </option>
     </select>
   </div>
   <div>
     <select id="course-filter" onchange="updateDashboard()">
-      <option value="all" {% if not selected_course_id %}selected{% endif %}>All Courses</option>
+      <option value="all" {% if not selected_course_id %}selected{% endif %}>{% trans 'All Courses' %}</option>
     {% for c in courses %}
-        <option value="{{ c.id }}" {% if selected_course_id and c.id|stringformat:"i" == selected_course_id|stringformat:"i" %}selected{% endif %}>{{ c.title }}</option>
+        <option value="{{ c.id }}" {% if selected_course_id and c.id|stringformat:"s" == selected_course_id %}selected{% endif %}>{{ c.title }}</option>
     {% endfor %}
   </select>
   </div>
   <div>
     <select id="activity-filter" onchange="updateDashboard()">
-      <option value="all" {% if not selected_activity %}selected{% endif %}>All Activities</option>
+      <option value="all" {% if not selected_activity_id or selected_activity_id == 'all' %}selected{% endif %}>{% trans 'All Activities' %}</option>
       {% for activity in activities %}
-        <option value="{{ activity.id }}" {% if selected_activity and activity.id == selected_activity.id %}selected{% endif %}>
+        <option value="{{ activity.id }}" {% if selected_activity_id and activity.id|stringformat:"s" == selected_activity_id %}selected{% endif %}>
           {{ activity.title }}{% if not selected_course_id %} ({{ activity.course.title }}){% endif %}
         </option>
       {% endfor %}
@@ -776,51 +859,51 @@
 
 <div class="tabs">
   {% if view_as == 'teacher' %}
-  <div class="tab {% if active_tab == 'conversation-stats' %}active{% endif %}" data-tab="conversation-stats">Conversation Stats</div>
-  <div class="tab {% if active_tab == 'student-stats' %}active{% endif %}" data-tab="student-stats">Student Stats</div>
-  <div class="tab {% if active_tab == 'student-engagement' %}active{% endif %}" data-tab="student-engagement">Students Engagement</div>
-  <div class="tab {% if active_tab == 'raw-data' %}active{% endif %}" data-tab="raw-data">Raw Data</div>
+  <div class="tab {% if active_tab == 'conversation-stats' %}active{% endif %}" data-tab="conversation-stats">{% trans 'Conversation Stats' %}</div>
+  <div class="tab {% if active_tab == 'student-stats' %}active{% endif %}" data-tab="student-stats">{% trans 'Student Stats' %}</div>
+  <div class="tab {% if active_tab == 'student-engagement' %}active{% endif %}" data-tab="student-engagement">{% trans 'Students Engagement' %}</div>
+  <div class="tab {% if active_tab == 'raw-data' %}active{% endif %}" data-tab="raw-data">{% trans 'Raw Data' %}</div>
   {% else %}
-  <div class="tab {% if active_tab == 'student-stats' or active_tab == 'conversation-stats' %}active{% endif %}" data-tab="student-stats">My Stats</div>
-  <div class="tab {% if active_tab == 'raw-data' %}active{% endif %}" data-tab="raw-data">My Messages</div>
+  <div class="tab {% if active_tab == 'student-stats' or active_tab == 'conversation-stats' %}active{% endif %}" data-tab="student-stats">{% trans 'My Stats' %}</div>
   {% endif %}
 </div>
 
 <!-- Conversation Stats Tab -->
+{% if view_as == 'teacher' %}
 <div id="conversation-stats" class="tab-content {% if active_tab == 'conversation-stats' %}active{% endif %}">
   <div class="metric-cards">
     <div class="metric-card">
-      <h3>Total Students</h3>
+      <h3>{% trans 'Total Students' %}</h3>
       <p>{{ students_count }}</p>
     </div>
     <div class="metric-card">
-      <h3>Total Activities</h3>
+      <h3>{% trans 'Total Activities' %}</h3>
       <p>{{ activities_count }}</p>
     </div>
     <div class="metric-card">
-    <h3>Total Messages</h3>
+    <h3>{% trans 'Total Messages' %}</h3>
     <p>{{ total_messages }}</p>
   </div>
     <div class="metric-card">
-      <h3>Avg Message Length</h3>
+      <h3>{% trans 'Avg Message Length' %}</h3>
       <p>{{ avg_message_length }}</p>
     </div>
     <div class="metric-card">
-      <h3>Avg Time per Student</h3>
+      <h3>{% trans 'Avg Time per Student' %}</h3>
       <p>{{ avg_time_per_student }}</p>
     </div>
 </div>
 
   <div class="two-columns">
     <div class="chart-container">
-      <h3>Student Engagement</h3>
+      <h3>{% trans 'Student Engagement' %}</h3>
       <div class="engagement-table">
         <table>
   <thead>
     <tr>
-              <th>Student</th>
-              <th>Messages</th>
-              <th>Avg Length</th>
+              <th>{% trans 'Student' %}</th>
+              <th>{% trans 'Messages' %}</th>
+              <th>{% trans 'Avg Length' %}</th>
     </tr>
   </thead>
   <tbody>
@@ -832,7 +915,7 @@
       </tr>
     {% empty %}
             <tr>
-              <td colspan="3">No student data available</td>
+              <td colspan="3">{% trans 'No student data available' %}</td>
             </tr>
     {% endfor %}
   </tbody>
@@ -841,33 +924,34 @@
     </div>
     
     <div class="chart-container">
-      <h3>Activity Statistics</h3>
+      <h3>{% trans 'Activity Statistics' %}</h3>
       <canvas id="activity-stats-chart"></canvas>
     </div>
   </div>
   
   <div class="chart-container">
-    <h3>Student Segmentation by Engagement</h3>
+    <h3>{% trans 'Student Segmentation by Engagement' %}</h3>
     <canvas id="segmentation-chart"></canvas>
   </div>
   
   <div class="summary-container">
-    <h3>Message Summary</h3>
+    <h3>{% trans 'Message Summary' %}</h3>
     <div id="summary-content">
-      <p><i>Select a specific activity (not "All Activities") and click Generate to create an AI-powered summary of student conversations.</i></p>
-      <p><small>This feature uses OpenAI's API to analyze student messages and provide insights.</small></p>
+      <p><i>{% trans 'Select a specific activity (not "All Activities") and click Generate to create an AI-powered summary of student conversations.' %}</i></p>
+      <p><small>{% trans "This feature uses OpenAI's API to analyze student messages and provide insights." %}</small></p>
     </div>
-    <button id="generate-summary" class="btn-generate">Generate Summary</button>
+    <button id="generate-summary" class="btn-generate">{% trans 'Generate Summary' %}</button>
     <div id="summary-spinner" class="spinner"></div>
   </div>
 </div>
+{% endif %}
 
 <!-- Student Stats Tab -->
 <div id="student-stats" class="tab-content {% if active_tab == 'student-stats' %}active{% endif %}">
   {% if view_as == 'teacher' %}
   <div class="filters">
     <select id="student-filter" onchange="loadStudentData()">
-      <option value="">Select a student</option>
+      <option value="">{% trans 'Select a student' %}</option>
       {% for student in all_students %}
         <option value="{{ student.id }}">{{ student.username }}</option>
       {% endfor %}
@@ -878,49 +962,54 @@
   <div id="student-metrics" {% if view_as == 'student' %}style="display: block;"{% else %}style="display: none;"{% endif %}>
     <div class="metric-cards">
       <div class="metric-card">
-        <h3>Activities</h3>
+        <h3>{% trans 'Activities' %}</h3>
         <p id="student-activities-count">{% if view_as == 'student' and student_personal_stats %}{{ student_personal_stats.activities_count }}{% else %}-{% endif %}</p>
       </div>
       <div class="metric-card">
-        <h3>Messages</h3>
+        <h3>{% trans 'Messages' %}</h3>
         <p id="student-messages-count">{% if view_as == 'student' and student_personal_stats %}{{ student_personal_stats.messages_count }}{% else %}-{% endif %}</p>
       </div>
       <div class="metric-card">
-        <h3>Total Characters</h3>
+        <h3>{% trans 'Total Characters' %}</h3>
         <p id="student-total-chars">{% if view_as == 'student' and student_personal_stats %}{{ student_personal_stats.total_chars|floatformat:0 }}{% else %}-{% endif %}</p>
       </div>
       <div class="metric-card">
-        <h3>Retries</h3>
+        <h3>{% trans 'Retries' %}</h3>
         <p id="student-retries-count">{% if view_as == 'student' and student_personal_stats %}{{ student_personal_stats.retries_count }}{% else %}-{% endif %}</p>
       </div>
     </div>
     
     <div class="two-columns">
       <div class="chart-container">
-        <h3>Message Length Distribution</h3>
+        <h3>{% trans 'Message Length Distribution' %}</h3>
         <canvas id="length-distribution-chart"></canvas>
       </div>
       <div class="chart-container">
-        <h3>Activity Engagement</h3>
+        <h3>{% trans 'Activity Engagement' %}</h3>
         <canvas id="activity-engagement-chart"></canvas>
       </div>
     </div>
     
     <div class="two-columns">
       <div class="student-chat" id="student-conversation">
-        <h3>Conversation History</h3>
+        <h3>{% trans 'Conversation History' %}</h3>
         <div id="chat-messages"></div>
       </div>
       
       <div class="summary-container">
-        <h3>Student Analysis</h3>
+        <h3>{% trans 'Student Analysis' %}</h3>
         <div id="student-summary-content">
-          <p><i>Select a student above to view their data, then click Generate Analysis for an AI-powered assessment of their conversation patterns.</i></p>
-          <p><small>This feature uses OpenAI's API to analyze the student's communication style, engagement level, and identify potential misconceptions.</small></p>
+          {% if view_as == 'student' %}
+          <p><i>{% trans 'Select a specific activity from the filter above, then click Generate Analysis for an AI-powered assessment of your conversation patterns.' %}</i></p>
+          <p><small>{% trans "This feature uses OpenAI's API to analyze your communication style, engagement level, and identify potential misconceptions." %}</small></p>
+          {% else %}
+          <p><i>{% trans 'Select a student above to view their data, then click Generate Analysis for an AI-powered assessment of their conversation patterns.' %}</i></p>
+          <p><small>{% trans 'This feature uses OpenAI's API to analyze the student's communication style, engagement level, and identify potential misconceptions.' %}</small></p>
+          {% endif %}
         </div>
         <div class="button-group" style="display: flex; gap: 10px; margin-top: 15px;">
-          <button id="generate-student-summary" class="btn-generate">Generate Analysis</button>
-          <button id="download-student-conversation" class="btn-generate" style="background-color: #28a745;">Download Conversation</button>
+          <button id="generate-student-summary" class="btn-generate">{% trans 'Generate Analysis' %}</button>
+          <button id="download-student-conversation" class="btn-generate" style="background-color: #28a745;">{% trans 'Download Conversation' %}</button>
         </div>
         <div id="student-summary-spinner" class="spinner"></div>
       </div>
@@ -929,14 +1018,15 @@
 </div>
 
 <!-- Students Engagement Tab (previously Student Clusters) -->
+{% if view_as == 'teacher' %}
 <div id="student-engagement" class="tab-content {% if active_tab == 'student-engagement' %}active{% endif %}">
   <div class="chart-container">
-    <h3>Word Cloud Analysis</h3>
-    <p>The most frequently used words by students in their conversations. Click on any word to see which students used it.</p>
+    <h3>{% trans 'Word Cloud Analysis' %}</h3>
+    <p>{% trans 'The most frequently used words by students in their conversations. Click on any word to see which students used it.' %}</p>
     
     <div class="filters">
       <div>
-        <label for="min-word-length">Minimum word length:</label>
+        <label for="min-word-length">{% trans 'Minimum word length:' %}</label>
         <select id="min-word-length" onchange="loadWordCloud()">
           <option value="2">2</option>
           <option value="3" selected>3</option>
@@ -945,7 +1035,7 @@
         </select>
       </div>
       <div>
-        <label for="max-words">Maximum words:</label>
+        <label for="max-words">{% trans 'Maximum words:' %}</label>
         <select id="max-words" onchange="loadWordCloud()">
           <option value="50">50</option>
           <option value="100" selected>100</option>
@@ -953,43 +1043,55 @@
           <option value="200">200</option>
         </select>
       </div>
-      <button class="btn-generate" onclick="loadWordCloud()">Update Word Cloud</button>
+      <button class="btn-generate" onclick="loadWordCloud()">{% trans 'Update Word Cloud' %}</button>
     </div>
     
     <div id="word-cloud-spinner" class="spinner"></div>
     <div id="word-cloud-container" class="word-cloud-container">
-      <div id="word-cloud" class="word-cloud"></div>
+      <div id="word-cloud" class="word-cloud">
+        <svg id="word-cloud-svg">
+          <g id="word-cloud-group"></g>
+        </svg>
+      </div>
+      <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoomIn()" title="Zoom In">+</button>
+        <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+        <button class="zoom-btn" onclick="resetZoom()" title="Reset View">⌂</button>
+      </div>
+      <div class="zoom-info">
+        <span id="zoom-level">100%</span> | {% trans 'Drag to pan' %}
+      </div>
     </div>
   </div>
   
   <div class="two-columns">
     <div class="chart-container">
-      <h3>Word Details</h3>
+      <h3>{% trans 'Word Details' %}</h3>
       <div id="word-details" class="word-details">
-        <p>Click on a word in the cloud to see which students used it.</p>
+        <p>{% trans 'Click on a word in the cloud to see which students used it.' %}</p>
       </div>
     </div>
     
     <div class="chart-container">
-      <h3>Student Distribution by Features</h3>
+      <h3>{% trans 'Student Distribution by Features' %}</h3>
       <div class="filters">
         <div>
           <label for="feature-x">X-Axis:</label>
           <select id="feature-x" onchange="updateScatterPlot()">
-            <option value="num_messages">Message Count</option>
-            <option value="avg_length">Average Length</option>
-            <option value="lexical_diversity">Lexical Diversity</option>
-            <option value="vocab_size">Vocabulary Size</option>
+            <option value="num_messages">{% trans 'Message Count' %}</option>
+            <option value="avg_length">{% trans 'Average Length' %}</option>
+            <option value="lexical_diversity">{% trans 'Lexical Diversity' %}</option>
+            <option value="vocab_size">{% trans 'Vocabulary Size' %}</option>
           </select>
         </div>
         
         <div>
-          <label for="feature-y">Y-Axis:</label>
+          <label for="feature-y">{% trans 'Y-Axis:' %}</label>
           <select id="feature-y" onchange="updateScatterPlot()">
-            <option value="avg_length">Average Length</option>
-            <option value="num_messages">Message Count</option>
-            <option value="lexical_diversity">Lexical Diversity</option>
-            <option value="vocab_size">Vocabulary Size</option>
+            <option value="avg_length">{% trans 'Average Length' %}</option>
+            <option value="num_messages">{% trans 'Message Count' %}</option>
+            <option value="lexical_diversity">{% trans 'Lexical Diversity' %}</option>
+            <option value="vocab_size">{% trans 'Vocabulary Size' %}</option>
           </select>
         </div>
       </div>
@@ -998,37 +1100,41 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 <!-- Raw Data Tab -->
+{% if view_as == 'teacher' %}
 <div id="raw-data" class="tab-content {% if active_tab == 'raw-data' %}active{% endif %}">
   <div class="chart-container">
-    <h3>{% if view_as == 'student' %}My Conversation History{% else %}Raw Conversation Data{% endif %}</h3>
+    <h3>{% if view_as == 'student' %}{% trans 'My Conversation History' %}{% else %}{% trans 'Raw Conversation Data' %}{% endif %}</h3>
     <div style="margin-bottom: 10px; text-align: right;">
-      <button id="export-csv" class="btn-generate">Export to CSV</button>
+      <button id="export-csv" class="btn-generate">{% trans 'Export to CSV' %}</button>
     </div>
     <div style="max-height: 400px; overflow: auto;">
       <table class="engagement-table">
   <thead>
     <tr>
-      <th>User</th>
-            <th>Activity</th>
-      <th>Role</th>
-      <th>Timestamp</th>
-      <th>Content</th>
+      <th>{% trans 'User' %}</th>
+      <th>{% trans 'Course' %}</th>
+      <th>{% trans 'Activity' %}</th>
+      <th>{% trans 'Role' %}</th>
+      <th>{% trans 'Timestamp' %}</th>
+      <th>{% trans 'Content' %}</th>
     </tr>
   </thead>
   <tbody>
           {% for msg in raw_messages %}
       <tr>
         <td>{{ msg.thread.user.username }}</td>
-            <td>{{ msg.thread.activity.title }}</td>
+        <td>{{ msg.thread.activity.course.title }}</td>
+        <td>{{ msg.thread.activity.title }}</td>
         <td>{{ msg.role }}</td>
         <td>{{ msg.timestamp }}</td>
         <td>{{ msg.content|truncatechars:100 }}</td>
       </tr>
     {% empty %}
           <tr>
-            <td colspan="5">No messages available</td>
+            <td colspan="6">{% trans 'No messages available' %}</td>
           </tr>
     {% endfor %}
   </tbody>
@@ -1037,19 +1143,19 @@
   </div>
   
   <div class="chart-container">
-    <h3>Conversation Statistics</h3>
+    <h3>{% trans 'Conversation Statistics' %}</h3>
     <div style="max-height: 400px; overflow: auto;">
       <table class="engagement-table">
         <thead>
           <tr>
-            <th>User</th>
-            <th>Total Turns</th>
-            <th>User Turns</th>
-            <th>Model Turns</th>
-            <th>Turn Ratio</th>
-            <th>Num Activities</th>
-            <th>Vocab Size</th>
-            <th>Avg Word Length</th>
+            <th>{% trans 'User' %}</th>
+            <th>{% trans 'Total Turns' %}</th>
+            <th>{% trans 'User Turns' %}</th>
+            <th>{% trans 'Model Turns' %}</th>
+            <th>{% trans 'Turn Ratio' %}</th>
+            <th>{% trans 'Num Activities' %}</th>
+            <th>{% trans 'Vocab Size' %}</th>
+            <th>{% trans 'Avg Word Length' %}</th>
           </tr>
         </thead>
         <tbody id="conversation-stats-body">
@@ -1059,9 +1165,11 @@
     </div>
   </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
+<script type="text/javascript" src="{% url 'javascript-catalog' %}"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   const activityNames = JSON.parse('{{ activity_names_json|escapejs }}');
@@ -1094,174 +1202,591 @@
   window.addEventListener('orientationchange', handleChartResize);
   
   document.addEventListener('DOMContentLoaded', () => {
+    console.log('Dashboard loaded with view_as:', '{{ view_as }}', 'active_tab:', '{{ active_tab }}');
+    
+    // Check if required elements exist
+    console.log('Checking for chart elements...');
+    console.log('activity-stats-chart exists:', !!document.getElementById('activity-stats-chart'));
+    console.log('segmentation-chart exists:', !!document.getElementById('segmentation-chart'));
+    console.log('length-distribution-chart exists:', !!document.getElementById('length-distribution-chart'));
+    console.log('activity-engagement-chart exists:', !!document.getElementById('activity-engagement-chart'));
+    console.log('student-metrics exists:', !!document.getElementById('student-metrics'));
+    console.log('chat-messages exists:', !!document.getElementById('chat-messages'));
+    
+    // Check if buttons exist for debugging
+    console.log('generate-student-summary exists:', !!document.getElementById('generate-student-summary'));
+    console.log('download-student-conversation exists:', !!document.getElementById('download-student-conversation'));
+    
     initializeCharts();
     
-    const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
+    const activeTab = document.querySelector('.tab.active');
+    const activeTabName = activeTab ? activeTab.getAttribute('data-tab') : 'student-stats';
+    const currentViewAs = '{{ view_as }}';
+    
+    console.log('Initial active tab:', activeTabName, 'view_as:', currentViewAs);
     
     const urlParams = new URLSearchParams(window.location.search);
     const selectedStudentId = urlParams.get('student_id');
     
-    if (activeTab === 'raw-data') {
+    // Initialize based on active tab
+    if (activeTabName === 'raw-data') {
       updateConversationStats();
-    } else if (activeTab === 'student-engagement') {
+    } else if (activeTabName === 'student-engagement') {
       setTimeout(() => {
         loadWordCloud();
+        initializeWordCloudControls();
       }, 100);
-    } else if (activeTab === 'student-stats' && selectedStudentId) {
-      document.getElementById('student-filter').value = selectedStudentId;
-      loadStudentData();
+    } else if (activeTabName === 'student-stats') {
+      if (selectedStudentId && currentViewAs === 'teacher') {
+        // Teacher view with specific student selected
+        const studentFilter = document.getElementById('student-filter');
+        if (studentFilter) {
+          studentFilter.value = selectedStudentId;
+          loadStudentData();
+        }
+      } else if (currentViewAs === 'student') {
+        // Student view - load current user's data automatically
+        console.log('Loading student data for current user...');
+        setTimeout(() => {
+          loadCurrentStudentData();
+        }, 100);
+      }
     }
     
+    // Add click listeners to tabs
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
         switchToTab(tab.dataset.tab);
       });
     });
+    
+    // Register event listeners for student analysis and download buttons
+    const generateStudentSummaryBtn = document.getElementById('generate-student-summary');
+    if (generateStudentSummaryBtn) {
+      generateStudentSummaryBtn.addEventListener('click', function() {
+        console.log('Generate student summary button clicked');
+        // Check if we're in student view
+        const currentViewAs = '{{ view_as }}';
+        let studentId, activityId;
+        
+        if (currentViewAs === 'student') {
+          // In student view, use current user ID and activity filter
+          studentId = '{{ user.id }}';
+          activityId = document.getElementById('activity-filter').value;
+          
+          if (!studentId) {
+            const summaryContent = document.getElementById('student-summary-content');
+            summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">User session not found. Please refresh the page.</p>');
+            return;
+          }
+          
+          if (activityId === 'all') {
+            const summaryContent = document.getElementById('student-summary-content');
+            summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">Please select a specific activity first. Analysis can only be generated for individual activities.</p>');
+            return;
+          }
+        } else {
+          // In teacher view, use student filter
+          studentId = document.getElementById('student-filter').value;
+          activityId = document.getElementById('activity-filter').value;
+          
+          if (!studentId) {
+            const summaryContent = document.getElementById('student-summary-content');
+            summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">Please select a student first.</p>');
+            return;
+          }
+        }
+        
+        const summaryContent = document.getElementById('student-summary-content');
+        const spinner = document.getElementById('student-summary-spinner');
+        
+        spinner.style.display = 'block';
+        summaryContent.innerHTML = gettext('<p>Analyzing student data with AI... This may take a moment.</p>');
+        
+        fetch(`/api/dashboard/generate_student_analysis/?student_id=${studentId}&activity_id=${activityId}`)
+          .then(response => response.json())
+          .then(data => {
+            spinner.style.display = 'none';
+            summaryContent.innerHTML = `<p>${data.analysis}</p>`;
+          })
+          .catch(error => {
+            spinner.style.display = 'none';
+            summaryContent.innerHTML = gettext(`<p class="error" style="color:red">Error generating analysis: ${error}</p>`);
+          });
+      });
+    }
+    
+    const downloadStudentConversationBtn = document.getElementById('download-student-conversation');
+    if (downloadStudentConversationBtn) {
+      downloadStudentConversationBtn.addEventListener('click', function() {
+        console.log('Download student conversation button clicked');
+        // Check if we're in student view
+        const currentViewAs = '{{ view_as }}';
+        let studentId, activityId, courseId;
+        
+        if (currentViewAs === 'student') {
+          // In student view, use current user ID and filters
+          studentId = '{{ user.id }}';
+          activityId = document.getElementById('activity-filter').value;
+          courseId = document.getElementById('course-filter').value;
+          
+          if (!studentId) {
+            const summaryContent = document.getElementById('student-summary-content');
+            summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">User session not found. Please refresh the page.</p>');
+            return;
+          }
+          
+          if (activityId === 'all') {
+            const summaryContent = document.getElementById('student-summary-content');
+            summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">Please select a specific activity first. Conversation download is only available for individual activities.</p>');
+            return;
+          }
+        } else {
+          // In teacher view, use student filter
+          studentId = document.getElementById('student-filter').value;
+          activityId = document.getElementById('activity-filter').value;
+          courseId = document.getElementById('course-filter').value;
+          
+          if (!studentId) {
+            const summaryContent = document.getElementById('student-summary-content');
+            summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">Please select a student first.</p>');
+            return;
+          }
+        }
+        
+        const spinner = document.getElementById('student-summary-spinner');
+        spinner.style.display = 'block';
+        
+        // Get student name for filename
+        let studentName;
+        if (currentViewAs === 'student') {
+          studentName = '{{ user.username|default:"student" }}';
+        } else {
+          const studentSelect = document.getElementById('student-filter');
+          studentName = studentSelect.options[studentSelect.selectedIndex].text;
+        }
+        const cleanStudentName = studentName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        
+        // Build API URL with activity filter
+        let apiUrl = `/api/dashboard/student/${studentId}/?course_id=${courseId}`;
+        if (activityId && activityId !== 'all') {
+          apiUrl += `&activity_id=${activityId}`;
+        }
+        
+        fetch(apiUrl)
+          .then(response => response.json())
+          .then(data => {
+            spinner.style.display = 'none';
+            
+            if (!data.messages || data.messages.length === 0) {
+              alert(gettext('No conversation data available for this activity.'));
+              return;
+            }
+            
+            // Create CSV content
+            const headers = ['Role', 'Content', 'Timestamp', 'Activity', 'Thread ID', 'Message Number'];
+            const rows = data.messages.map(msg => [
+              `"${msg.role}"`,
+              `"${msg.content.replace(/"/g, '""')}"`,
+              `"${msg.timestamp || new Date().toISOString()}"`,
+              `"${msg.activity_title || 'Unknown Activity'}"`,
+              `"${msg.thread_id || ''}"`,
+              `"${msg.message_number || ''}"`,
+            ]);
+            
+            const csvContent = [
+              headers.join(','),
+              ...rows.map(row => row.join(','))
+            ].join('\n');
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            
+            // Include activity info in filename if specific activity selected
+            let filename = `student_conversation_${cleanStudentName}`;
+            if (activityId && activityId !== 'all') {
+              const activitySelect = document.getElementById('activity-filter');
+              const activityName = activitySelect.options[activitySelect.selectedIndex].text.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+              filename += `_${activityName}`;
+            }
+            filename += `_${new Date().toISOString().split('T')[0]}.csv`;
+            
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          })
+          .catch(error => {
+            spinner.style.display = 'none';
+            console.error('Error fetching student data:', error);
+            alert(gettext('Failed to download conversation data. Please try again.'));
+          });
+      });
+    }
   });
   
   function switchToTab(tabId) {
+    console.log('switchToTab called with:', tabId, 'current view_as:', '{{ view_as }}');
+    
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     
     const tabElement = document.querySelector(`.tab[data-tab="${tabId}"]`);
     if (tabElement) {
       tabElement.classList.add('active');
-      document.getElementById(tabId).classList.add('active');
+      const contentElement = document.getElementById(tabId);
+      if (contentElement) {
+        contentElement.classList.add('active');
+      }
       
       if (tabId === 'raw-data') {
         updateConversationStats();
       } else if (tabId === 'student-engagement') {
         loadWordCloud();
+        initializeWordCloudControls();
+      } else if (tabId === 'student-stats' && '{{ view_as }}' === 'student') {
+        // Load student data when switching to student-stats tab in student view
+        setTimeout(() => {
+          loadCurrentStudentData();
+        }, 100);
       }
+    } else {
+      console.warn('Tab element not found for:', tabId);
     }
   }
   
-  function initializeCharts() {
-    const activityCtx = document.getElementById('activity-stats-chart').getContext('2d');
-    const activityChart = new Chart(activityCtx, {
-      type: 'bar',
-      data: {
-        labels: activityNames,
-        datasets: [{
-          label: 'Messages',
-          data: activityMessageCounts,
-          backgroundColor: 'rgba(54, 162, 235, 0.5)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-          borderWidth: 2
-        }, {
-          label: 'Avg Length',
-          data: activityAvgLengths,
-          backgroundColor: 'rgba(255, 99, 132, 0.5)',
-          borderColor: 'rgba(255, 99, 132, 1)',
-          borderWidth: 1,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            ticks: {
-              padding: -1
-            }
-          },
-          y: {
-            beginAtZero: true,
-            alignToPixels: true
-          }
-        }
-      }
-    });
-    
-    const segmentationCtx = document.getElementById('segmentation-chart').getContext('2d');
-    const segmentationChart = new Chart(segmentationCtx, {
-      type: 'scatter',
-      data: {
-        datasets: [{
-          label: 'Many Long Messages',
-          data: segmentManyLong,
-          backgroundColor: 'rgba(54, 162, 235, 0.5)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-        }, {
-          label: 'Few Long Messages',
-          data: segmentFewLong,
-          backgroundColor: 'rgba(255, 99, 132, 0.5)',
-          borderColor: 'rgba(255, 99, 132, 1)',
-        }, {
-          label: 'Many Short Messages',
-          data: segmentManyShort,
-          backgroundColor: 'rgba(75, 192, 192, 0.5)',
-          borderColor: 'rgba(75, 192, 192, 1)',
-        }, {
-          label: 'Few Short Messages',
-          data: segmentFewShort,
-          backgroundColor: 'rgba(255, 206, 86, 0.5)',
-          borderColor: 'rgba(255, 206, 86, 1)',
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            title: {
-              display: true,
-              text: 'Message Length (chars)'
-            }
-          },
-          y: {
-            title: {
-              display: true,
-              text: 'Message Count'
-            }
-          }
-        }
-      }
-    });
-    
-    window.activityChart = activityChart;
-    window.segmentationChart = segmentationChart;
-  }
-  
-  function updateDashboard() {
-    const viewAs = document.getElementById('view-as-filter').value;
+  function loadCurrentStudentData() {
+    console.log('Loading current student data...');
+    const currentUserId = '{{ user.id }}';
     const courseId = document.getElementById('course-filter').value;
     const activityId = document.getElementById('activity-filter').value;
     
-    const activeTab = document.querySelector('.tab.active').getAttribute('data-tab');
-    
-    const url = new URL(window.location);
-    
-    url.searchParams.set('view_as', viewAs);
-    
-    if (courseId === 'all') {
-      url.searchParams.delete('course_id');
-    } else {
-      url.searchParams.set('course_id', courseId);
+    if (!currentUserId) {
+      console.error('No current user ID found');
+      return;
     }
     
-    if (activityId === 'all') {
-      url.searchParams.delete('activity_id');
-    } else {
-      url.searchParams.set('activity_id', activityId);
+    // Show the student metrics section
+    const studentMetrics = document.getElementById('student-metrics');
+    if (studentMetrics) {
+      studentMetrics.style.display = 'block';
     }
     
-    url.searchParams.set('active_tab', activeTab);
+    // Build API URL with activity filter
+    let apiUrl = `/api/dashboard/student/${currentUserId}/?course_id=${courseId}&requesting_user_id=${currentUserId}`;
+    if (activityId && activityId !== 'all') {
+      apiUrl += `&activity_id=${activityId}`;
+    }
     
-    if (activeTab === 'student-stats') {
-      const studentFilter = document.getElementById('student-filter');
-      if (studentFilter && studentFilter.value) {
-        url.searchParams.set('student_id', studentFilter.value);
+    fetch(apiUrl)
+      .then(response => response.json())
+      .then(data => {
+        console.log('Student data received:', data);
+        
+        if (data.error) {
+          console.error('API returned error:', data.error);
+          // Show error message to user
+          document.getElementById('student-activities-count').textContent = 'Error';
+          document.getElementById('student-messages-count').textContent = 'Error';
+          document.getElementById('student-total-chars').textContent = 'Error';
+          document.getElementById('student-retries-count').textContent = 'Error';
+          return;
+        }
+        
+        // Update student metrics
+        document.getElementById('student-activities-count').textContent = data.activities_count || 0;
+        document.getElementById('student-messages-count').textContent = data.messages_count || 0;
+        document.getElementById('student-total-chars').textContent = data.total_chars || 0;
+        document.getElementById('student-retries-count').textContent = data.retries_count || 0;
+        
+        // Update charts if data exists
+        if (data.length_distribution && data.length_distribution.bins && data.length_distribution.values) {
+          updateLengthDistributionChart(data.length_distribution, data.student_length);
+        } else {
+          console.warn('No length distribution data available');
+        }
+        
+        if (data.activity_engagement && data.activity_engagement.labels && data.activity_engagement.values) {
+          updateActivityEngagementChart(data.activity_engagement);
+        } else {
+          console.warn('No activity engagement data available');
+        }
+        
+        // Update conversation history - only show if specific activity is selected
+        const chatMessages = document.getElementById('chat-messages');
+        if (chatMessages) {
+          if (activityId && activityId !== 'all') {
+            // Show conversation history for specific activity
+            if (data.messages && data.messages.length > 0) {
+              updateConversationHistory(data.messages);
+            } else {
+              chatMessages.innerHTML = gettext('<p>No conversation history available for this activity.</p>');
+            }
+          } else {
+            // Show message to select specific activity
+            chatMessages.innerHTML = gettext('<p><i>Select a specific activity from the filter above to view conversation history.</i></p>');
+          }
+        }
+        
+        // Update analysis section text for student view
+        const summaryContent = document.getElementById('student-summary-content');
+        if (summaryContent) {
+          if (activityId && activityId !== 'all') {
+            summaryContent.innerHTML = gettext('<p><i>Click Generate Analysis for an AI-powered assessment of your conversation patterns in this activity.</i></p><p><small>This feature uses OpenAI\'s API to analyze your communication style, engagement level, and identify potential misconceptions.</small></p>');
+          } else {
+            summaryContent.innerHTML = gettext('<p><i>Select a specific activity from the filter above, then click Generate Analysis for an AI-powered assessment of your conversation patterns.</i></p><p><small>This feature uses OpenAI\'s API to analyze your communication style, engagement level, and identify potential misconceptions.</small></p>');
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error loading student data:', error);
+        // Show error state
+        document.getElementById('student-activities-count').textContent = 'Error';
+        document.getElementById('student-messages-count').textContent = 'Error';
+        document.getElementById('student-total-chars').textContent = 'Error';
+        document.getElementById('student-retries-count').textContent = 'Error';
+      });
+  }
+  
+  function initializeCharts() {
+    // Only initialize charts that exist in the current view
+    const activityChartElement = document.getElementById('activity-stats-chart');
+    const segmentationChartElement = document.getElementById('segmentation-chart');
+    
+    if (activityChartElement) {
+      try {
+        const activityCtx = activityChartElement.getContext('2d');
+        const activityChart = new Chart(activityCtx, {
+          type: 'bar',
+          data: {
+            labels: activityNames,
+            datasets: [{
+              label: 'Messages',
+              data: activityMessageCounts,
+              backgroundColor: 'rgba(54, 162, 235, 0.5)',
+              borderColor: 'rgba(54, 162, 235, 1)',
+              borderWidth: 2
+            }, {
+              label: 'Avg Length',
+              data: activityAvgLengths,
+              backgroundColor: 'rgba(255, 99, 132, 0.5)',
+              borderColor: 'rgba(255, 99, 132, 1)',
+              borderWidth: 1,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                ticks: {
+                  padding: -1
+                }
+              },
+              y: {
+                beginAtZero: true,
+                alignToPixels: true
+              }
+            }
+          }
+        });
+        window.activityChart = activityChart;
+      } catch (error) {
+        console.error('Error initializing activity chart:', error);
       }
     }
     
-    // Clear word cloud data when switching
-    if (typeof wordCloudData !== 'undefined') {
-      wordCloudData = null;
+    if (segmentationChartElement) {
+      try {
+        const segmentationCtx = segmentationChartElement.getContext('2d');
+        const segmentationChart = new Chart(segmentationCtx, {
+          type: 'scatter',
+          data: {
+            datasets: [{
+              label: 'Many Long Messages',
+              data: segmentManyLong,
+              backgroundColor: 'rgba(54, 162, 235, 0.5)',
+              borderColor: 'rgba(54, 162, 235, 1)',
+            }, {
+              label: 'Few Long Messages',
+              data: segmentFewLong,
+              backgroundColor: 'rgba(255, 99, 132, 0.5)',
+              borderColor: 'rgba(255, 99, 132, 1)',
+            }, {
+              label: 'Many Short Messages',
+              data: segmentManyShort,
+              backgroundColor: 'rgba(75, 192, 192, 0.5)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+            }, {
+              label: 'Few Short Messages',
+              data: segmentFewShort,
+              backgroundColor: 'rgba(255, 206, 86, 0.5)',
+              borderColor: 'rgba(255, 206, 86, 1)',
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                title: {
+                  display: true,
+                  text: 'Message Length (chars)'
+                }
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: 'Message Count'
+                }
+              }
+            }
+          }
+        });
+        window.segmentationChart = segmentationChart;
+      } catch (error) {
+        console.error('Error initializing segmentation chart:', error);
+      }
+    }
+  }
+  
+  function updateDashboard() {
+    const viewAsFilter = document.getElementById('view-as-filter');
+    const courseFilter = document.getElementById('course-filter');
+    const activityFilter = document.getElementById('activity-filter');
+    
+    const viewAs = viewAsFilter ? viewAsFilter.value : '{{ view_as }}';
+    const currentViewAs = '{{ view_as }}';
+    const courseId = courseFilter ? courseFilter.value : 'all';
+    const activityId = activityFilter ? activityFilter.value : 'all';
+    
+    // Get current URL parameters for comparison
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentCourseId = urlParams.get('course_id') || 'all';
+    const currentActivityId = urlParams.get('activity_id') || 'all';
+    
+    console.log('=== updateDashboard START ===');
+    console.log('Current:', { currentViewAs, currentCourseId, currentActivityId });
+    console.log('New:', { viewAs, courseId, activityId });
+    
+    // Validate permissions
+    const hasTeacherRole = '{{ has_teacher_role|yesno:"true,false" }}' === 'true';
+    const hasStudentRole = '{{ has_student_role|yesno:"true,false" }}' === 'true';
+    
+    if (viewAs === 'teacher' && !hasTeacherRole) {
+      alert(gettext('You need to own a course or be enrolled as a teacher to access teacher view.'));
+      if (viewAsFilter) viewAsFilter.value = currentViewAs;
+      return;
+    } else if (viewAs === 'student' && !hasStudentRole) {
+      alert(gettext('You need to be enrolled as a student in a course to access student view.'));
+      if (viewAsFilter) viewAsFilter.value = currentViewAs;
+      return;
     }
     
-    // Always redirect to ensure proper data loading
-    window.location.href = url.toString();
+    // Determine if we need to reload the page
+    const viewChanged = (viewAs !== currentViewAs);
+    const courseChanged = (courseId !== currentCourseId);
+    const activityChanged = (activityId !== currentActivityId);
+    
+    // Reload page for any significant change
+    if (viewChanged || courseChanged || activityChanged) {
+      console.log('Significant change detected - reloading page');
+      
+      const newUrlParams = new URLSearchParams();
+      newUrlParams.set('view_as', viewAs);
+      
+      if (courseId && courseId !== 'all') {
+        newUrlParams.set('course_id', courseId);
+      }
+      if (activityId && activityId !== 'all') {
+        newUrlParams.set('activity_id', activityId);
+      }
+      
+      // Set appropriate default tab
+      const activeTab = document.querySelector('.tab.active');
+      const activeTabName = activeTab ? activeTab.getAttribute('data-tab') : 
+                           (viewAs === 'student' ? 'student-stats' : 'conversation-stats');
+      newUrlParams.set('active_tab', activeTabName);
+      
+      const newUrl = `${window.location.pathname}?${newUrlParams.toString()}`;
+      console.log('Redirecting to:', newUrl);
+      window.location = newUrl;
+      return;
+    }
+    
+    console.log('No changes detected - staying on current page');
+  }
+  
+  function updateActivityFilter(selectedCourseId) {
+    const activityFilter = document.getElementById('activity-filter');
+    if (!activityFilter) return;
+    
+    console.log('Updating activity filter for course:', selectedCourseId);
+    
+    // Store current selection
+    const currentActivityId = activityFilter.value;
+    
+    // Clear current options except "All Activities"
+    activityFilter.innerHTML = gettext('<option value="all">All Activities</option>');
+    
+    // Get activities from the page context
+    // Read current activity options to rebuild them dynamically
+    const allActivityOptions = [];
+    const activitySelect = document.getElementById('activity-filter');
+    
+    // Store all original options (except "All Activities")
+    if (activitySelect) {
+      Array.from(activitySelect.options).forEach(option => {
+        if (option.value !== 'all') {
+          // Extract course info from option text if present
+          const optionText = option.textContent;
+          const courseMatch = optionText.match(/\(([^)]+)\)$/);
+          const courseName = courseMatch ? courseMatch[1] : null;
+          
+          allActivityOptions.push({
+            id: option.value,
+            title: optionText.replace(/\s*\([^)]+\)$/, ''), // Remove course name from title
+            text: optionText,
+            courseName: courseName
+          });
+        }
+      });
+    }
+    
+    const selectedCourseUUID = selectedCourseId === 'all' ? null : selectedCourseId;
+    
+    console.log('Available activities:', allActivityOptions.length);
+    console.log('Selected course UUID:', selectedCourseUUID);
+    
+    // Filter and add activities
+    allActivityOptions.forEach(activity => {
+      // For now, show all activities if "all courses" is selected
+      // If a specific course is selected, we'll need the page to reload to get the correct activities
+      if (selectedCourseId === 'all') {
+        const option = document.createElement('option');
+        option.value = activity.id;
+        option.textContent = activity.text; // Use the original text with course name
+        activityFilter.appendChild(option);
+      } else {
+        // For specific course selection, we need a page reload to get the correct filtered activities
+        // This will be handled by the page reload logic above
+      }
+    });
+    
+    // Try to restore previous selection if it's still valid
+    const activityOptions = Array.from(activityFilter.options);
+    const validOption = activityOptions.find(option => option.value === currentActivityId);
+    if (validOption) {
+      activityFilter.value = currentActivityId;
+      console.log('Restored activity selection:', currentActivityId);
+    } else {
+      activityFilter.value = 'all';
+      console.log('Reset activity selection to "all"');
+    }
   }
   
   function loadStudentData() {
@@ -1327,106 +1852,126 @@
   }
   
   function updateLengthDistributionChart(distribution, studentLength) {
-    const ctx = document.getElementById('length-distribution-chart').getContext('2d');
+    const chartElement = document.getElementById('length-distribution-chart');
+    if (!chartElement) {
+      console.warn('Length distribution chart element not found');
+      return;
+    }
     
-    if (window.lengthChart) window.lengthChart.destroy();
-    
-    window.lengthChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: distribution.bins,
-        datasets: [{
-          label: 'Distribution',
-          data: distribution.values,
-          fill: true,
-          backgroundColor: 'rgba(54, 162, 235, 0.2)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-          tension: 0.4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            title: {
-              display: true,
-              text: 'Message Length (chars)'
+    try {
+      const ctx = chartElement.getContext('2d');
+      
+      if (window.lengthChart) window.lengthChart.destroy();
+      
+      window.lengthChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: distribution.bins,
+          datasets: [{
+            label: 'Distribution',
+            data: distribution.values,
+            fill: true,
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Message Length (chars)'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Frequency'
+              },
+              beginAtZero: true
             }
           },
-          y: {
-            title: {
-              display: true,
-              text: 'Frequency'
-            },
-            beginAtZero: true
-          }
-        },
-        elements: {
-          point: {
-            radius: 0
-          }
-        },
-        plugins: {
-          annotation: {
-            annotations: {
-              line1: {
-                type: 'line',
-                yMin: 0,
-                yMax: Math.max(...distribution.values),
-                xMin: studentLength,
-                xMax: studentLength,
-                borderColor: 'red',
-                borderWidth: 2,
-                borderDash: [5, 5]
+          elements: {
+            point: {
+              radius: 0
+            }
+          },
+          plugins: {
+            annotation: {
+              annotations: {
+                line1: {
+                  type: 'line',
+                  yMin: 0,
+                  yMax: Math.max(...distribution.values),
+                  xMin: studentLength,
+                  xMax: studentLength,
+                  borderColor: 'red',
+                  borderWidth: 2,
+                  borderDash: [5, 5]
+                }
               }
             }
           }
         }
-      }
-    });
+      });
+    } catch (error) {
+      console.error('Error updating length distribution chart:', error);
+    }
   }
   
   function updateActivityEngagementChart(engagement) {
-    const ctx = document.getElementById('activity-engagement-chart').getContext('2d');
+    const chartElement = document.getElementById('activity-engagement-chart');
+    if (!chartElement) {
+      console.warn('Activity engagement chart element not found');
+      return;
+    }
     
-    if (window.engagementChart) window.engagementChart.destroy();
-    
-    window.engagementChart = new Chart(ctx, {
-      type: 'pie',
-      data: {
-        labels: engagement.labels,
-        datasets: [{
-          data: engagement.values,
-          backgroundColor: [
-            'rgba(255, 99, 132, 0.5)',
-            'rgba(54, 162, 235, 0.5)',
-            'rgba(255, 206, 86, 0.5)',
-            'rgba(75, 192, 192, 0.5)',
-            'rgba(153, 102, 255, 0.5)',
-            'rgba(255, 159, 64, 0.5)'
-          ],
-          borderColor: [
-            'rgba(255, 99, 132, 1)',
-            'rgba(54, 162, 235, 1)',
-            'rgba(255, 206, 86, 1)',
-            'rgba(75, 192, 192, 1)',
-            'rgba(153, 102, 255, 1)',
-            'rgba(255, 159, 64, 1)'
-          ],
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'right',
+    try {
+      const ctx = chartElement.getContext('2d');
+      
+      if (window.engagementChart) window.engagementChart.destroy();
+      
+      window.engagementChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: engagement.labels,
+          datasets: [{
+            data: engagement.values,
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.5)',
+              'rgba(54, 162, 235, 0.5)',
+              'rgba(255, 206, 86, 0.5)',
+              'rgba(75, 192, 192, 0.5)',
+              'rgba(153, 102, 255, 0.5)',
+              'rgba(255, 159, 64, 0.5)'
+            ],
+            borderColor: [
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(153, 102, 255, 1)',
+              'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+            }
           }
         }
-      }
-    });
+      });
+    } catch (error) {
+      console.error('Error updating activity engagement chart:', error);
+    }
   }
   
   document.getElementById('generate-summary').addEventListener('click', function() {
@@ -1435,7 +1980,7 @@
     
     if (activityId === 'all') {
       const summaryContent = document.getElementById('summary-content');
-      summaryContent.innerHTML = '<p class="error" style="color:red;font-weight:bold">Please select a specific activity first. Summaries can only be generated for individual activities.</p>';
+      summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">Please select a specific activity first. Summaries can only be generated for individual activities.</p>');
       return;
     }
     
@@ -1443,7 +1988,7 @@
     const spinner = document.getElementById('summary-spinner');
     
     spinner.style.display = 'block';
-    summaryContent.innerHTML = '<p>Generating summary with AI... This may take a moment.</p>';
+    summaryContent.innerHTML = gettext('<p>Generating summary with AI... This may take a moment.</p>');
     
     fetch(`/api/dashboard/generate_summary/?activity_id=${activityId}`)
       .then(response => response.json())
@@ -1453,96 +1998,7 @@
       })
       .catch(error => {
         spinner.style.display = 'none';
-        summaryContent.innerHTML = `<p class="error" style="color:red">Error generating summary: ${error}</p>`;
-      });
-  });
-  
-  document.getElementById('generate-student-summary').addEventListener('click', function() {
-    const studentId = document.getElementById('student-filter').value;
-    const activityId = document.getElementById('activity-filter').value;
-    
-    if (!studentId) {
-      const summaryContent = document.getElementById('student-summary-content');
-      summaryContent.innerHTML = '<p class="error" style="color:red;font-weight:bold">Please select a student first.</p>';
-      return;
-    }
-    
-    const summaryContent = document.getElementById('student-summary-content');
-    const spinner = document.getElementById('student-summary-spinner');
-    
-    spinner.style.display = 'block';
-    summaryContent.innerHTML = '<p>Analyzing student data with AI... This may take a moment.</p>';
-    
-    fetch(`/api/dashboard/generate_student_analysis/?student_id=${studentId}&activity_id=${activityId}`)
-      .then(response => response.json())
-      .then(data => {
-        spinner.style.display = 'none';
-        summaryContent.innerHTML = `<p>${data.analysis}</p>`;
-      })
-      .catch(error => {
-        spinner.style.display = 'none';
-        summaryContent.innerHTML = `<p class="error" style="color:red">Error generating analysis: ${error}</p>`;
-      });
-  });
-  
-  document.getElementById('download-student-conversation').addEventListener('click', function() {
-    const studentId = document.getElementById('student-filter').value;
-    const activityId = document.getElementById('activity-filter').value;
-    const courseId = document.getElementById('course-filter').value;
-    
-    if (!studentId) {
-      const summaryContent = document.getElementById('student-summary-content');
-      summaryContent.innerHTML = '<p class="error" style="color:red;font-weight:bold">Please select a student first.</p>';
-      return;
-    }
-    
-    const spinner = document.getElementById('student-summary-spinner');
-    spinner.style.display = 'block';
-    
-    const studentSelect = document.getElementById('student-filter');
-    const studentName = studentSelect.options[studentSelect.selectedIndex].text.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    
-    fetch(`/api/dashboard/student/${studentId}/?course_id=${courseId}`)
-      .then(response => response.json())
-      .then(data => {
-        spinner.style.display = 'none';
-        
-        if (!data.messages || data.messages.length === 0) {
-          alert('No conversation data available for this student.');
-          return;
-        }
-        
-        // Create CSV content
-        const headers = ['Role', 'Content', 'Timestamp', 'Activity', 'Thread ID', 'Message Number'];
-        const rows = data.messages.map(msg => [
-          `"${msg.role}"`,
-          `"${msg.content.replace(/"/g, '""')}"`,
-          `"${msg.timestamp || new Date().toISOString()}"`,
-          `"${msg.activity_title || 'Unknown Activity'}"`,
-          `"${msg.thread_id || ''}"`,
-          `"${msg.message_number || ''}"`,
-        ]);
-        
-        const csvContent = [
-          headers.join(','),
-          ...rows.map(row => row.join(','))
-        ].join('\n');
-        
-        // Create and download file
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', `student_conversation_${studentName}_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      })
-      .catch(error => {
-        spinner.style.display = 'none';
-        console.error('Error fetching student data:', error);
-        alert('Failed to download conversation data. Please try again.');
+        summaryContent.innerHTML = gettext(`<p class="error" style="color:red">Error generating summary: ${error}</p>`);
       });
   });
   
@@ -1590,7 +2046,7 @@
     const clusterVisContainer = document.getElementById('cluster-visualization');
     
     spinner.style.display = 'block';
-    clusterVisContainer.innerHTML = '<p>Loading clusters...</p>';
+    clusterVisContainer.innerHTML = gettext('<p>Loading clusters...</p>');
     
     fetch(`/api/dashboard/student_clusters/?course_id=${courseId}&n_clusters=${clusterCount}`)
       .then(response => response.json())
@@ -1601,13 +2057,13 @@
         console.log("Cluster data received:", data);
         
         if (data.error) {
-          clusterVisContainer.innerHTML = `<p class="error">Error generating clusters: ${data.error}</p>`;
+          clusterVisContainer.innerHTML = gettext(`<p class="error">Error generating clusters: ${data.error}</p>`);
           console.error("Error in cluster data:", data.error);
           return;
         }
         
         if (!data.clusters || data.clusters.length === 0) {
-          clusterVisContainer.innerHTML = '<p>Could not generate clusters. Please ensure there are enough messages from at least 2 students.</p>';
+          clusterVisContainer.innerHTML = gettext('<p>Could not generate clusters. Please ensure there are enough messages from at least 2 students.</p>');
           console.log("No clusters data available");
           return;
         }
@@ -1618,7 +2074,7 @@
       })
       .catch(error => {
         spinner.style.display = 'none';
-        clusterVisContainer.innerHTML = `<p class="error">Error loading clusters: ${error}</p>`;
+        clusterVisContainer.innerHTML = gettext(`<p class="error">Error loading clusters: ${error}</p>`);
         console.error('Error fetching clusters:', error);
       });
   }
@@ -1628,14 +2084,14 @@
     container.innerHTML = '';
     
     if (!clusters || clusters.length === 0) {
-      container.innerHTML = '<p>Not enough data to create clusters. Add more students or messages.</p>';
+      container.innerHTML = gettext('<p>Not enough data to create clusters. Add more students or messages.</p>');
       return;
     }
     
     const totalStudents = clusters.reduce((sum, c) => sum + c.size, 0);
     
     if (totalStudents === 0) {
-      container.innerHTML = '<p>No students with sufficient data for clustering.</p>';
+      container.innerHTML = gettext('<p>No students with sufficient data for clustering.</p>');
       return;
     }
     
@@ -1695,7 +2151,7 @@
     if (!clusterData || !clusterData.clusters) {
       console.error("No cluster data available");
       document.getElementById('cluster-details').innerHTML = 
-        '<p>No group data available. Try updating the groups.</p>';
+        gettext('<p>No group data available. Try updating the groups.</p>');
       return;
     }
     
@@ -1703,7 +2159,7 @@
     if (!cluster) {
       console.error(`Cluster with ID ${clusterId} not found`);
       document.getElementById('cluster-details').innerHTML = 
-        '<p>Selected group not found. Try updating the groups.</p>';
+        gettext('<p>Selected group not found. Try updating the groups.</p>');
       return;
     }
     
@@ -1757,7 +2213,7 @@
     const clusterDescription = getClusterDescription(cluster.name);
     
     const container = document.getElementById('cluster-details');
-    container.innerHTML = `
+    container.innerHTML = gettext(`
       <h4>${cluster.name}</h4>
       <p>${clusterDescription}</p>
       <p><strong>Number of students:</strong> ${cluster.size}</p>
@@ -1766,7 +2222,7 @@
         ${cluster.users.map(user => `<li>${user.username}</li>`).join('')}
       </ul>
       <p><em>Tip: Hover over the group bubble to see a brief description of what this type means.</em></p>
-    `;
+    `);
   }
   
   function updateScatterPlot() {
@@ -1919,7 +2375,7 @@
     const rows = Array.from(table.querySelectorAll('tbody tr'));
     
     if (rows.length === 0 || rows[0].querySelector('td[colspan]')) {
-      alert('No data available to export');
+      alert(gettext('No data available to export'));
       spinner.remove();
       return;
     }
@@ -1932,11 +2388,12 @@
           return;
         }
         
-        const headers = ['Role', 'Content', 'Timestamp', 'Activity', 'Thread ID', 'Message Number', 'Username'];
+        const headers = ['Role', 'Content', 'Timestamp', 'Course', 'Activity', 'Thread ID', 'Message Number', 'Username'];
         const rows = data.messages.map(msg => [
           `"${msg.role || ''}"`,
           `"${(msg.content || '').replace(/"/g, '""')}"`,
           `"${msg.timestamp || new Date().toISOString()}"`,
+          `"${msg.course_title || 'Unknown Course'}"`,
           `"${msg.activity_title || 'Unknown Activity'}"`,
           `"${msg.thread_id || ''}"`,
           `"${msg.message_number || ''}"`,
@@ -1958,18 +2415,19 @@
       
     function exportTableData() {
       try {
-        const headers = ['Role', 'Content', 'Timestamp', 'Activity', 'Thread ID', 'Message Number', 'Username'];
+        const headers = ['Role', 'Content', 'Timestamp', 'Course', 'Activity', 'Thread ID', 'Message Number', 'Username'];
         
         const processedRows = rows.map(row => {
           const cells = Array.from(row.querySelectorAll('td'));
           
           return [
-            `"${cells[2].textContent.replace(/"/g, '""')}"`,
-            `"${cells[4].textContent.replace(/"/g, '""')}"`,
-            `"${cells[3].textContent.replace(/"/g, '""')}"`,
-            `"${cells[1].textContent.replace(/"/g, '""')}"`,
+            `"${cells[3].textContent.replace(/"/g, '""')}"`, 
+            `"${cells[5].textContent.replace(/"/g, '""')}"`,
+            `"${cells[4].textContent.replace(/"/g, '""')}"`, 
+            `"${cells[1].textContent.replace(/"/g, '""')}"`, 
+            `"${cells[2].textContent.replace(/"/g, '""')}"`, 
             `""`,
-            `""`,
+            `""`, 
             `"${cells[0].textContent.replace(/"/g, '""')}"`,
           ];
         });
@@ -1983,7 +2441,7 @@
         spinner.remove();
       } catch (error) {
         console.error('Error exporting data:', error);
-        alert('An error occurred while exporting data. Please try again.');
+        alert(gettext('An error occurred while exporting data. Please try again.'));
         spinner.remove();
       }
     }
@@ -2011,12 +2469,130 @@
   }
   
   let wordCloudData = null;
+  let currentZoom = 1;
+  let currentTranslate = { x: 0, y: 0 };
+  let isDragging = false;
+  let dragStart = { x: 0, y: 0 };
+  let lastTranslate = { x: 0, y: 0 };
   
   const vibrantColors = [
     '#FF5F7E', '#36B5FF', '#5D5FEF', '#00CFB4', '#FF9F45',
     '#6979F8', '#FF7D51', '#00C2A8', '#FF65A3', '#AF52DE',
     '#47E6B1', '#FFC55C', '#7474BF', '#19D3F3', '#FD5B8F'
   ];
+  
+  function initializeWordCloudControls() {
+    const svg = document.getElementById('word-cloud-svg');
+    const container = document.getElementById('word-cloud');
+    
+    if (!svg || !container) return;
+    
+    container.addEventListener('mousedown', function(e) {
+      isDragging = true;
+      dragStart.x = e.clientX;
+      dragStart.y = e.clientY;
+      lastTranslate.x = currentTranslate.x;
+      lastTranslate.y = currentTranslate.y;
+      container.style.cursor = 'grabbing';
+    });
+    
+    document.addEventListener('mousemove', function(e) {
+      if (!isDragging) return;
+      
+      const deltaX = e.clientX - dragStart.x;
+      const deltaY = e.clientY - dragStart.y;
+      
+      currentTranslate.x = lastTranslate.x + deltaX;
+      currentTranslate.y = lastTranslate.y + deltaY;
+      
+      updateTransform();
+    });
+    
+    document.addEventListener('mouseup', function() {
+      isDragging = false;
+      const container = document.getElementById('word-cloud');
+      if (container) container.style.cursor = 'grab';
+    });
+    
+    container.addEventListener('touchstart', function(e) {
+      if (e.touches.length === 1) {
+        isDragging = true;
+        dragStart.x = e.touches[0].clientX;
+        dragStart.y = e.touches[0].clientY;
+        lastTranslate.x = currentTranslate.x;
+        lastTranslate.y = currentTranslate.y;
+      }
+    });
+    
+    container.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      if (!isDragging || e.touches.length !== 1) return;
+      
+      const deltaX = e.touches[0].clientX - dragStart.x;
+      const deltaY = e.touches[0].clientY - dragStart.y;
+      
+      currentTranslate.x = lastTranslate.x + deltaX;
+      currentTranslate.y = lastTranslate.y + deltaY;
+      
+      updateTransform();
+    });
+    
+    container.addEventListener('touchend', function() {
+      isDragging = false;
+    });
+  }
+  
+  function updateTransform() {
+    const group = document.getElementById('word-cloud-group');
+    if (group) {
+      group.setAttribute('transform', `translate(${currentTranslate.x}, ${currentTranslate.y}) scale(${currentZoom})`);
+      updateZoomInfo();
+    }
+  }
+  
+  function updateZoomInfo() {
+    const zoomLevel = document.getElementById('zoom-level');
+    if (zoomLevel) {
+      zoomLevel.textContent = `${Math.round(currentZoom * 100)}%`;
+    }
+  }
+  
+  function zoomIn() {
+    const container = document.getElementById('word-cloud');
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    zoomToPoint(centerX, centerY, 1.5);
+  }
+  
+  function zoomOut() {
+    const container = document.getElementById('word-cloud');
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    zoomToPoint(centerX, centerY, 0.67);
+  }
+  
+  function resetZoom() {
+    currentZoom = 1;
+    currentTranslate.x = 0;
+    currentTranslate.y = 0;
+    updateTransform();
+  }
+  
+  function zoomToPoint(pointX, pointY, zoomFactor) {
+    const newZoom = Math.max(0.1, Math.min(10, currentZoom * zoomFactor));
+    
+    const worldX = (pointX - currentTranslate.x) / currentZoom;
+    const worldY = (pointY - currentTranslate.y) / currentZoom;
+    
+    currentZoom = newZoom;
+    
+    currentTranslate.x = pointX - worldX * currentZoom;
+    currentTranslate.y = pointY - worldY * currentZoom;
+    
+    updateTransform();
+  }
   
   function loadWordCloud() {
     let courseId = document.getElementById('course-filter').value;
@@ -2030,10 +2606,28 @@
     const spinner = document.getElementById('word-cloud-spinner');
     const wordCloudContainer = document.getElementById('word-cloud');
     
-    spinner.style.display = 'block';
-    wordCloudContainer.innerHTML = '';
+    if (!wordCloudContainer) {
+      console.error('Word cloud container not found');
+      return;
+    }
     
-    document.getElementById('word-details').innerHTML = '<p>Loading word data...</p>';
+    const svg = document.getElementById('word-cloud-svg');
+    const group = document.getElementById('word-cloud-group');
+    if (!svg || !group) {
+      console.error('Word cloud SVG structure not found, reinitializing...');
+      wordCloudContainer.innerHTML = gettext(`
+        <svg id="word-cloud-svg">
+          <g id="word-cloud-group"></g>
+        </svg>
+      `);
+    }
+    
+    spinner.style.display = 'block';
+    
+    const wordDetails = document.getElementById('word-details');
+    if (wordDetails) {
+      wordDetails.innerHTML = gettext('<p>Loading word data...</p>');
+    }
     
     fetch(`/api/dashboard/word_frequencies/?course_id=${courseId}&min_word_length=${minWordLength}&max_words=${maxWords}`)
       .then(response => response.json())
@@ -2044,18 +2638,46 @@
         console.log("Word cloud data received:", data);
         
         if (data.error) {
-          wordCloudContainer.innerHTML = `<p class="error">Error generating word cloud: ${data.error}</p>`;
+          const group = document.getElementById('word-cloud-group');
+          if (group) {
+            group.innerHTML = '';
+            const svg = document.getElementById('word-cloud-svg');
+            if (svg) {
+              svg.innerHTML = gettext(`<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">Error: ${data.error}</text>`);
+            }
+          }
           console.error("Error in word cloud data:", data.error);
           return;
         }
         
         if (!data.words || data.words.length === 0) {
-          wordCloudContainer.innerHTML = '<p>No word data available. Please ensure there are enough student messages.</p>';
+          const group = document.getElementById('word-cloud-group');
+          if (group) {
+            group.innerHTML = '';
+            const svg = document.getElementById('word-cloud-svg');
+            if (svg) {
+              svg.innerHTML = gettext('<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">No word data available. Please ensure there are enough student messages.</text>');
+            }
+          }
           console.log("No word data available");
           return;
         }
         
-        visualizeWordCloud(data.words);
+        try {
+          visualizeWordCloud(data.words);
+        } catch (error) {
+          console.error('Error visualizing word cloud:', error);
+          const group = document.getElementById('word-cloud-group');
+          const svg = document.getElementById('word-cloud-svg');
+          if (svg) {
+            if (group) group.innerHTML = '';
+            const errorMessage = error.message ? String(error.message).replace(/</g, "&lt;").replace(/>/g, "&gt;") : 'Unknown error';
+            svg.innerHTML = gettext(`<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#cc0000" font-size="12px" style="font-family: sans-serif;">
+                              <tspan x="50%" dy="-0.6em">Error visualizing word cloud:</tspan>
+                              <tspan x="50%" dy="1.2em">${errorMessage}</tspan>
+                           </text>`);
+          }
+        }
         
         if (clusterData) {
           updateScatterPlot();
@@ -2065,7 +2687,14 @@
       })
       .catch(error => {
         spinner.style.display = 'none';
-        wordCloudContainer.innerHTML = `<p class="error">Error loading word cloud: ${error}</p>`;
+        const group = document.getElementById('word-cloud-group');
+        if (group) {
+          group.innerHTML = '';
+          const svg = document.getElementById('word-cloud-svg');
+          if (svg) {
+            svg.innerHTML = gettext(`<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">Error loading word cloud: ${error}</text>`);
+          }
+        }
         console.error('Error fetching word frequencies:', error);
       });
   }
@@ -2089,11 +2718,19 @@
   }
   
   function visualizeWordCloud(words) {
-    const container = document.getElementById('word-cloud');
+    const container = document.getElementById('word-cloud-group');
+    if (!container) {
+      console.error('Word cloud group element not found');
+      return;
+    }
+    
     container.innerHTML = '';
     
     if (!words || words.length === 0) {
-      container.innerHTML = '<p>No words available for visualization.</p>';
+      const svg = document.getElementById('word-cloud-svg');
+      if (svg) {
+        svg.innerHTML = gettext('<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="#999">No words available for visualization.</text>');
+      }
       return;
     }
     
@@ -2101,159 +2738,170 @@
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
     
-    const normalizedRange = maxValue - minValue;
-    const effectiveMinValue = normalizedRange > 5 ? minValue : Math.max(1, minValue - 2);
-    const effectiveMaxValue = normalizedRange > 5 ? maxValue : minValue + 5;
+    const containerElement = document.getElementById('word-cloud');
+    if (!containerElement) {
+      console.error('Word cloud container element not found');
+      return;
+    }
     
-    const containerWidth = container.clientWidth || 800;
-    const containerHeight = container.clientHeight || 400;
+    const containerWidth = containerElement.clientWidth || 800;
+    const containerHeight = containerElement.clientHeight || 400;
+    
+    const svg = document.getElementById('word-cloud-svg');
+    if (!svg) {
+      console.error('Word cloud SVG element not found');
+      return;
+    }
+    
+    svg.setAttribute('viewBox', `0 0 ${containerWidth} ${containerHeight}`);
     
     const sortedWords = [...words].sort((a, b) => b.value - a.value);
-    
-    const minFontSize = 12;
-    const maxFontSize = 36;
     const placedWords = [];
     
+    const minFontSize = 12;
+    const maxFontSize = Math.min(containerWidth / 8, 60);
+    
+    const centerX = containerWidth / 2;
+    const centerY = containerHeight / 2;
+    
     sortedWords.forEach((word, index) => {
-      const normalizedValue = (word.value - effectiveMinValue) / (effectiveMaxValue - effectiveMinValue);
-      const fontSize = minFontSize + (normalizedValue * (maxFontSize - minFontSize));
+      const normalizedValue = maxValue > minValue ? (word.value - minValue) / (maxValue - minValue) : 0.5;
+      const fontWeightValue = Math.pow(normalizedValue, 1.5);
+      const fontSize = minFontSize + (fontWeightValue * (maxFontSize - minFontSize));
       
       const colorIndex = Math.floor(normalizedValue * (vibrantColors.length - 1));
       const color = vibrantColors[colorIndex];
-
-      const wordElement = document.createElement('div');
-      wordElement.className = 'word';
-      wordElement.textContent = word.text;
-      wordElement.style.fontSize = `${fontSize}px`;
-      wordElement.style.color = color;
-      wordElement.style.fontWeight = normalizedValue > 0.7 ? 'bold' : normalizedValue > 0.4 ? '600' : 'normal';
-      wordElement.style.cursor = 'pointer';
-      wordElement.style.userSelect = 'none';
-      wordElement.style.transition = 'all 0.3s ease';
       
-      if (Math.random() > 0.7) {
-        const rotation = Math.random() * 20 - 10;
-        wordElement.style.transform = `rotate(${rotation}deg)`;
+      const tempText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tempText.textContent = word.text;
+      tempText.setAttribute('font-size', fontSize);
+      tempText.setAttribute('font-family', 'Arial, sans-serif');
+      tempText.setAttribute('font-weight', normalizedValue > 0.7 ? 'bold' : normalizedValue > 0.4 ? '600' : 'normal');
+      tempText.style.visibility = 'hidden';
+      container.appendChild(tempText);
+      
+      const bbox = tempText.getBBox();
+      const wordWidth = bbox.width;
+      const wordHeight = bbox.height;
+      
+      container.removeChild(tempText);
+      
+      let position;
+      if (index === 0) {
+        position = { x: centerX, y: centerY };
+      } else {
+        position = findBestPosition(centerX, centerY, wordWidth, wordHeight, placedWords);
       }
       
-      container.appendChild(wordElement);
-      const rect = wordElement.getBoundingClientRect();
-      const wordWidth = rect.width;
-      const wordHeight = rect.height;
+      const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      textElement.textContent = word.text;
+      textElement.setAttribute('x', position.x);
+      textElement.setAttribute('y', position.y);
+      textElement.setAttribute('font-size', fontSize);
+      textElement.setAttribute('font-family', 'Arial, sans-serif');
+      textElement.setAttribute('font-weight', normalizedValue > 0.7 ? 'bold' : normalizedValue > 0.4 ? '600' : 'normal');
+      textElement.setAttribute('fill', color);
+      textElement.setAttribute('text-anchor', 'middle');
+      textElement.setAttribute('dominant-baseline', 'central');
+      textElement.classList.add('word');
       
-      let position = findNonOverlappingPosition(
-        wordWidth, 
-        wordHeight, 
-        containerWidth, 
-        containerHeight, 
-        placedWords,
-        index
-      );
+      const rotationAngle = (Math.random() > 0.8) ? (Math.random() * 15 - 7.5) : 0;
+      textElement.style.setProperty('--word-rotation', `${rotationAngle}deg`);
       
-      wordElement.style.left = `${position.x}px`;
-      wordElement.style.top = `${position.y}px`;
+      textElement.addEventListener('click', function(e) {
+        e.stopPropagation();
+        showWordDetails(word);
+      });
+      
+      container.appendChild(textElement);
       
       placedWords.push({
-        x: position.x,
-        y: position.y,
+        x: position.x - wordWidth / 2,
+        y: position.y - wordHeight / 2,
         width: wordWidth,
         height: wordHeight,
-        element: wordElement
-      });
-      
-      wordElement.addEventListener('click', () => showWordDetails(word));
-      
-      wordElement.addEventListener('mouseenter', () => {
-        const originalTransform = wordElement.style.transform;
-        wordElement.dataset.originalTransform = originalTransform;
-        wordElement.style.transform = 'scale(1.15)';
-        wordElement.style.zIndex = '10';
-      });
-      
-      wordElement.addEventListener('mouseleave', () => {
-        wordElement.style.transform = wordElement.dataset.originalTransform || '';
-        wordElement.style.zIndex = '1';
+        centerX: position.x,
+        centerY: position.y,
+        element: textElement
       });
     });
     
-    if (words.length > 0) {
+    if (sortedWords.length > 0) {
       showWordDetails(sortedWords[0]);
     }
+    
+    resetZoom();
+    initializeWordCloudControls();
   }
   
-  function findNonOverlappingPosition(wordWidth, wordHeight, containerWidth, containerHeight, placedWords, wordIndex) {
-    const padding = 8;
-    const maxAttempts = 100;
+  function findBestPosition(centerX, centerY, wordWidth, wordHeight, placedWords) {
+    const basePadding = 12;
+    const sizeFactor = Math.max(wordWidth, wordHeight) / 100;
+    const padding = basePadding + (sizeFactor * 8);
     
-    if (wordIndex < 3) {
-      const centerX = (containerWidth - wordWidth) / 2;
-      const centerY = (containerHeight - wordHeight) / 2;
+    const maxRadius = Math.min(600, Math.max(centerX, centerY));
+    const radiusStep = 3;
+    const angleStep = 0.5;
+    
+    let radius = 30;
+    let angle = 0;
+    
+    while (radius < maxRadius) {
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
       
-      if (!checkCollision(centerX, centerY, wordWidth, wordHeight, placedWords, padding)) {
-        return { x: centerX, y: centerY };
-      }
-      
-      for (let radius = 50; radius < Math.min(containerWidth, containerHeight) / 2; radius += 30) {
-        for (let angle = 0; angle < 360; angle += 45) {
-          const x = centerX + Math.cos(angle * Math.PI / 180) * radius;
-          const y = centerY + Math.sin(angle * Math.PI / 180) * radius;
-          
-          if (x >= 0 && y >= 0 && x + wordWidth <= containerWidth && y + wordHeight <= containerHeight) {
-            if (!checkCollision(x, y, wordWidth, wordHeight, placedWords, padding)) {
-              return { x, y };
-            }
-          }
-        }
-      }
-    }
-    
-    const gridSize = 20;
-    const attempts = [];
-    
-    for (let x = 0; x <= containerWidth - wordWidth; x += gridSize) {
-      for (let y = 0; y <= containerHeight - wordHeight; y += gridSize) {
-        if (!checkCollision(x, y, wordWidth, wordHeight, placedWords, padding)) {
-          const centerX = containerWidth / 2;
-          const centerY = containerHeight / 2;
-          const distance = Math.sqrt(Math.pow(x + wordWidth/2 - centerX, 2) + Math.pow(y + wordHeight/2 - centerY, 2));
-          
-          attempts.push({ x, y, distance });
-        }
-      }
-    }
-    
-    attempts.sort((a, b) => a.distance - b.distance);
-    
-    if (attempts.length > 0) {
-      return { x: attempts[0].x, y: attempts[0].y };
-    }
-    
-    let attempts_count = 0;
-    while (attempts_count < maxAttempts) {
-      const x = Math.random() * (containerWidth - wordWidth);
-      const y = Math.random() * (containerHeight - wordHeight);
-      
-      if (!checkCollision(x, y, wordWidth, wordHeight, placedWords, padding)) {
+      if (!hasCollision(x, y, wordWidth, wordHeight, placedWords, padding)) {
         return { x, y };
       }
-      attempts_count++;
+      
+      angle += angleStep;
+      radius += radiusStep * (angle / (2 * Math.PI));
+      
+      if (angle >= 2 * Math.PI) {
+        angle = 0;
+        radius += radiusStep * 2;
+      }
     }
     
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const randomAngle = Math.random() * 2 * Math.PI;
+      const randomRadius = 100 + Math.random() * 200;
+      const x = centerX + Math.cos(randomAngle) * randomRadius;
+      const y = centerY + Math.sin(randomAngle) * randomRadius;
+      
+      if (!hasCollision(x, y, wordWidth, wordHeight, placedWords, padding)) {
+        return { x, y };
+      }
+    }
+
+    const fallbackAngle = Math.random() * 2 * Math.PI;
+    const fallbackRadius = 300 + Math.random() * 100;
     return {
-      x: Math.min(wordIndex * 10, containerWidth - wordWidth),
-      y: Math.min(wordIndex * 5, containerHeight - wordHeight)
+      x: centerX + Math.cos(fallbackAngle) * fallbackRadius,
+      y: centerY + Math.sin(fallbackAngle) * fallbackRadius
     };
   }
   
-  function checkCollision(x, y, width, height, placedWords, padding) {
+  function hasCollision(x, y, width, height, placedWords, padding) {
+    const left = x - width / 2 - padding;
+    const right = x + width / 2 + padding;
+    const top = y - height / 2 - padding;
+    const bottom = y + height / 2 + padding;
+    
     for (let placed of placedWords) {
-      if (x < placed.x + placed.width + padding &&
-          x + width + padding > placed.x &&
-          y < placed.y + placed.height + padding &&
-          y + height + padding > placed.y) {
+      const placedLeft = placed.x - padding;
+      const placedRight = placed.x + placed.width + padding;
+      const placedTop = placed.y - padding;
+      const placedBottom = placed.y + placed.height + padding;
+      
+      if (right > placedLeft && 
+          left < placedRight && 
+          bottom > placedTop && 
+          top < placedBottom) {
         return true;
       }
     }
+    
     return false;
   }
   
@@ -2261,7 +2909,7 @@
     const container = document.getElementById('word-details');
     
     if (!word) {
-      container.innerHTML = '<p>No word selected.</p>';
+      container.innerHTML = gettext('<p>No word selected.</p>');
       return;
     }
     
@@ -2285,5 +2933,115 @@
     
     container.innerHTML = html;
   }
+  
+  // Test function to verify student view is working
+  function testStudentView() {
+    console.log('=== TESTING STUDENT VIEW ===');
+    console.log('Current view_as:', '{{ view_as }}');
+    console.log('User ID:', '{{ user.id }}');
+    console.log('Has student role:', '{{ has_student_role|yesno:"true,false" }}');
+    console.log('Student personal stats:', '{{ student_personal_stats|default:"null" }}');
+    
+    const studentMetrics = document.getElementById('student-metrics');
+    console.log('Student metrics element:', studentMetrics);
+    console.log('Student metrics display:', studentMetrics ? studentMetrics.style.display : 'not found');
+    
+    const lengthChart = document.getElementById('length-distribution-chart');
+    const engagementChart = document.getElementById('activity-engagement-chart');
+    console.log('Length chart element:', lengthChart);
+    console.log('Engagement chart element:', engagementChart);
+    
+    if ('{{ view_as }}' === 'student') {
+      console.log('In student view - testing data load...');
+      loadCurrentStudentData();
+    }
+    
+    console.log('=== END TEST ===');
+  }
+  
+  // Call test function after a short delay
+  setTimeout(testStudentView, 500);
+  
+  function updateConversationHistory(messages) {
+    const chatContainer = document.getElementById('chat-messages');
+    if (!chatContainer) {
+      console.warn('Chat messages container not found');
+      return;
+    }
+    
+    chatContainer.innerHTML = '';
+    
+    if (!messages || messages.length === 0) {
+      chatContainer.innerHTML = gettext('<p>No conversation history available.</p>');
+      return;
+    }
+    
+    messages.forEach(msg => {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = msg.role === 'user' ? 'user-message' : 'model-message';
+      
+      const messageHeader = document.createElement('div');
+      messageHeader.className = 'message-header';
+      
+      if (msg.timestamp) {
+        const timeDisplay = document.createElement('span');
+        timeDisplay.className = 'message-time';
+        const messageDate = new Date(msg.timestamp);
+        timeDisplay.textContent = messageDate.toLocaleString();
+        messageHeader.appendChild(timeDisplay);
+      }
+      
+      if (msg.activity_title) {
+        const activityDisplay = document.createElement('span');
+        activityDisplay.className = 'message-activity';
+        activityDisplay.textContent = msg.activity_title;
+        messageHeader.appendChild(activityDisplay);
+      }
+      
+      const messageContent = document.createElement('div');
+      messageContent.className = 'message-content';
+      messageContent.textContent = msg.content;
+      
+      messageDiv.appendChild(messageHeader);
+      messageDiv.appendChild(messageContent);
+      
+      chatContainer.appendChild(messageDiv);
+    });
+  }
+  
+  // Register event listeners for all action buttons
+  const generateSummaryBtn = document.getElementById('generate-summary');
+  if (generateSummaryBtn) {
+    generateSummaryBtn.addEventListener('click', function() {
+      const courseId = document.getElementById('course-filter').value;
+      const activityId = document.getElementById('activity-filter').value;
+      
+      if (activityId === 'all') {
+        const summaryContent = document.getElementById('summary-content');
+        summaryContent.innerHTML = gettext('<p class="error" style="color:red;font-weight:bold">Please select a specific activity first. Summaries can only be generated for individual activities.</p>');
+        return;
+      }
+      
+      const summaryContent = document.getElementById('summary-content');
+      const spinner = document.getElementById('summary-spinner');
+      
+      spinner.style.display = 'block';
+      summaryContent.innerHTML = gettext('<p>Generating summary with AI... This may take a moment.</p>');
+      
+      fetch(`/api/dashboard/generate_summary/?activity_id=${activityId}`)
+        .then(response => response.json())
+        .then(data => {
+          spinner.style.display = 'none';
+          summaryContent.innerHTML = `<p>${data.summary}</p>`;
+        })
+        .catch(error => {
+          spinner.style.display = 'none';
+          summaryContent.innerHTML = gettext(`<p class="error" style="color:red">Error generating summary: ${error}</p>`);
+        });
+    });
+  }
+  
+  // Register event listeners for student analysis and download buttons
+  const generateStudentSummaryBtn = document.getElementById('generate-student-summary');
 </script>
 {% endblock %}

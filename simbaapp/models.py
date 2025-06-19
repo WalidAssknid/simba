@@ -1,12 +1,19 @@
 from django.db import models
+import uuid
+from datetime import timedelta
+from django.utils import timezone
 
 
 class User(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = models.CharField(max_length=255, unique=True, null=False)
     email = models.EmailField(unique=True, null=False)
     password_hash = models.CharField(max_length=255, null=False)
     created_at = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(blank=True, null=True)
+    is_email_verified = models.BooleanField(default=False)
+    email_verified_at = models.DateTimeField(blank=True, null=True)
+    is_admin = models.BooleanField(default=False)
 
     def __str__(self):
         return self.username
@@ -28,17 +35,15 @@ class User(models.Model):
         return self.get_owned_courses_count() < 3
     
     def can_create_activity(self, course=None):
-        """Check if user can create a new activity (limit: 6 per course)"""
-        if course:
-            course_activities_count = Activity.objects.filter(owner=self, course=course).count()
-            return course_activities_count < 6
-        else:
-            owned_courses = Course.objects.filter(owner=self)
-            for owned_course in owned_courses:
-                course_activities_count = Activity.objects.filter(owner=self, course=owned_course).count()
-                if course_activities_count < 6:
-                    return True
+        """Check if user can create a new activity (limit: 10 total) and has access to at least one course"""
+        total_activities_count = Activity.objects.filter(owner=self).count()
+        if total_activities_count >= 10:
             return False
+        
+        owned_courses = Course.objects.filter(owner=self).exists()
+        teacher_enrollments = CourseEnrollment.objects.filter(user=self, role='teacher').exists()
+        
+        return owned_courses or teacher_enrollments
     
     def can_join_course(self):
         """Check if user can join a new course (limit: 3 total including owned)"""
@@ -46,6 +51,7 @@ class User(models.Model):
         return total_courses < 3
 
 class Course(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="courses")
@@ -63,6 +69,7 @@ class Course(models.Model):
 
 
 class CourseEnrollment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="enrollments")
     role = models.CharField(max_length=20, choices=[('student', 'Student'), ('teacher', 'Teacher')], default='student')
@@ -76,6 +83,7 @@ class CourseEnrollment(models.Model):
 
 
 class Activity(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="activities")
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=255, blank=True, null=True)
@@ -87,6 +95,7 @@ class Activity(models.Model):
     subjects = models.TextField(blank=True, null=True)
     restrict_to_subject = models.BooleanField(default=False)
     allow_questions = models.BooleanField(default=True)
+    never_answer_directly = models.BooleanField(default=True)
     allow_emojis = models.BooleanField(default=True)
     trust_document = models.BooleanField(default=True)
     word_limit = models.PositiveIntegerField(default=0)
@@ -94,6 +103,7 @@ class Activity(models.Model):
     end_date = models.DateTimeField(blank=True, null=True)
     is_visible = models.BooleanField(default=True)
     allow_redo = models.BooleanField(default=True)
+    ai_model = models.CharField(max_length=20, choices=[('gpt', 'GPT'), ('mistral', 'Mistral')], default='gpt')
     openai_assistant_id = models.CharField(max_length=255, blank=True, null=True)
     vector_store_id = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -106,6 +116,7 @@ class Activity(models.Model):
     
 
 class Thread(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="threads")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     attempt_number = models.PositiveIntegerField(default=1)
@@ -120,6 +131,7 @@ class Thread(models.Model):
 
 
 class Message(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     content = models.TextField(null=False)
     thread = models.ForeignKey(Thread, on_delete=models.CASCADE, related_name="messages")
     role = models.CharField(max_length=50, null=False)
@@ -135,6 +147,7 @@ class Message(models.Model):
 
 
 class Analytics(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     activity = models.ForeignKey(Activity, on_delete=models.SET_NULL, null=True, blank=True)  
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True)
@@ -145,6 +158,7 @@ class Analytics(models.Model):
         return f"Analytics at {self.timestamp}"
 
 class Event(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     verb = models.SmallIntegerField(choices = [(0,"Created"), (1,"Deleted"), (2,"Opened"), (3,"Closed"), (4,"Joined"), (5,"Modified")])
     object = models.SmallIntegerField(choices = [(0,"Account"), (1,"Course"), (2,"Activity"), (3,"Thread"), (4, "Message"), (5,"Simba")])
@@ -153,3 +167,123 @@ class Event(models.Model):
 
     def __str__(self):
         return f"subject : {self.user}, verb : {self.verb}, object : {self.object}"
+
+
+class ChainlitSession(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session_id = models.CharField(max_length=255, unique=True)
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    thread = models.ForeignKey(Thread, on_delete=models.CASCADE)
+    username = models.CharField(max_length=255)
+    session_data = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_consumed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Chainlit Session {self.session_id} for {self.user.username}"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['session_id']),
+            models.Index(fields=['expires_at']),
+            models.Index(fields=['is_consumed']),
+        ]
+
+
+class EmailVerificationToken(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="email_verification_tokens")
+    token = models.CharField(max_length=32, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = uuid.uuid4().hex
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(hours=24)
+        super().save(*args, **kwargs)
+    
+    def is_valid(self):
+        return not self.is_used and timezone.now() < self.expires_at
+    
+    def __str__(self):
+        return f"Email verification token for {self.user.email}"
+
+
+class PasswordResetToken(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="password_reset_tokens")
+    token = models.CharField(max_length=32, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = uuid.uuid4().hex
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(hours=1)
+        super().save(*args, **kwargs)
+    
+    def is_valid(self):
+        return not self.is_used and timezone.now() < self.expires_at
+    
+    def __str__(self):
+        return f"Password reset token for {self.user.email}"
+
+
+class InviteToken(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    ROLE_CHOICES = [
+        ('student', 'Student'),
+        ('teacher', 'Teacher'),
+    ]
+    
+    token = models.CharField(max_length=32, unique=True)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="invite_tokens")
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_invites")
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+    
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = uuid.uuid4().hex
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(days=1)
+        super().save(*args, **kwargs)
+    
+    def is_valid(self):
+        return self.is_active and timezone.now() < self.expires_at
+    
+    def __str__(self):
+        return f"Invite to {self.course.title} as {self.role}"
+
+
+class ActivityToken(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    token = models.CharField(max_length=32, unique=True)
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="activity_tokens")
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_activity_tokens")
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+    
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = uuid.uuid4().hex
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(days=7)
+        super().save(*args, **kwargs)
+    
+    def is_valid(self):
+        return self.is_active and timezone.now() < self.expires_at
+    
+    def __str__(self):
+        return f"Activity link to {self.activity.title} in {self.activity.course.title}"

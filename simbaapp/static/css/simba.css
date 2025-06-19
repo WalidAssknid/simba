@@ -97,6 +97,8 @@ main.container {
 }
 
 .header-brand {
+  display: flex;
+  align-items: center;
   font-size: 1.8rem;
   font-weight: 600;
   color: var(--primary-color);
@@ -3917,5 +3919,136 @@ body.home-page {
   .partner-image {
     max-width: 80px;
     max-height: 80px;
+  }
+}
+
+/* Language Selector Styles */
+.language-selector {
+  position: relative;
+  display: inline-block;
+  margin-right: 16px;
+}
+
+.language-dropdown {
+  position: relative;
+}
+
+.language-toggle {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+}
+
+.language-toggle:hover {
+  background-color: var(--hover-color);
+}
+
+.language-menu {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  min-width: 150px;
+  z-index: 1000;
+  display: none;
+  overflow: hidden;
+}
+
+.language-menu.show {
+  display: block;
+}
+
+.language-option {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  color: var(--text-color);
+}
+
+.language-option:hover {
+  background-color: var(--hover-color);
+}
+
+.language-option.active {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.language-option.active:hover {
+  background-color: var(--primary-dark);
+}
+
+/* Adjust header-brand to accommodate language selector */
+
+/* Adjust nav-brand to accommodate language selector */
+.nav-brand {
+  display: flex;
+  align-items: center;
+}
+
+.nav-brand h1 {
+  margin: 0;
+  margin-left: 8px;
+}
+
+/* Mobile adjustments for language selector */
+@media (max-width: 768px) {
+  .header-brand {
+    left: 50%;
+    transform: translateX(-50%);
+    position: static;
+    margin: 0 auto;
+  }
+  
+  .language-selector {
+    margin-right: 12px;
+  }
+  
+  .language-toggle {
+    min-width: 36px;
+    height: 36px;
+    font-size: 1rem;
+    padding: 6px;
+  }
+  
+  .language-menu {
+    min-width: 130px;
+  }
+  
+  .language-option {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .language-selector {
+    margin-right: 8px;
+  }
+  
+  .language-toggle {
+    min-width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+    padding: 4px;
   }
 }

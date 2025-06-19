@@ -62,6 +62,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'simba.middleware.ForceEnglishDefaultMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -90,6 +91,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'simbaapp.context_processors.version_context',
+                'simbaapp.context_processors.language_context',
             ],
         },
     },
@@ -150,13 +152,19 @@ LOCALE_PATHS = [
     BASE_DIR / 'locale',
 ]
 
-TIME_ZONE = 'UTC'
-
+# Disable Django's built-in language detection from headers
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
+
+# Force fallback to English when no translation is available
+LANGUAGE_FALLBACKS = {
+    'fr': ['en'],
+    'es': ['en'], 
+    'pt': ['en'],
+}
+
+TIME_ZONE = 'UTC'
 
 
 # Static files (CSS, JavaScript, Images)

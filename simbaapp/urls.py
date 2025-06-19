@@ -36,9 +36,9 @@ urlpatterns = [
     path('admin-dashboard/courses/<uuid:course_id>/delete/', views.admin_delete_course, name='admin_delete_course'),
     path('admin-dashboard/activities/<uuid:activity_id>/delete/', views.admin_delete_activity, name='admin_delete_activity'),
     
-    # Test error endpoint (remove in production)
     path('test-error/', views.test_error_view, name='test_error'),
+    
+    path('set-language/', views.set_language_view, name='set_language'),
 
-    #gettext
     path('jsi18n/', JavaScriptCatalog.as_view(), name='javascript-catalog'),
 ]

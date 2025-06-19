@@ -1654,13 +1654,15 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
             }
         }
         
-        # Prepare session data
+        user_language = request.session.get('django_language', 'en')
+        
         session_data = {
             'session_id': session_id,
             'activity_id': str(activity.id),
             'user_id': str(user.id),
             'username': payload.username,
             'thread_id': str(thread.id),
+            'language': user_language,
             'activity_data': activity_data
         }
         
@@ -1778,13 +1780,15 @@ def init_chainlit_session(request, payload: ChainlitSessionInitSchema):
             }
         }
         
-        # Prepare session data
+        user_language = request.session.get('django_language', 'en')
+        
         session_data = {
             'session_id': session_id,
             'activity_id': str(activity.id),
             'user_id': str(user.id),
             'username': payload.username,
             'thread_id': str(thread.id),
+            'language': user_language,
             'activity_data': activity_data
         }
         

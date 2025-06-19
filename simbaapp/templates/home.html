@@ -15,6 +15,36 @@
     <nav class="home-nav">
         <div class="nav-container">
             <div class="nav-brand">
+                <!-- Language Selector -->
+                <div class="language-selector">
+                    <div class="language-dropdown">
+                        <button class="language-toggle" type="button">
+                            {% if CURRENT_LANGUAGE == 'en' %}🇬🇧
+                            {% elif CURRENT_LANGUAGE == 'fr' %}🇫🇷
+                            {% elif CURRENT_LANGUAGE == 'es' %}🇪🇸
+                            {% elif CURRENT_LANGUAGE == 'pt' %}🇧🇷
+                            {% else %}🇬🇧{% endif %}
+                        </button>
+                        <div class="language-menu">
+                            <form method="post" action="{% url 'set_language' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" name="language" value="en" class="language-option {% if CURRENT_LANGUAGE == 'en' %}active{% endif %}">
+                                    🇬🇧 English
+                                </button>
+                                <button type="submit" name="language" value="fr" class="language-option {% if CURRENT_LANGUAGE == 'fr' %}active{% endif %}">
+                                    🇫🇷 Français
+                                </button>
+                                <button type="submit" name="language" value="es" class="language-option {% if CURRENT_LANGUAGE == 'es' %}active{% endif %}">
+                                    🇪🇸 Español
+                                </button>
+                                <button type="submit" name="language" value="pt" class="language-option {% if CURRENT_LANGUAGE == 'pt' %}active{% endif %}">
+                                    🇧🇷 Português
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
                 <h1>SIMBA</h1>
             </div>
             <div class="nav-menu">
@@ -405,6 +435,23 @@
         document.querySelector('.mobile-nav-toggle').addEventListener('click', function() {
             document.querySelector('.nav-menu').classList.toggle('active');
         });
+
+        // Language menu functionality
+        const languageToggle = document.querySelector('.language-toggle');
+        const languageMenu = document.querySelector('.language-menu');
+        
+        if (languageToggle && languageMenu) {
+            languageToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                languageMenu.classList.toggle('show');
+            });
+            
+            document.addEventListener('click', (e) => {
+                if (!languageToggle.contains(e.target) && !languageMenu.contains(e.target)) {
+                    languageMenu.classList.remove('show');
+                }
+            });
+        }
 
         // Smooth scrolling for navigation links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {

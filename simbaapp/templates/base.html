@@ -84,6 +84,36 @@
             {% endif %}
             
             <div class="header-brand">
+                <!-- Language Selector -->
+                <div class="language-selector">
+                    <div class="language-dropdown">
+                        <button class="language-toggle" type="button">
+                            {% if CURRENT_LANGUAGE == 'en' %}🇬🇧
+                            {% elif CURRENT_LANGUAGE == 'fr' %}🇫🇷
+                            {% elif CURRENT_LANGUAGE == 'es' %}🇪🇸
+                            {% elif CURRENT_LANGUAGE == 'pt' %}🇧🇷
+                            {% else %}🇬🇧{% endif %}
+                        </button>
+                        <div class="language-menu">
+                            <form method="post" action="{% url 'set_language' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" name="language" value="en" class="language-option {% if CURRENT_LANGUAGE == 'en' %}active{% endif %}">
+                                    🇬🇧 English
+                                </button>
+                                <button type="submit" name="language" value="fr" class="language-option {% if CURRENT_LANGUAGE == 'fr' %}active{% endif %}">
+                                    🇫🇷 Français
+                                </button>
+                                <button type="submit" name="language" value="es" class="language-option {% if CURRENT_LANGUAGE == 'es' %}active{% endif %}">
+                                    🇪🇸 Español
+                                </button>
+                                <button type="submit" name="language" value="pt" class="language-option {% if CURRENT_LANGUAGE == 'pt' %}active{% endif %}">
+                                    🇧🇷 Português
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
                 <a href="{% url 'home' %}?force=true" style="color: inherit; text-decoration: none;">
                     <span>SIMBA</span>
                 </a>
@@ -167,6 +197,23 @@
                     if (userMenu && !userMenu.contains(e.target)) {
                         const content = userMenu.querySelector('.user-menu-content');
                         if (content) content.style.display = 'none';
+                    }
+                });
+            }
+
+            // Language menu functionality
+            const languageToggle = document.querySelector('.language-toggle');
+            const languageMenu = document.querySelector('.language-menu');
+            
+            if (languageToggle && languageMenu) {
+                languageToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    languageMenu.classList.toggle('show');
+                });
+                
+                document.addEventListener('click', (e) => {
+                    if (!languageToggle.contains(e.target) && !languageMenu.contains(e.target)) {
+                        languageMenu.classList.remove('show');
                     }
                 });
             }

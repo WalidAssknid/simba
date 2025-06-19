@@ -13,7 +13,7 @@ VERSION_HISTORY = {
         "features": [
             "Role-based access control per course",
             "Dashboard with teacher/student views",
-            "Course and activity limits (3 courses, 6 activities per course)",
+            "Course and activity limits (3 courses, 10 activities total)",
             "Course enrollment system with role selection",
             "Analytics dashboard with conversation stats",
             "Activity management with visibility controls",

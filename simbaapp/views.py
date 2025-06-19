@@ -13,6 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 import uuid
 from django.utils import timezone
+from django.utils.translation import activate
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -1748,6 +1749,24 @@ def admin_delete_activity(request, activity_id):
         messages.error(request, f"Error deleting activity: {str(e)}")
     
     return redirect('admin_activities')
+
+def set_language_view(request):
+    """Set language preference"""
+    if request.method == 'POST':
+        language = request.POST.get('language')
+        if language and language in dict(settings.LANGUAGES):
+            # Force the language change
+            activate(language)
+            request.session['django_language'] = language
+            # Set a custom flag to override browser detection
+            request.session['_language_override'] = language
+            # Clear any cached language info
+            if hasattr(request, '_cached_user'):
+                delattr(request, '_cached_user')
+            
+    # Redirect back to the referring page or home
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or '/'
+    return redirect(next_url)
 
 # Test endpoint to verify error email functionality (remove in production)
 def test_error_view(request):

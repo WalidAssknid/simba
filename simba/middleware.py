@@ -191,3 +191,26 @@ Please check the SIMBA application immediately.
         """.strip()
         
         return html_message
+
+class ForceEnglishDefaultMiddleware:
+    """Middleware to force English as default language when no user preference is set"""
+    
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        language = request.session.get('django_language', request.session.get('_language_override'))
+        
+        if not language:
+            language = 'en'
+            request.session['django_language'] = 'en'
+            
+        translation.activate(language)
+        
+        request.LANGUAGE_CODE = language
+        
+        response = self.get_response(request)
+        
+        translation.deactivate()
+        
+        return response

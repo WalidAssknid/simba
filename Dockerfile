@@ -16,6 +16,8 @@ COPY . /code/
 COPY entrypoint.sh /code/
 RUN chmod +x /code/entrypoint.sh
 
+RUN python manage.py compilemessages
+
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000

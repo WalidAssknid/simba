@@ -98,6 +98,9 @@ ENVIRONMENT=production docker compose -f $COMPOSE_FILE up -d web chainlit
 print_step "Waiting for services to be ready..."
 sleep 10
 
+print_step "Compiling translation messages..."
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE exec -T web python manage.py compilemessages
+
 print_step "Collecting static files..."
 ENVIRONMENT=production docker compose -f $COMPOSE_FILE exec -T web python manage.py collectstatic --noinput
 

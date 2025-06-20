@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /code
 
 # Install build dependencies for Alpine
-RUN apk add --no-cache build-base musl-dev libffi-dev rust cargo
+RUN apk add --no-cache build-base musl-dev libffi-dev rust cargo gettext
 
 COPY requirements.txt /code/
 RUN pip install --upgrade pip \

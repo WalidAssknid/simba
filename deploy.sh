@@ -133,6 +133,10 @@ verified_users = User.objects.filter(is_email_verified=True).count()
 print(f'📊 Total users: {total_users}, Verified: {verified_users}')
 "
 
+print_step "Compiling translation messages..."
+ENVIRONMENT=production docker compose -f $COMPOSE_FILE exec -T web python manage.py compilemessages
+print_success "Translation messages compiled"
+
 print_step "Collecting static files..."
 ENVIRONMENT=production docker compose -f $COMPOSE_FILE exec -T web python manage.py collectstatic --noinput
 print_success "Static files collected"

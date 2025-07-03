@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /code
 
 # Install build dependencies for Alpine
-RUN apk add --no-cache build-base musl-dev libffi-dev rust cargo
+RUN apk add --no-cache build-base musl-dev libffi-dev rust cargo gettext
 
 COPY requirements.txt /code/
 RUN pip install --upgrade pip \
@@ -15,6 +15,8 @@ RUN pip install --upgrade pip \
 COPY . /code/
 COPY entrypoint.sh /code/
 RUN chmod +x /code/entrypoint.sh
+
+RUN python manage.py compilemessages
 
 RUN python manage.py collectstatic --noinput
 

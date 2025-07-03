@@ -385,6 +385,30 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
         if total_activities_count >= 10:
             return HTTPStatus.FORBIDDEN, {"message": f"You can only create up to 10 activities total. You currently have {total_activities_count} activities."}
 
+        if payload.options:
+            options = payload.options.copy()
+        else:
+            options = {}
+        
+        if payload.questions is not None:
+            options['questions'] = payload.questions
+        if payload.agent_attitude is not None:
+            options['agent_attitude'] = payload.agent_attitude
+        if payload.subjects is not None:
+            options['subjects'] = payload.subjects
+        if payload.restrict_to_subject is not None:
+            options['restrict_to_subject'] = payload.restrict_to_subject
+        if payload.allow_questions is not None:
+            options['allow_questions'] = payload.allow_questions
+        if payload.never_answer_directly is not None:
+            options['never_answer_directly'] = payload.never_answer_directly
+        if payload.allow_emojis is not None:
+            options['allow_emojis'] = payload.allow_emojis
+        if payload.trust_document is not None:
+            options['trust_document'] = payload.trust_document
+        if payload.word_limit is not None:
+            options['word_limit'] = payload.word_limit
+
         assistant_id = None
         vector_store_id = None
         
@@ -395,14 +419,15 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
                 'course_title': course.title,
                 'expert_mode': payload.expert_mode,
                 'custom_prompt': payload.custom_prompt,
-                'questions': payload.questions,
-                'agent_attitude': payload.agent_attitude,
-                'subjects': payload.subjects,
-                'restrict_to_subject': payload.restrict_to_subject,
-                'allow_questions': payload.allow_questions,
-                'allow_emojis': payload.allow_emojis,
-                'trust_document': payload.trust_document,
-                'word_limit': payload.word_limit,
+                'questions': options.get('questions', []),
+                'agent_attitude': options.get('agent_attitude', 'friendly'),
+                'subjects': options.get('subjects', ''),
+                'restrict_to_subject': options.get('restrict_to_subject', False),
+                'allow_questions': options.get('allow_questions', True),
+                'never_answer_directly': options.get('never_answer_directly', True),
+                'allow_emojis': options.get('allow_emojis', True),
+                'trust_document': options.get('trust_document', True),
+                'word_limit': options.get('word_limit', 0),
                 'start_date': payload.start_date,
                 'end_date': payload.end_date
             }
@@ -444,43 +469,31 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
             description=payload.description,
             expert_mode=payload.expert_mode,
             custom_prompt=payload.custom_prompt,
-            questions=payload.questions,
-            agent_attitude=payload.agent_attitude,
-            subjects=payload.subjects,
-            restrict_to_subject=payload.restrict_to_subject,
-            allow_questions=payload.allow_questions,
-            allow_emojis=payload.allow_emojis,
-            trust_document=payload.trust_document,
-            word_limit=payload.word_limit,
             start_date=payload.start_date,
             end_date=payload.end_date,
             is_visible=payload.is_visible,
             allow_redo=payload.allow_redo,
             ai_model=payload.ai_model,
             openai_assistant_id=assistant_id,
-            vector_store_id=vector_store_id
+            vector_store_id=vector_store_id,
+            options=options
         )
-        createdActivity(user,activity.id,{
-            "course":payload.course_id,
-            "owner":user_id,
-            "title":activity.title,
-            "description":payload.description,
-            "expert_mode":payload.expert_mode,
-            "custom_prompt":payload.custom_prompt,
-            "questions":payload.questions,
-            "agent_attitude":payload.agent_attitude,
-            "subjects":payload.subjects,
-            "restrict_to_subject":payload.restrict_to_subject,
-            "allow_questions":payload.allow_questions,
-            "allow_emojis":payload.allow_emojis,
-            "trust_document":payload.trust_document,
-            "word_limit":payload.word_limit,
-            "start_date":payload.start_date,
-            "end_date":payload.end_date,
-            "is_visible":payload.is_visible,
-            "allow_redo":payload.allow_redo,
-            "ai_model":payload.ai_model},
-            time.time())
+        
+        createdActivity(user, activity.id, {
+            "course": payload.course_id,
+            "owner": user_id,
+            "title": activity.title,
+            "description": payload.description,
+            "expert_mode": payload.expert_mode,
+            "custom_prompt": payload.custom_prompt,
+            "start_date": payload.start_date,
+            "end_date": payload.end_date,
+            "is_visible": payload.is_visible,
+            "allow_redo": payload.allow_redo,
+            "ai_model": payload.ai_model,
+            "options": options
+        }, time.time())
+        
         return HTTPStatus.CREATED, activity
     except User.DoesNotExist:
         return HTTPStatus.BAD_REQUEST, {"message": "Invalid user ID."}
@@ -507,41 +520,65 @@ def update_activity_api(request, activity_id: str, payload: ActivityUpdateSchema
             activity.title = payload.title
         if payload.description is not None:
             activity.description = payload.description
-        activity.expert_mode = payload.expert_mode
+        if payload.expert_mode is not None:
+            activity.expert_mode = payload.expert_mode
         if payload.custom_prompt is not None:
             activity.custom_prompt = payload.custom_prompt
-        activity.questions = payload.questions
-        activity.agent_attitude = payload.agent_attitude
-        if payload.subjects is not None:
-            activity.subjects = payload.subjects
-        activity.restrict_to_subject = payload.restrict_to_subject
-        activity.allow_questions = payload.allow_questions
-        activity.allow_emojis = payload.allow_emojis
-        activity.trust_document = payload.trust_document
-        activity.word_limit = payload.word_limit
         if payload.start_date is not None:
             activity.start_date = payload.start_date
         if payload.end_date is not None:
             activity.end_date = payload.end_date
-        activity.is_visible = payload.is_visible
-        activity.allow_redo = payload.allow_redo
-        activity.ai_model = payload.ai_model
+        if payload.is_visible is not None:
+            activity.is_visible = payload.is_visible
+        if payload.allow_redo is not None:
+            activity.allow_redo = payload.allow_redo
+        if payload.ai_model is not None:
+            activity.ai_model = payload.ai_model
+
+        current_options = activity.get_all_options()
         
-        if payload.ai_model == 'gpt':
+        if payload.options:
+            updated_options = payload.options.copy()
+        else:
+            updated_options = current_options.copy()
+        
+        if payload.questions is not None:
+            updated_options['questions'] = payload.questions
+        if payload.agent_attitude is not None:
+            updated_options['agent_attitude'] = payload.agent_attitude
+        if payload.subjects is not None:
+            updated_options['subjects'] = payload.subjects
+        if payload.restrict_to_subject is not None:
+            updated_options['restrict_to_subject'] = payload.restrict_to_subject
+        if payload.allow_questions is not None:
+            updated_options['allow_questions'] = payload.allow_questions
+        if payload.never_answer_directly is not None:
+            updated_options['never_answer_directly'] = payload.never_answer_directly
+        if payload.allow_emojis is not None:
+            updated_options['allow_emojis'] = payload.allow_emojis
+        if payload.trust_document is not None:
+            updated_options['trust_document'] = payload.trust_document
+        if payload.word_limit is not None:
+            updated_options['word_limit'] = payload.word_limit
+        
+        activity.options = updated_options
+        
+        if activity.ai_model == 'gpt':
             activity_data = {
                 'title': activity.title or f"Activity for {activity.course.title}",
                 'description': activity.description or '',
                 'course_title': activity.course.title,
                 'expert_mode': activity.expert_mode,
                 'custom_prompt': activity.custom_prompt,
-                'questions': activity.questions,
-                'agent_attitude': activity.agent_attitude,
-                'subjects': activity.subjects,
-                'restrict_to_subject': activity.restrict_to_subject,
-                'allow_questions': activity.allow_questions,
-                'allow_emojis': activity.allow_emojis,
-                'trust_document': activity.trust_document,
-                'word_limit': activity.word_limit,
+                'questions': updated_options.get('questions', []),
+                'agent_attitude': updated_options.get('agent_attitude', 'friendly'),
+                'subjects': updated_options.get('subjects', ''),
+                'restrict_to_subject': updated_options.get('restrict_to_subject', False),
+                'allow_questions': updated_options.get('allow_questions', True),
+                'never_answer_directly': updated_options.get('never_answer_directly', True),
+                'allow_emojis': updated_options.get('allow_emojis', True),
+                'trust_document': updated_options.get('trust_document', True),
+                'word_limit': updated_options.get('word_limit', 0),
                 'start_date': activity.start_date,
                 'end_date': activity.end_date
             }
@@ -574,7 +611,7 @@ def update_activity_api(request, activity_id: str, payload: ActivityUpdateSchema
             activity.openai_assistant_id = assistant_result['assistant_id']
             activity.vector_store_id = assistant_result['vector_store_id']
             
-        elif previous_ai_model == 'gpt' and payload.ai_model == 'mistral':
+        elif previous_ai_model == 'gpt' and activity.ai_model == 'mistral':
             if activity.openai_assistant_id:
                 try:
                     openai_assistant.delete_assistant(activity.openai_assistant_id, activity.vector_store_id)
@@ -585,7 +622,14 @@ def update_activity_api(request, activity_id: str, payload: ActivityUpdateSchema
                 activity.vector_store_id = None
         
         activity.save()
-        modifiedActivity(user,activity_id,{"title" : activity.title,"description" : activity.description, "owner" : user.id, "ai_model": activity.ai_model},time.time())
+        
+        modifiedActivity(user, activity_id, {
+            "title": activity.title,
+            "description": activity.description, 
+            "owner": user.id, 
+            "ai_model": activity.ai_model,
+            "options": updated_options
+        }, time.time())
         
         return HTTPStatus.OK, activity
     except User.DoesNotExist:
@@ -624,28 +668,7 @@ def get_activity_api(request, activity_id: str):
     """
     try:
         activity = Activity.objects.get(id=activity_id)
-        
-        activity_data = {
-            'id': str(activity.id),
-            'title': activity.title,
-            'description': activity.description,
-            'expert_mode': activity.expert_mode,
-            'custom_prompt': activity.custom_prompt,
-            'questions': activity.questions or [],
-            'agent_attitude': activity.agent_attitude,
-            'subjects': activity.subjects,
-            'restrict_to_subject': activity.restrict_to_subject,
-            'allow_questions': activity.allow_questions,
-            'allow_emojis': activity.allow_emojis,
-            'trust_document': activity.trust_document,
-            'word_limit': activity.word_limit,
-            'start_date': activity.start_date,
-            'end_date': activity.end_date,
-            'is_visible': activity.is_visible,
-            'allow_redo': activity.allow_redo,
-            'ai_model': activity.ai_model
-        }
-        
+        activity_data = ActivityDetailSchema.from_activity(activity)
         return HTTPStatus.OK, activity_data
     except Activity.DoesNotExist:
         return HTTPStatus.NOT_FOUND, {"message": "Activity not found."}
@@ -1626,25 +1649,26 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
             thread=thread
         ).delete()
         
-        # Generate unique session ID
         import uuid
         session_id = str(uuid.uuid4())
         
-        # Prepare activity data for Chainlit
+        all_options = activity.get_all_options()
+        
         activity_data = {
             'id': str(activity.id),
             'title': activity.title,
             'description': activity.description,
             'expert_mode': activity.expert_mode,
             'custom_prompt': activity.custom_prompt,
-            'questions': activity.questions,
-            'agent_attitude': activity.agent_attitude,
-            'subjects': activity.subjects,
-            'restrict_to_subject': activity.restrict_to_subject,
-            'allow_questions': activity.allow_questions,
-            'allow_emojis': activity.allow_emojis,
-            'trust_document': activity.trust_document,
-            'word_limit': activity.word_limit,
+            'questions': all_options.get('questions', []),
+            'agent_attitude': all_options.get('agent_attitude', 'friendly'),
+            'subjects': all_options.get('subjects', ''),
+            'restrict_to_subject': all_options.get('restrict_to_subject', False),
+            'allow_questions': all_options.get('allow_questions', True),
+            'never_answer_directly': all_options.get('never_answer_directly', True),
+            'allow_emojis': all_options.get('allow_emojis', True),
+            'trust_document': all_options.get('trust_document', True),
+            'word_limit': all_options.get('word_limit', 0),
             'ai_model': activity.ai_model,
             'openai_assistant_id': activity.openai_assistant_id,
             'vector_store_id': activity.vector_store_id,
@@ -1756,21 +1780,25 @@ def init_chainlit_session(request, payload: ChainlitSessionInitSchema):
         import uuid
         session_id = str(uuid.uuid4())
         
-        # Prepare activity data for Chainlit
+        # Get all options with defaults
+        all_options = activity.get_all_options()
+        
+        # Prepare activity data for Chainlit using the options field
         activity_data = {
             'id': str(activity.id),
             'title': activity.title,
             'description': activity.description,
             'expert_mode': activity.expert_mode,
             'custom_prompt': activity.custom_prompt,
-            'questions': activity.questions,
-            'agent_attitude': activity.agent_attitude,
-            'subjects': activity.subjects,
-            'restrict_to_subject': activity.restrict_to_subject,
-            'allow_questions': activity.allow_questions,
-            'allow_emojis': activity.allow_emojis,
-            'trust_document': activity.trust_document,
-            'word_limit': activity.word_limit,
+            'questions': all_options.get('questions', []),
+            'agent_attitude': all_options.get('agent_attitude', 'friendly'),
+            'subjects': all_options.get('subjects', ''),
+            'restrict_to_subject': all_options.get('restrict_to_subject', False),
+            'allow_questions': all_options.get('allow_questions', True),
+            'never_answer_directly': all_options.get('never_answer_directly', True),
+            'allow_emojis': all_options.get('allow_emojis', True),
+            'trust_document': all_options.get('trust_document', True),
+            'word_limit': all_options.get('word_limit', 0),
             'ai_model': activity.ai_model,
             'openai_assistant_id': activity.openai_assistant_id,
             'vector_store_id': activity.vector_store_id,
@@ -1792,12 +1820,10 @@ def init_chainlit_session(request, payload: ChainlitSessionInitSchema):
             'activity_data': activity_data
         }
         
-        # Store session data in database with expiration (1 hour)
         from datetime import datetime, timedelta
         from django.utils import timezone
         expires_at = timezone.now() + timedelta(hours=1)
         
-        # Delete any existing session for this user/activity to avoid duplicates
         ChainlitSession.objects.filter(
             user=user,
             activity=activity,

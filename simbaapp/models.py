@@ -90,15 +90,6 @@ class Activity(models.Model):
     description = models.TextField(blank=True, null=True)
     expert_mode = models.BooleanField(default=False)
     custom_prompt = models.TextField(blank=True, null=True)
-    questions = models.JSONField(blank=True, null=True, default=list)
-    agent_attitude = models.CharField(max_length=20, choices=[('friendly', 'Friendly'), ('informal', 'Informal'), ('formal', 'Formal')], default='friendly')
-    subjects = models.TextField(blank=True, null=True)
-    restrict_to_subject = models.BooleanField(default=False)
-    allow_questions = models.BooleanField(default=True)
-    never_answer_directly = models.BooleanField(default=True)
-    allow_emojis = models.BooleanField(default=True)
-    trust_document = models.BooleanField(default=True)
-    word_limit = models.PositiveIntegerField(default=0)
     start_date = models.DateTimeField(blank=True, null=True)
     end_date = models.DateTimeField(blank=True, null=True)
     is_visible = models.BooleanField(default=True)
@@ -106,6 +97,7 @@ class Activity(models.Model):
     ai_model = models.CharField(max_length=20, choices=[('gpt', 'GPT'), ('mistral', 'Mistral')], default='gpt')
     openai_assistant_id = models.CharField(max_length=255, blank=True, null=True)
     vector_store_id = models.CharField(max_length=255, blank=True, null=True)
+    options = models.JSONField(blank=True, null=True, default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -114,6 +106,36 @@ class Activity(models.Model):
             return f"{self.title} by {self.owner}"
         return f"Activity by {self.owner} on {self.course}"
     
+    def get_option(self, key, default=None):
+        """Helper method to get a value from options dict"""
+        if self.options and isinstance(self.options, dict):
+            return self.options.get(key, default)
+        return default
+    
+    def set_option(self, key, value):
+        """Helper method to set a value in options dict"""
+        if not self.options:
+            self.options = {}
+        self.options[key] = value
+    
+    def get_all_options(self):
+        """Helper method to get all options with defaults"""
+        defaults = {
+            'questions': [],
+            'agent_attitude': 'friendly',
+            'subjects': '',
+            'restrict_to_subject': False,
+            'allow_questions': True,
+            'never_answer_directly': True,
+            'allow_emojis': True,
+            'trust_document': True,
+            'word_limit': 0
+        }
+        
+        if self.options and isinstance(self.options, dict):
+            return {**defaults, **self.options}
+        return defaults
+
 
 class Thread(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

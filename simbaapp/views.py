@@ -1,17 +1,12 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.contrib.auth.hashers import check_password, make_password
-import urllib
 import requests
 from django.urls import reverse
 from django.conf import settings
-from .models import User, Course, Activity, CourseEnrollment, Message, Thread, ChainlitSession, InviteToken, ActivityToken, EmailVerificationToken, PasswordResetToken
+from .models import User, Course, Activity, CourseEnrollment, Message, ActivityToken, EmailVerificationToken, PasswordResetToken
 import json
 import logging
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
-import uuid
+from django.http import HttpResponseForbidden
 from django.utils import timezone
 from django.utils.translation import activate
 
@@ -587,6 +582,7 @@ def create_activity_view(request, course_id):
             "subjects": request.POST.get('subjects', ''),
             "restrict_to_subject": request.POST.get('restrict_to_subject') == 'on',
             "allow_questions": request.POST.get('allow_questions') == 'on',
+            "never_answer_directly": request.POST.get('never_answer_directly') == 'on',
             "allow_emojis": request.POST.get('allow_emojis') == 'on',
             "trust_document": request.POST.get('trust_document') == 'on',
             "word_limit": int(request.POST.get('word_limit', 0)) or 0,

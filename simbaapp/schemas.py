@@ -86,40 +86,45 @@ class ActivityCreateSchema(Schema):
     description: Optional[str] = None
     expert_mode: bool = False
     custom_prompt: Optional[str] = None
-    questions: List[str] = Field(default_factory=list)
-    agent_attitude: str = 'friendly'
-    subjects: Optional[str] = None
-    restrict_to_subject: bool = False
-    allow_questions: bool = True
-    allow_emojis: bool = True
-    trust_document: bool = True
-    word_limit: int = 0
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     is_visible: bool = True
     allow_redo: bool = True
     ai_model: str = 'gpt'
-    files: List[str] = Field(default_factory=list)  
+    files: List[str] = Field(default_factory=list)
+    options: Optional[Dict[str, Any]] = None
+    # For backward compatibility, also accept individual fields
+    questions: Optional[List[str]] = Field(default_factory=list)
+    agent_attitude: Optional[str] = 'friendly'
+    subjects: Optional[str] = None
+    restrict_to_subject: Optional[bool] = False
+    allow_questions: Optional[bool] = True
+    never_answer_directly: Optional[bool] = True
+    allow_emojis: Optional[bool] = True
+    trust_document: Optional[bool] = True
+    word_limit: Optional[int] = 0
 
 class ActivityUpdateSchema(Schema):
     title: Optional[str] = None
     description: Optional[str] = None
-    expert_mode: bool = False
+    expert_mode: Optional[bool] = False
     custom_prompt: Optional[str] = None
-    questions: List[str] = Field(default_factory=list)
-    agent_attitude: str = 'friendly'
-    subjects: Optional[str] = None
-    restrict_to_subject: bool = False
-    allow_questions: bool = True
-    allow_emojis: bool = True
-    trust_document: bool = True
-    word_limit: int = 0
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-    is_visible: bool = True
-    allow_redo: bool = True
-    ai_model: str = 'gpt'
-    files: List[str] = Field(default_factory=list) 
+    is_visible: Optional[bool] = True
+    allow_redo: Optional[bool] = True
+    ai_model: Optional[str] = 'gpt'
+    files: Optional[List[str]] = Field(default_factory=list)
+    options: Optional[Dict[str, Any]] = None
+    questions: Optional[List[str]] = Field(default_factory=list)
+    agent_attitude: Optional[str] = 'friendly'
+    subjects: Optional[str] = None
+    restrict_to_subject: Optional[bool] = False
+    allow_questions: Optional[bool] = True
+    never_answer_directly: Optional[bool] = True
+    allow_emojis: Optional[bool] = True
+    trust_document: Optional[bool] = True
+    word_limit: Optional[int] = 0
 
 class ThreadGetOrCreateSchema(Schema):
     activity_id: str
@@ -154,48 +159,55 @@ class ActivityOutSchema(ModelSchema):
         model = Activity
         fields = "__all__"
 
-class ActivityDetailSchema(ModelSchema):
+class ActivityDetailSchema(Schema):
     id: str
     title: Optional[str]
     description: Optional[str]
     expert_mode: bool
     custom_prompt: Optional[str]
-    questions: List[str] 
-    agent_attitude: str
-    subjects: Optional[str]
-    restrict_to_subject: bool
-    allow_questions: bool
-    allow_emojis: bool
-    trust_document: bool
-    word_limit: int
     start_date: Optional[datetime]
     end_date: Optional[datetime]
     is_visible: bool
     allow_redo: bool
     ai_model: str
+    options: Optional[Dict[str, Any]] = None
+    questions: Optional[List[str]] = None
+    agent_attitude: Optional[str] = None
+    subjects: Optional[str] = None
+    restrict_to_subject: Optional[bool] = None
+    allow_questions: Optional[bool] = None
+    never_answer_directly: Optional[bool] = None
+    allow_emojis: Optional[bool] = None
+    trust_document: Optional[bool] = None
+    word_limit: Optional[int] = None
 
-    class Meta:
-        model = Activity
-        fields = [
-            "id",
-            "title",
-            "description",
-            "expert_mode",
-            "custom_prompt",
-            "questions",
-            "agent_attitude",
-            "subjects",
-            "restrict_to_subject",
-            "allow_questions",
-            "allow_emojis",
-            "trust_document",
-            "word_limit",
-            "start_date",
-            "end_date",
-            "is_visible",
-            "allow_redo",
-            "ai_model"
-        ]
+    @staticmethod
+    def from_activity(activity):
+        """Create schema instance from Activity model with options expansion"""
+        all_options = activity.get_all_options()
+        
+        return {
+            'id': str(activity.id),
+            'title': activity.title,
+            'description': activity.description,
+            'expert_mode': activity.expert_mode,
+            'custom_prompt': activity.custom_prompt,
+            'start_date': activity.start_date,
+            'end_date': activity.end_date,
+            'is_visible': activity.is_visible,
+            'allow_redo': activity.allow_redo,
+            'ai_model': activity.ai_model,
+            'options': activity.options,
+            'questions': all_options.get('questions', []),
+            'agent_attitude': all_options.get('agent_attitude', 'friendly'),
+            'subjects': all_options.get('subjects', ''),
+            'restrict_to_subject': all_options.get('restrict_to_subject', False),
+            'allow_questions': all_options.get('allow_questions', True),
+            'never_answer_directly': all_options.get('never_answer_directly', True),
+            'allow_emojis': all_options.get('allow_emojis', True),
+            'trust_document': all_options.get('trust_document', True),
+            'word_limit': all_options.get('word_limit', 0)
+        }
 
 class ThreadSchema(ModelSchema):
     class Meta:

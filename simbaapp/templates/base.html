@@ -123,10 +123,10 @@
                     {% block action_button %}
                         {% if request.resolver_match.url_name == 'courses' %}
                             <div class="action-buttons-group">
-                                <a href="{% url 'create_course' %}" class="add-button" title="Create Course">
+                                <a href="{% url 'create_course' %}" class="add-button" title="{% trans 'Create Course' %}">
                                     <i class="fas fa-plus"></i>
                                 </a>
-                                <a href="{% url 'join_course' %}" class="add-button" title="Join a Course">
+                                <a href="{% url 'join_course' %}" class="add-button" title="{% trans 'Join a Course' %}">
                                     <i class="fas fa-user-plus"></i>
                                 </a>
                             </div>

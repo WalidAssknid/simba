@@ -29,7 +29,13 @@
                             {% if course_info.is_owner %}
                                 {% trans 'TEACHER EDITOR' %}
                             {% elif course_info.enrollment_role %}
-                                {{ course_info.enrollment_role|upper }}
+                                {% if course_info.enrollment_role == 'student' %}
+                                    {% trans 'STUDENT' %}
+                                {% elif course_info.enrollment_role == 'teacher' %}
+                                    {% trans 'TEACHER' %}
+                                {% else %}
+                                    {{ course_info.enrollment_role|upper }}
+                                {% endif %}
                             {% endif %}
                         </p>
                     </div>

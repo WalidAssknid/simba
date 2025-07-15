@@ -6,12 +6,14 @@ from django.conf import settings
 from .models import User, Course, Activity, CourseEnrollment, Message, ActivityToken, EmailVerificationToken, PasswordResetToken
 import json
 import logging
+import gettext
 from django.http import HttpResponseForbidden
 from django.utils import timezone
 from django.utils.translation import activate
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+_ = gettext.gettext
 
 def home_view(request):
     force_home = request.GET.get('force', False)
@@ -58,7 +60,7 @@ def login_view(request):
 
 def logout_view(request):
     request.session.flush()
-    messages.success(request, "Successfully logged out!")
+    messages.success(request, _("Successfully logged out!"))
     return redirect('login')
 
 def register_view(request):
@@ -81,7 +83,7 @@ def register_view(request):
             response_data = response.json()
 
             if response.status_code == 201:
-                messages.success(request, "Registration successful!")
+                messages.success(request, _("Registration successful!"))
                 request.session['user_id'] = response_data['id']
                 request.session['username'] = response_data['username']
                 
@@ -137,7 +139,7 @@ def verify_email_view(request, token):
             request.session.pop('email_verification_warning', None)
             request.session.pop('user_email', None)
         
-        messages.success(request, "Your email has been verified successfully! You can now log in.")
+        messages.success(request, _("Your email has been verified successfully! You can now log in."))
         
         # Check for next parameter to redirect after verification
         next_url = request.GET.get('next')
@@ -171,7 +173,7 @@ def resend_verification_view(request):
             response_data = response.json()
             
             if response.status_code == 200:
-                messages.success(request, "Verification email sent! Please check your inbox.")
+                messages.success(request, _("Verification email sent! Please check your inbox."))
             else:
                 messages.error(request, response_data.get('message', 'Failed to send verification email.'))
                 
@@ -196,7 +198,7 @@ def password_reset_request_view(request):
             response_data = response.json()
             
             if response.status_code == 200:
-                messages.success(request, "If your email is registered, you will receive a password reset link.")
+                messages.success(request, _("If your email is registered, you will receive a password reset link."))
                 return redirect('login')
             else:
                 messages.error(request, response_data.get('message', 'Failed to send password reset email.'))
@@ -238,7 +240,7 @@ def password_reset_view(request, token):
                 response_data = response.json()
                 
                 if response.status_code == 200:
-                    messages.success(request, "Your password has been reset successfully! You can now log in.")
+                    messages.success(request, _("Your password has been reset successfully! You can now log in."))
                     return redirect('login')
                 else:
                     messages.error(request, response_data.get('message', 'Failed to reset password.'))
@@ -352,7 +354,7 @@ def courses_view(request):
     
     # Show login success message only once
     if request.session.pop('show_login_success', False):
-        messages.success(request, f"Welcome back, {user.username}!")
+        messages.success(request, _(f"Welcome back, {user.username}!"))
     
     # Get courses where user is owner (teacher)
     owned_courses = Course.objects.filter(owner=user).order_by('-created_at')
@@ -426,7 +428,7 @@ def create_course_view(request):
             response_data = response.json()
 
             if response.status_code == 201:
-                messages.success(request, f"Course created successfully! Enrollment code: {response_data['enrollment_code']}")
+                messages.success(request, _(f"Course created successfully! Enrollment code: {response_data['enrollment_code']}"))
                 return redirect('courses')
             else:
                  messages.error(request, response_data.get('message', 'Course creation failed.'))
@@ -601,7 +603,7 @@ def create_activity_view(request, course_id):
             response_data = response.json()
 
             if response.status_code == 201:
-                messages.success(request, "Activity created successfully!")
+                messages.success(request, _("Activity created successfully!"))
                 return redirect('course_detail', course_id=course_id)
             else:
                 messages.error(request, response_data.get('message', 'Activity creation failed.'))
@@ -647,17 +649,17 @@ def invite_join_view(request, token):
         # Check if user can join more courses
         if not user.can_join_course():
             total_courses = user.get_owned_courses_count() + user.get_enrolled_courses_count()
-            messages.error(request, f"You can only be in up to 3 courses total. You are currently in {total_courses} courses.")
+            messages.error(request, _(f"You can only be in up to 3 courses total. You are currently in {total_courses} courses."))
             return redirect('courses')
         
         # Check if user is already the owner
         if course.owner.id == user.id:
-            messages.warning(request, f"You are already the owner of the course '{course.title}'.")
+            messages.warning(request, _(f"You are already the owner of the course '{course.title}'."))
             return redirect('course_detail', course_id=course.id)
         
         # Check if user is already enrolled
         if CourseEnrollment.objects.filter(user=user, course=course).exists():
-            messages.warning(request, f"You are already enrolled in the course '{course.title}'.")
+            messages.warning(request, _(f"You are already enrolled in the course '{course.title}'."))
             return redirect('course_detail', course_id=course.id)
         
         # Enroll user with the role specified in the token
@@ -667,7 +669,7 @@ def invite_join_view(request, token):
             role=invite_token.role
         )
         
-        messages.success(request, f"Successfully enrolled in course '{course.title}' as {invite_token.role}!")
+        messages.success(request, _(f"Successfully enrolled in course '{course.title}' as {invite_token.role}!"))
         return redirect('course_detail', course_id=course.id)
         
     except InviteToken.DoesNotExist:
@@ -712,13 +714,13 @@ def activity_join_view(request, token):
         
         # Check if user is already the owner
         if course.owner.id == user.id:
-            messages.info(request, f"Welcome back! You are the owner of '{course.title}'.")
+            messages.info(request, _(f"Welcome back! You are the owner of '{course.title}'."))
             return redirect(f'/courses/{course.id}/?expand_activity={activity.id}')
         
         # Check if user is already enrolled
         existing_enrollment = CourseEnrollment.objects.filter(user=user, course=course).first()
         if existing_enrollment:
-            messages.info(request, f"Welcome back to '{course.title}'!")
+            messages.info(request, _(f"Welcome back to '{course.title}'!"))
             return redirect(f'/courses/{course.id}/?expand_activity={activity.id}')
         
         # Enroll user as student (default role for activity links)
@@ -728,7 +730,7 @@ def activity_join_view(request, token):
             role='student'
         )
         
-        messages.success(request, f"Successfully joined course '{course.title}' and activity '{activity.title}'!")
+        messages.success(request, _(f"Successfully joined course '{course.title}' and activity '{activity.title}'!"))
         return redirect(f'/courses/{course.id}/?expand_activity={activity.id}')
         
     except ActivityToken.DoesNotExist:
@@ -764,7 +766,7 @@ def join_course_view(request):
         # Check if user can join more courses
         if not user.can_join_course():
             total_courses = user.get_owned_courses_count() + user.get_enrolled_courses_count()
-            messages.error(request, f"You can only be in up to 3 courses total. You are currently in {total_courses} courses.")
+            messages.error(request, _(f"You can only be in up to 3 courses total. You are currently in {total_courses} courses."))
             return render(request, 'join_course.html', {'enrolled_courses': all_courses})
             
         try:
@@ -772,12 +774,12 @@ def join_course_view(request):
             
             # Check if user is already the owner
             if course.owner.id == user.id:
-                messages.warning(request, f"You are already the owner of the course '{course.title}'.")
+                messages.warning(request, _(f"You are already the owner of the course '{course.title}'."))
                 return redirect('course_detail', course_id=course.id)
             
             # Check if user is already enrolled
             if CourseEnrollment.objects.filter(user=user, course=course).exists():
-                messages.warning(request, f"You are already enrolled in the course '{course.title}'.")
+                messages.warning(request, _(f"You are already enrolled in the course '{course.title}'."))
                 return redirect('course_detail', course_id=course.id)
             else:
                 # Always enroll as student when using enrollment code
@@ -787,7 +789,7 @@ def join_course_view(request):
                     role='student'
                 )
                 
-                messages.success(request, f"Successfully enrolled in course '{course.title}' as student!")
+                messages.success(request, _(f"Successfully enrolled in course '{course.title}' as student!"))
             
             return redirect('course_detail', course_id=course.id)
             
@@ -849,11 +851,11 @@ def dashboard_view(request):
     if view_as:
         if view_as == 'teacher':
             if not has_teacher_role:
-                messages.warning(request, "You don't have teacher privileges in any courses. You need to own a course or be enrolled as a teacher.")
+                messages.warning(request, _("You don't have teacher privileges in any courses. You need to own a course or be enrolled as a teacher."))
                 view_as = 'student' if has_student_role else 'teacher'  # Fallback
         elif view_as == 'student':
             if not has_student_role:
-                messages.warning(request, "You are not enrolled as a student in any courses. Join a course as a student to access this view.")
+                messages.warning(request, _("You are not enrolled as a student in any courses. Join a course as a student to access this view."))
                 view_as = 'teacher' if has_teacher_role else 'student'  # Fallback
     
     if not view_as:
@@ -871,13 +873,13 @@ def dashboard_view(request):
     # Handle view selection - show appropriate courses based on validated view
     if view_as == 'teacher':
         if not has_teacher_role:
-            messages.info(request, "You don't have any courses yet. Create a course or join one as a teacher to access analytics features.")
+            messages.info(request, _("You don't have any courses yet. Create a course or join one as a teacher to access analytics features."))
             courses = Course.objects.none()  # Empty queryset
         else:
             courses = all_teacher_courses.order_by('-created_at')
     else:  # view_as == 'student'
         if not has_student_role:
-            messages.info(request, "You are not enrolled in any courses as a student yet. Join a course to view your statistics.")
+            messages.info(request, _("You are not enrolled in any courses as a student yet. Join a course to view your statistics."))
             courses = Course.objects.none()  # Empty queryset
         else:
             courses = student_courses.order_by('-created_at')
@@ -929,7 +931,7 @@ def dashboard_view(request):
                 course_object_for_context = courses.first()
         except ValueError:
             logger.error(f"Invalid course ID format: {selected_course_id}")
-            messages.warning(request, f"Invalid course ID format: '{selected_course_id}'. Defaulting to all courses.")
+            messages.warning(request, _(f"Invalid course ID format: '{selected_course_id}'. Defaulting to all courses."))
             authoritative_id_for_logic_and_template = None
             course_object_for_context = courses.first() 
     else:
@@ -1312,7 +1314,7 @@ def edit_course_view(request, course_id):
             course.description = description
             course.save()
             
-            messages.success(request, "Course updated successfully!")
+            messages.success(request, _("Course updated successfully!"))
             return redirect('course_detail', course_id=course.id)
             
         return render(request, 'create_course.html', {
@@ -1425,7 +1427,7 @@ def profile_view(request):
                 # Recarregar o objeto user do banco de dados para garantir dados atualizados
                 user = User.objects.get(id=user_id)
                 
-                messages.success(request, "Profile updated successfully!")
+                messages.success(request, _("Profile updated successfully!"))
                 return redirect('profile')
             else:
                 error_data = response.json()
@@ -1522,7 +1524,7 @@ def admin_users_view(request):
             })
             
             if response.status_code == 201:
-                messages.success(request, f"User '{username}' created successfully.")
+                messages.success(request, _(f"User '{username}' created successfully."))
             else:
                 error_data = response.json()
                 messages.error(request, f"Failed to create user: {error_data.get('message', 'Unknown error')}")
@@ -1674,7 +1676,7 @@ def admin_delete_user(request, user_id_to_delete):
         response = requests.delete(api_url)
         
         if response.status_code == 204:
-            messages.success(request, "User deleted successfully.")
+            messages.success(request, _("User deleted successfully."))
         else:
             error_data = response.json() if response.content else {}
             messages.error(request, f"Failed to delete user: {error_data.get('message', 'Unknown error')}")
@@ -1705,7 +1707,7 @@ def admin_delete_course(request, course_id):
         response = requests.delete(api_url)
         
         if response.status_code == 204:
-            messages.success(request, "Course deleted successfully.")
+            messages.success(request, _("Course deleted successfully."))
         else:
             error_data = response.json() if response.content else {}
             messages.error(request, f"Failed to delete course: {error_data.get('message', 'Unknown error')}")
@@ -1736,7 +1738,7 @@ def admin_delete_activity(request, activity_id):
         response = requests.delete(api_url)
         
         if response.status_code == 204:
-            messages.success(request, "Activity deleted successfully.")
+            messages.success(request, _("Activity deleted successfully."))
         else:
             error_data = response.json() if response.content else {}
             messages.error(request, f"Failed to delete activity: {error_data.get('message', 'Unknown error')}")

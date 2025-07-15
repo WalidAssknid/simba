@@ -22,7 +22,7 @@
             {% trans 'Show Participants' %}
         </button>
         {% if can_create_activity %}
-        <a href="#" id="createActivityBtn" class="add-button hidden" title="Create Activity">
+        <a href="#" id="createActivityBtn" class="add-button hidden" title="{% trans 'Create Activity' %}">
             <i class="fas fa-plus"></i>
         </a>
         {% endif %}
@@ -102,7 +102,13 @@
                                 {% if activity_info.is_owner %}
                                     {% trans 'Owner' %}
                                 {% else %}
-                                    {{ activity_info.user_role|capfirst }}
+                                    {% if activity_info.user_role == 'student' %}
+                                        {% trans 'Student' %}
+                                    {% elif activity_info.user_role == 'teacher' %}
+                                        {% trans 'Teacher' %}
+                                    {% else %}
+                                        {{ activity_info.user_role|capfirst }}
+                                    {% endif %}
                                 {% endif %}
                             </span>
                         </div>

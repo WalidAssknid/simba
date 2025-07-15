@@ -829,10 +829,10 @@
   <div>
     <label for="view-as-filter">{% trans 'View as:' %}</label>
     <select id="view-as-filter" class="form-control" onchange="updateDashboard()">
-        <option value="teacher" {% if view_as == 'teacher' %}selected{% endif %} {% if not has_teacher_role %}disabled title="You need to own a course or be enrolled as a teacher"{% endif %}>
+        <option value="teacher" {% if view_as == 'teacher' %}selected{% endif %} {% if not has_teacher_role %}disabled title="{% trans 'You need to own a course or be enrolled as a teacher' %}"{% endif %}>
             {% trans 'Teacher View' %}
         </option>
-        <option value="student" {% if view_as == 'student' %}selected{% endif %} {% if not has_student_role %}disabled title="You need to be enrolled as a student in a course"{% endif %}>
+        <option value="student" {% if view_as == 'student' %}selected{% endif %} {% if not has_student_role %}disabled title="{% trans 'You need to be enrolled as a student in a course' %}"{% endif %}>
             {% trans 'Student View' %}
         </option>
     </select>

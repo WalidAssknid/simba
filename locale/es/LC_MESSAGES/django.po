@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-06-19 16:02+0200\n"
+"POT-Creation-Date: 2025-07-15 17:11+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,6 +34,12 @@ msgstr ""
 msgid "Show Participants"
 msgstr ""
 
+#: .\simbaapp\templates\activities.html:25
+#: .\simbaapp\templates\course_detail.html:44
+#: .\simbaapp\templates\popup_activity.html:200
+msgid "Create Activity"
+msgstr ""
+
 #: .\simbaapp\templates\activities.html:37
 #: .\simbaapp\templates\course_detail.html:96
 msgid "Course Enrollment Code"
@@ -50,18 +56,22 @@ msgid "Course Participants"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:78
+#: .\simbaapp\templates\course_detail.html:158
 msgid "Edit"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:81
+#: .\simbaapp\templates\course_detail.html:161
 msgid "Chat with Activity"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:84
+#: .\simbaapp\templates\course_detail.html:164
 msgid "Get Activity Link"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:87
+#: .\simbaapp\templates\course_detail.html:167
 msgid "Delete"
 msgstr ""
 
@@ -70,56 +80,65 @@ msgstr ""
 msgid "Owner"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:114
+#: .\simbaapp\templates\activities.html:106
+#: .\simbaapp\templates\dashboard.html:904
+msgid "Student"
+msgstr ""
+
+#: .\simbaapp\templates\activities.html:108
+msgid "Teacher"
+msgstr ""
+
+#: .\simbaapp\templates\activities.html:120
 #: .\simbaapp\templates\course_detail.html:184
 msgid "No activities found"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:117
+#: .\simbaapp\templates\activities.html:123
 #: .\simbaapp\templates\course_detail.html:187
 msgid ""
 " Click the <i class=\"fas fa-plus\"></i> button to create a new activity! "
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:119
+#: .\simbaapp\templates\activities.html:125
 msgid "You don't have any activities yet. Ask your teacher to create one!"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:133
+#: .\simbaapp\templates\activities.html:139
 #: .\simbaapp\templates\course_detail.html:203
 msgid "Back to Activities"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:143
+#: .\simbaapp\templates\activities.html:149
 #: .\simbaapp\templates\course_detail.html:214
 msgid "Re-do Activity"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:147
+#: .\simbaapp\templates\activities.html:153
 #: .\simbaapp\templates\course_detail.html:218
 msgid "Start New Attempt"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:150
+#: .\simbaapp\templates\activities.html:156
 #: .\simbaapp\templates\course_detail.html:221
 msgid "Start"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:153
+#: .\simbaapp\templates\activities.html:159
 #: .\simbaapp\templates\course_detail.html:224
-#: .\simbaapp\templates\courses.html:83 .\simbaapp\templates\courses.html:98
+#: .\simbaapp\templates\courses.html:89 .\simbaapp\templates\courses.html:104
 #: .\simbaapp\templates\create_course.html:20
 #: .\simbaapp\templates\join_course.html:26
 #: .\simbaapp\templates\profile.html:40
 msgid "Cancel"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:273
+#: .\simbaapp\templates\activities.html:279
 #: .\simbaapp\templates\course_detail.html:242
 msgid "Share this link with students to access the activity:"
 msgstr ""
 
-#: .\simbaapp\templates\activities.html:275
+#: .\simbaapp\templates\activities.html:281
 #: .\simbaapp\templates\course_detail.html:69
 #: .\simbaapp\templates\course_detail.html:83
 #: .\simbaapp\templates\course_detail.html:244
@@ -142,39 +161,50 @@ msgstr ""
 msgid "Admin Dashboard"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:62 .\simbaapp\templates\home.html:25
-#: .\simbaapp\templates\home.html:374 .\simbaapp\templates\login.html:3
+#: .\simbaapp\templates\base.html:62 .\simbaapp\templates\home.html:55
+#: .\simbaapp\templates\home.html:404 .\simbaapp\templates\login.html:3
 #: .\simbaapp\templates\login.html:40 .\simbaapp\templates\register.html:52
 msgid "Login"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:65 .\simbaapp\templates\home.html:375
+#: .\simbaapp\templates\base.html:65 .\simbaapp\templates\home.html:405
 #: .\simbaapp\templates\login.html:45 .\simbaapp\templates\register.html:3
 #: .\simbaapp\templates\register.html:47
 msgid "Register"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:111 .\simbaapp\templates\profile.html:3
+#: .\simbaapp\templates\base.html:128
+#: .\simbaapp\templates\create_course.html:21
+msgid "Create Course"
+msgstr ""
+
+#: .\simbaapp\templates\base.html:131 .\simbaapp\templates\join_course.html:3
+#: .\simbaapp\templates\join_course.html:6
+#: .\simbaapp\templates\join_course.html:39
+msgid "Join a Course"
+msgstr ""
+
+#: .\simbaapp\templates\base.html:141 .\simbaapp\templates\profile.html:3
 msgid "Manage Account"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:112
+#: .\simbaapp\templates\base.html:142
 #: .\simbaapp\templates\email_verification_status.html:159
 #: .\simbaapp\templates\email_verification_status.html:165
 msgid "Logout"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:135
+#: .\simbaapp\templates\base.html:165
 msgid "Email Verification Required:"
 msgstr ""
 
-#: .\simbaapp\templates\base.html:135
+#: .\simbaapp\templates\base.html:165
 msgid ""
 "Please verify your email address to confirm your account. Otherwise, you "
 "will not be able to log in again."
 msgstr ""
 
-#: .\simbaapp\templates\base.html:136
+#: .\simbaapp\templates\base.html:166
 msgid "Resend verification email"
 msgstr ""
 
@@ -241,62 +271,66 @@ msgstr ""
 msgid "TEACHER EDITOR"
 msgstr ""
 
-#: .\simbaapp\templates\courses.html:50
+#: .\simbaapp\templates\courses.html:33
+msgid "STUDENT"
+msgstr ""
+
+#: .\simbaapp\templates\courses.html:35
+msgid "TEACHER"
+msgstr ""
+
+#: .\simbaapp\templates\courses.html:56
 msgid ""
 " Click the <i class=\"fas fa-plus\"></i> button to create a new course! "
 msgstr ""
 
-#: .\simbaapp\templates\courses.html:53
+#: .\simbaapp\templates\courses.html:59
 msgid " Click the <i class=\"fas fa-plus\"></i> button to join a course! "
 msgstr ""
 
-#: .\simbaapp\templates\courses.html:58
+#: .\simbaapp\templates\courses.html:64
 #, python-format
 msgid ""
 " Courses: %(owned_courses_count)s/3 owned, %(enrolled_courses_count)s "
 "enrolled "
 msgstr ""
 
-#: .\simbaapp\templates\courses.html:59
+#: .\simbaapp\templates\courses.html:65
 msgid "Activities: Up to 10 total"
 msgstr ""
 
-#: .\simbaapp\templates\courses.html:70
+#: .\simbaapp\templates\courses.html:76
 msgid "Edit Course"
 msgstr ""
 
-#: .\simbaapp\templates\courses.html:73
+#: .\simbaapp\templates\courses.html:79
 #: .\simbaapp\templates\create_course.html:10
 msgid "Title:"
 msgstr ""
 
-#: .\simbaapp\templates\courses.html:78
+#: .\simbaapp\templates\courses.html:84
 #: .\simbaapp\templates\create_course.html:15
 msgid "Description:"
 msgstr ""
 
-#: .\simbaapp\templates\courses.html:84
+#: .\simbaapp\templates\courses.html:90
 msgid "Update Course"
 msgstr ""
 
-#: .\simbaapp\templates\courses.html:94 .\simbaapp\templates\courses.html:99
+#: .\simbaapp\templates\courses.html:100 .\simbaapp\templates\courses.html:105
 msgid "Delete Course"
 msgstr ""
 
-#: .\simbaapp\templates\courses.html:95
+#: .\simbaapp\templates\courses.html:101
 msgid "Are you sure you want to delete"
 msgstr ""
 
-#: .\simbaapp\templates\courses.html:96
+#: .\simbaapp\templates\courses.html:102
 msgid "This action cannot be undone."
 msgstr ""
 
 #: .\simbaapp\templates\create_course.html:6
 msgid "Create New Course"
-msgstr ""
-
-#: .\simbaapp\templates\create_course.html:21
-msgid "Create Course"
 msgstr ""
 
 #: .\simbaapp\templates\dashboard.html:3
@@ -308,8 +342,16 @@ msgstr ""
 msgid "View as:"
 msgstr ""
 
+#: .\simbaapp\templates\dashboard.html:832
+msgid "You need to own a course or be enrolled as a teacher"
+msgstr ""
+
 #: .\simbaapp\templates\dashboard.html:833
 msgid "Teacher View"
+msgstr ""
+
+#: .\simbaapp\templates\dashboard.html:835
+msgid "You need to be enrolled as a student in a course"
 msgstr ""
 
 #: .\simbaapp\templates\dashboard.html:836
@@ -364,10 +406,6 @@ msgstr ""
 msgid "Student Engagement"
 msgstr ""
 
-#: .\simbaapp\templates\dashboard.html:904
-msgid "Student"
-msgstr ""
-
 #: .\simbaapp\templates\dashboard.html:905
 #: .\simbaapp\templates\dashboard.html:969
 msgid "Messages"
@@ -401,7 +439,7 @@ msgstr ""
 
 #: .\simbaapp\templates\dashboard.html:941
 msgid ""
-"This feature uses OpenAI's API to analyze student messages and provide "
+"This feature uses OpenAI&#39;s API to analyze student messages and provide "
 "insights."
 msgstr ""
 
@@ -445,7 +483,7 @@ msgstr ""
 
 #: .\simbaapp\templates\dashboard.html:1004
 msgid ""
-"This feature uses OpenAI's API to analyze your communication style, "
+"This feature uses OpenAI&#39;s API to analyze your communication style, "
 "engagement level, and identify potential misconceptions."
 msgstr ""
 
@@ -457,7 +495,7 @@ msgstr ""
 
 #: .\simbaapp\templates\dashboard.html:1007
 msgid ""
-"This feature uses OpenAI's API to analyze the student's "
+"This feature uses OpenAI&#39;s API to analyze the student&#39;s "
 "communication style, engagement level, and identify potential misconceptions."
 msgstr ""
 
@@ -648,42 +686,42 @@ msgstr ""
 msgid "and register again."
 msgstr ""
 
-#: .\simbaapp\templates\home.html:21
+#: .\simbaapp\templates\home.html:51
 msgid "Manual"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:22
+#: .\simbaapp\templates\home.html:52
 msgid "Papers"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:23 .\simbaapp\templates\home.html:213
+#: .\simbaapp\templates\home.html:53 .\simbaapp\templates\home.html:243
 msgid "Partners"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:24 .\simbaapp\templates\home.html:382
+#: .\simbaapp\templates\home.html:54 .\simbaapp\templates\home.html:412
 msgid "About"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:37 .\simbaapp\templates\login.html:10
+#: .\simbaapp\templates\home.html:67 .\simbaapp\templates\login.html:10
 msgid "Welcome to SIMBA"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:38 .\simbaapp\templates\home.html:369
+#: .\simbaapp\templates\home.html:68 .\simbaapp\templates\home.html:399
 msgid "The AI That Makes Students Think"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:40
+#: .\simbaapp\templates\home.html:70
 msgid ""
 " SIMBA is a web and mobile based educational platform that empowers teachers "
 "to design, deploy,\n"
 "                    and analyze "
 msgstr ""
 
-#: .\simbaapp\templates\home.html:41
+#: .\simbaapp\templates\home.html:71
 msgid "pedagogically-grounded"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:41
+#: .\simbaapp\templates\home.html:71
 msgid ""
 "chatbots powered by large language models.\n"
 "                    While generative AI is becoming increasingly available, "
@@ -702,39 +740,39 @@ msgid ""
 "                    "
 msgstr ""
 
-#: .\simbaapp\templates\home.html:52
+#: .\simbaapp\templates\home.html:82
 msgid "Get Started"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:53
+#: .\simbaapp\templates\home.html:83
 msgid "Learn More"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:67
+#: .\simbaapp\templates\home.html:97
 msgid "How Does SIMBA Work?"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:74
+#: .\simbaapp\templates\home.html:104
 msgid "Access and Manage Courses"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:82
+#: .\simbaapp\templates\home.html:112
 msgid "Engage with our AI Assistant"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:90
+#: .\simbaapp\templates\home.html:120
 msgid "Track Progress and Insights"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:100
+#: .\simbaapp\templates\home.html:130
 msgid "Getting Started with SIMBA"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:103
+#: .\simbaapp\templates\home.html:133
 msgid "Everything You Need to Know"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:105
+#: .\simbaapp\templates\home.html:135
 msgid ""
 " Whether you're new to educational technology or an experienced educator, "
 "our documentation \n"
@@ -744,86 +782,86 @@ msgid ""
 "running quickly. "
 msgstr ""
 
-#: .\simbaapp\templates\home.html:112
+#: .\simbaapp\templates\home.html:142
 msgid "What Makes SIMBA Different?"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:117
+#: .\simbaapp\templates\home.html:147
 msgid "Pedagogy-first:"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:117
+#: .\simbaapp\templates\home.html:147
 msgid ""
 "Chatbot creation is rooted in instructional strategies defined by the "
 "teachers."
 msgstr ""
 
-#: .\simbaapp\templates\home.html:123
+#: .\simbaapp\templates\home.html:153
 msgid "Teacher-driven:"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:123
+#: .\simbaapp\templates\home.html:153
 msgid "Built with and for educators; no AI expertise needed."
 msgstr ""
 
-#: .\simbaapp\templates\home.html:129
+#: .\simbaapp\templates\home.html:159
 msgid "Learning Analytics-Ready:"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:129
+#: .\simbaapp\templates\home.html:159
 msgid "Interactions become evidence for reflection, research, and refinement."
 msgstr ""
 
-#: .\simbaapp\templates\home.html:135
+#: .\simbaapp\templates\home.html:165
 msgid "Evidence-based and Informed:"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:135
+#: .\simbaapp\templates\home.html:165
 msgid ""
 "The tool evolves based on classroom realities and ongoing research using "
 "Design Based Research Methodologies."
 msgstr ""
 
-#: .\simbaapp\templates\home.html:143
+#: .\simbaapp\templates\home.html:173
 msgid "Who is SIMBA for?"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:146
+#: .\simbaapp\templates\home.html:176
 msgid "University instructors, school teachers, and instructional designers."
 msgstr ""
 
-#: .\simbaapp\templates\home.html:147
+#: .\simbaapp\templates\home.html:177
 msgid "Education researchers exploring AI-supported teaching."
 msgstr ""
 
-#: .\simbaapp\templates\home.html:148
+#: .\simbaapp\templates\home.html:178
 msgid "Innovative institutions piloting future-ready learning tools."
 msgstr ""
 
-#: .\simbaapp\templates\home.html:156
+#: .\simbaapp\templates\home.html:186
 msgid "User Guide"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:165
+#: .\simbaapp\templates\home.html:195
 msgid "SIMBA User Manual"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:167 .\simbaapp\templates\home.html:192
-#: .\simbaapp\templates\home.html:203
+#: .\simbaapp\templates\home.html:197 .\simbaapp\templates\home.html:222
+#: .\simbaapp\templates\home.html:233
 msgid "Download PDF"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:178
+#: .\simbaapp\templates\home.html:208
 msgid "Research Behind SIMBA"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:180
+#: .\simbaapp\templates\home.html:210
 msgid ""
 "Our work is grounded in educational research and continues to contribute to "
 "the field of AI in education"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:243
+#: .\simbaapp\templates\home.html:273
 msgid ""
 " SIMBA was developed and implemented through a series of collaborative "
 "research projects involving researchers from Chile, Brazil, and France. This "
@@ -832,51 +870,51 @@ msgid ""
 "(NMEdSup), and the STIC-AmSud LAFE project. "
 msgstr ""
 
-#: .\simbaapp\templates\home.html:252
+#: .\simbaapp\templates\home.html:282
 msgid "Contributors"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:260
+#: .\simbaapp\templates\home.html:290
 msgid "Associate Professor at UT, IRIT"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:269
+#: .\simbaapp\templates\home.html:299
 msgid "Associate Professor at PUC"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:278
+#: .\simbaapp\templates\home.html:308
 msgid "Professor at UFRPE University"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:287
+#: .\simbaapp\templates\home.html:317
 msgid "PhD, Lecturer at IPSA"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:296
+#: .\simbaapp\templates\home.html:326
 msgid "Post-Doc researcher at IRIT"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:305
+#: .\simbaapp\templates\home.html:335
 msgid "Internship from UFRPE University at IRIT"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:314
+#: .\simbaapp\templates\home.html:344
 msgid "PhD Student from IRIT"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:324
+#: .\simbaapp\templates\home.html:354
 msgid "How to cite SIMBA"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:338
+#: .\simbaapp\templates\home.html:368
 msgid "About SIMBA"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:341
+#: .\simbaapp\templates\home.html:371
 msgid "Educational Technology That Actually Helps"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:343
+#: .\simbaapp\templates\home.html:373
 msgid ""
 "SIMBA is an educational chatbot designed to support students' learning "
 "strategies. \n"
@@ -886,7 +924,7 @@ msgid ""
 "Education (NMEdSup)."
 msgstr ""
 
-#: .\simbaapp\templates\home.html:348
+#: .\simbaapp\templates\home.html:378
 msgid ""
 "Our goal is simple: help students and teachers become better learners. We "
 "believe that with the right \n"
@@ -897,22 +935,16 @@ msgid ""
 "                        whenever students need it most."
 msgstr ""
 
-#: .\simbaapp\templates\home.html:376
+#: .\simbaapp\templates\home.html:406
 msgid "Documentation"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:380
+#: .\simbaapp\templates\home.html:410
 msgid "Research Papers"
 msgstr ""
 
-#: .\simbaapp\templates\home.html:381
+#: .\simbaapp\templates\home.html:411
 msgid "Use Cases"
-msgstr ""
-
-#: .\simbaapp\templates\join_course.html:3
-#: .\simbaapp\templates\join_course.html:6
-#: .\simbaapp\templates\join_course.html:39
-msgid "Join a Course"
 msgstr ""
 
 #: .\simbaapp\templates\join_course.html:13
@@ -942,6 +974,12 @@ msgstr ""
 
 #: .\simbaapp\templates\login.html:11
 msgid "Login to your account to access the platform"
+msgstr ""
+
+#: .\simbaapp\templates\login.html:12
+msgid ""
+"Since this is a free tool, usage is limited. You can create up to 3 courses "
+"with a maximum of 10 activities."
 msgstr ""
 
 #: .\simbaapp\templates\login.html:27 .\simbaapp\templates\profile.html:11
@@ -1068,6 +1106,12 @@ msgstr ""
 
 #: .\simbaapp\templates\popup_activity.html:49
 msgid "Activity Questions"
+msgstr ""
+
+#: .\simbaapp\templates\popup_activity.html:52
+msgid ""
+" <input type=\"text\" id=\"new-question\" class=\"form-control\" "
+"placeholder=\"Add a question...\"> "
 msgstr ""
 
 #: .\simbaapp\templates\popup_activity.html:59
@@ -1218,10 +1262,6 @@ msgstr ""
 msgid "When should this activity stop being available to students?"
 msgstr ""
 
-#: .\simbaapp\templates\popup_activity.html:200
-msgid "Create Activity"
-msgstr ""
-
 #: .\simbaapp\templates\profile.html:7
 msgid "Manage Your Account"
 msgstr ""
@@ -1289,4 +1329,76 @@ msgstr ""
 
 #: .\simbaapp\templates\resend_verification.html:94
 msgid "Send Verification Email"
+msgstr ""
+
+#: .\simbaapp\views.py:63
+msgid "Successfully logged out!"
+msgstr ""
+
+#: .\simbaapp\views.py:86
+msgid "Registration successful!"
+msgstr ""
+
+#: .\simbaapp\views.py:142
+msgid "Your email has been verified successfully! You can now log in."
+msgstr ""
+
+#: .\simbaapp\views.py:176
+msgid "Verification email sent! Please check your inbox."
+msgstr ""
+
+#: .\simbaapp\views.py:201
+msgid "If your email is registered, you will receive a password reset link."
+msgstr ""
+
+#: .\simbaapp\views.py:243
+msgid "Your password has been reset successfully! You can now log in."
+msgstr ""
+
+#: .\simbaapp\views.py:606
+msgid "Activity created successfully!"
+msgstr ""
+
+#: .\simbaapp\views.py:854
+msgid ""
+"You don't have teacher privileges in any courses. You need to own a course "
+"or be enrolled as a teacher."
+msgstr ""
+
+#: .\simbaapp\views.py:858
+msgid ""
+"You are not enrolled as a student in any courses. Join a course as a student "
+"to access this view."
+msgstr ""
+
+#: .\simbaapp\views.py:876
+msgid ""
+"You don't have any courses yet. Create a course or join one as a teacher to "
+"access analytics features."
+msgstr ""
+
+#: .\simbaapp\views.py:882
+msgid ""
+"You are not enrolled in any courses as a student yet. Join a course to view "
+"your statistics."
+msgstr ""
+
+#: .\simbaapp\views.py:1317
+msgid "Course updated successfully!"
+msgstr ""
+
+#: .\simbaapp\views.py:1430
+msgid "Profile updated successfully!"
+msgstr ""
+
+#: .\simbaapp\views.py:1679
+msgid "User deleted successfully."
+msgstr ""
+
+#: .\simbaapp\views.py:1710
+msgid "Course deleted successfully."
+msgstr ""
+
+#: .\simbaapp\views.py:1741
+msgid "Activity deleted successfully."
 msgstr ""

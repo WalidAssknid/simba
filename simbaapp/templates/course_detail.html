@@ -41,7 +41,7 @@
                 {% trans 'Show Participants' %}
             </button>
     {% if is_owner or user_role_in_course == 'teacher' %}
-            <button id="createActivityBtn" class="add-button" title="Create Activity">
+            <button id="createActivityBtn" class="add-button" title="{% trans 'Create Activity' %}">
                 <i class="fas fa-plus"></i>
             </button>
             {% endif %}
@@ -155,16 +155,16 @@
                         <div class="activity-menu">
                             {% if is_owner or user_role_in_course == 'teacher' %}
                             <a href="#" class="activity-menu-item" data-action="edit" data-activity-id="{{ activity.id }}">
-                                <i class="fas fa-edit"></i> Edit
+                                <i class="fas fa-edit"></i> {% trans 'Edit' %}
                             </a>
                             <a href="#" class="activity-menu-item" data-action="chat" data-activity-id="{{ activity.id }}">
-                                <i class="fas fa-comment"></i> Chat with Activity
+                                <i class="fas fa-comment"></i> {% trans 'Chat with Activity' %}
                             </a>
                             <a href="#" class="activity-menu-item" data-action="link" data-activity-id="{{ activity.id }}">
-                                <i class="fas fa-link"></i> Get Activity Link
+                                <i class="fas fa-link"></i> {% trans 'Get Activity Link' %}
                             </a>
                             <a href="#" class="activity-menu-item delete-activity" data-action="delete" data-activity-id="{{ activity.id }}">
-                                <i class="fas fa-trash"></i> Delete
+                                <i class="fas fa-trash"></i> {% trans 'Delete' %}
                             </a>
                             {% endif %}
                         </div>

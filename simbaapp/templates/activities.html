@@ -90,7 +90,7 @@
                     </div>
                 </div>
                 {% if activity_info.is_owner or activity_info.user_role == 'teacher' %}
-                <div class="activity-visibility-toggle" data-activity-id="{{ activity.id }}" data-is-visible="{{ activity.is_visible|yesno:'true,false' }}" title="{% if activity.is_visible %}Hide from students{% else %}Show to students{% endif %}">
+                <div class="activity-visibility-toggle" data-activity-id="{{ activity.id }}" data-is-visible="{{ activity.is_visible|yesno:'true,false' }}" title="{% if activity.is_visible %}{% trans 'Hide from students' %}{% else %}{% trans 'Show to students' %}{% endif %}">
                     <i class="fas fa-eye{% if not activity.is_visible %}-slash{% endif %}"></i>
                 </div>
                 {% endif %}
@@ -275,7 +275,7 @@
 <div id="activityLinkModal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <h3 class="modal-title">Activity Link</h3>
+        <h3 class="modal-title">{% trans 'Activity Link' %}</h3>
         <p>{% trans 'Share this link with students to access the activity:' %}</p>
         <div class="code-display" id="activityLinkDisplay"></div>
         <button class="btn btn-primary copy-link-btn" data-target="activityLinkDisplay">{% trans 'Copy Link' %}</button>
@@ -1000,10 +1000,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const icon = this.querySelector('i');
                 if (newIsVisible) {
                     icon.className = 'fas fa-eye';
-                    this.title = 'Hide from students';
+                    this.title = gettext('Hide from students');
                 } else {
                     icon.className = 'fas fa-eye-slash';
-                    this.title = 'Show to students';
+                    this.title = gettext('Show to students');
                 }
                 
                 // Show success message

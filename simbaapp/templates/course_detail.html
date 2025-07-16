@@ -121,10 +121,17 @@
                 <div class="participant-card" data-enrollment-id="{{ enrollment.id }}" data-user-id="{{ enrollment.user.id }}">
                     <div class="participant-info">
                         <span class="participant-name">{{ enrollment.user.username }}</span>
-                        <span class="participant-role">{{ enrollment.role|capfirst }}</span>
+                        {% if enrollment.role == 'student' %}
+                            <span class="participant-role">{% trans 'Student' %}</span>
+                        {% elif activity_info.user_role == 'teacher' %}
+                            <span class="participant-role">{% trans 'Teacher' %}</span>
+                        {% else %}
+                             <span class="participant-role">{{ enrollment.role|capfirst }}</span>
+                        {% endif %}
+                        
                     </div>
                     {% if is_owner and enrollment.role == 'student' %}
-                    <button class="remove-participant-btn" data-enrollment-id="{{ enrollment.id }}" data-username="{{ enrollment.user.username }}" title="Remove {{ enrollment.user.username }} from course">
+                    <button class="remove-participant-btn" data-enrollment-id="{{ enrollment.id }}" data-username="{{ enrollment.user.username }}" title="{% trans 'Remove {{ enrollment.user.username }} from course' %}">
                         <i class="fas fa-trash"></i>
                     </button>
                     {% endif %}
@@ -170,7 +177,7 @@
                         </div>
                     </div>
                     {% if is_owner or user_role_in_course == 'teacher' %}
-                    <div class="activity-visibility-toggle" data-activity-id="{{ activity.id }}" data-is-visible="{{ activity.is_visible|yesno:'true,false' }}" title="{% if activity.is_visible %}Hide from students{% else %}Show to students{% endif %}">
+                    <div class="activity-visibility-toggle" data-activity-id="{{ activity.id }}" data-is-visible="{{ activity.is_visible|yesno:'true,false' }}" title="{% if activity.is_visible %}{% trans 'Hide from students' %}{% else %}{% trans 'Show to students' %}{% endif %}">
                         <i class="fas fa-eye{% if not activity.is_visible %}-slash{% endif %}"></i>
                     </div>
                     {% endif %}
@@ -1168,10 +1175,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const icon = this.querySelector('i');
                 if (newIsVisible) {
                     icon.className = 'fas fa-eye';
-                    this.title = 'Hide from students';
+                    this.title = gettext('Hide from students');
                 } else {
                     icon.className = 'fas fa-eye-slash';
-                    this.title = 'Show to students';
+                    this.title = gettext('Show to students');
                 }
                 
                 // Show success message

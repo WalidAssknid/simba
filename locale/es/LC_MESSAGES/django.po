@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-15 17:11+0200\n"
+"POT-Creation-Date: 2025-07-16 16:14+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -56,23 +56,33 @@ msgid "Course Participants"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:78
-#: .\simbaapp\templates\course_detail.html:158
+#: .\simbaapp\templates\course_detail.html:165
 msgid "Edit"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:81
-#: .\simbaapp\templates\course_detail.html:161
+#: .\simbaapp\templates\course_detail.html:168
 msgid "Chat with Activity"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:84
-#: .\simbaapp\templates\course_detail.html:164
+#: .\simbaapp\templates\course_detail.html:171
 msgid "Get Activity Link"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:87
-#: .\simbaapp\templates\course_detail.html:167
+#: .\simbaapp\templates\course_detail.html:174
 msgid "Delete"
+msgstr ""
+
+#: .\simbaapp\templates\activities.html:93
+#: .\simbaapp\templates\course_detail.html:180
+msgid "Hide from students"
+msgstr ""
+
+#: .\simbaapp\templates\activities.html:93
+#: .\simbaapp\templates\course_detail.html:180
+msgid "Show to students"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:103
@@ -81,21 +91,23 @@ msgid "Owner"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:106
+#: .\simbaapp\templates\course_detail.html:125
 #: .\simbaapp\templates\dashboard.html:904
 msgid "Student"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:108
+#: .\simbaapp\templates\course_detail.html:127
 msgid "Teacher"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:120
-#: .\simbaapp\templates\course_detail.html:184
+#: .\simbaapp\templates\course_detail.html:191
 msgid "No activities found"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:123
-#: .\simbaapp\templates\course_detail.html:187
+#: .\simbaapp\templates\course_detail.html:194
 msgid ""
 " Click the <i class=\"fas fa-plus\"></i> button to create a new activity! "
 msgstr ""
@@ -105,27 +117,27 @@ msgid "You don't have any activities yet. Ask your teacher to create one!"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:139
-#: .\simbaapp\templates\course_detail.html:203
+#: .\simbaapp\templates\course_detail.html:210
 msgid "Back to Activities"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:149
-#: .\simbaapp\templates\course_detail.html:214
+#: .\simbaapp\templates\course_detail.html:221
 msgid "Re-do Activity"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:153
-#: .\simbaapp\templates\course_detail.html:218
+#: .\simbaapp\templates\course_detail.html:225
 msgid "Start New Attempt"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:156
-#: .\simbaapp\templates\course_detail.html:221
+#: .\simbaapp\templates\course_detail.html:228
 msgid "Start"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:159
-#: .\simbaapp\templates\course_detail.html:224
+#: .\simbaapp\templates\course_detail.html:231
 #: .\simbaapp\templates\courses.html:89 .\simbaapp\templates\courses.html:104
 #: .\simbaapp\templates\create_course.html:20
 #: .\simbaapp\templates\join_course.html:26
@@ -133,15 +145,20 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
+#: .\simbaapp\templates\activities.html:278
+#: .\simbaapp\templates\course_detail.html:248
+msgid "Activity Link"
+msgstr ""
+
 #: .\simbaapp\templates\activities.html:279
-#: .\simbaapp\templates\course_detail.html:242
+#: .\simbaapp\templates\course_detail.html:249
 msgid "Share this link with students to access the activity:"
 msgstr ""
 
 #: .\simbaapp\templates\activities.html:281
 #: .\simbaapp\templates\course_detail.html:69
 #: .\simbaapp\templates\course_detail.html:83
-#: .\simbaapp\templates\course_detail.html:244
+#: .\simbaapp\templates\course_detail.html:251
 msgid "Copy Link"
 msgstr ""
 
@@ -259,12 +276,12 @@ msgstr ""
 msgid "Generate Teacher Link"
 msgstr ""
 
-#: .\simbaapp\templates\course_detail.html:189
-msgid "This course doesn't have any activities yet."
+#: .\simbaapp\templates\course_detail.html:134
+msgid "Remove {{ enrollment.user.username }} from course"
 msgstr ""
 
-#: .\simbaapp\templates\course_detail.html:241
-msgid "Activity Link"
+#: .\simbaapp\templates\course_detail.html:196
+msgid "This course doesn't have any activities yet."
 msgstr ""
 
 #: .\simbaapp\templates\courses.html:30

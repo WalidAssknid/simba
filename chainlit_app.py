@@ -221,10 +221,7 @@ async def _build_system_prompt(activity_data: dict, logger_instance: logging.Log
             return "You can provide an answer to the provided questions if the student asks for it."
 
     def teachTypeGen_str(is_expert_mode):
-        if is_expert_mode:
-            return "Act as a Socratic tutor, taking the initiative in getting the students to answer the questions."
-        else:
-            return "Act as a standard teacher."
+        return "Act as a Socratic tutor, taking the initiative in getting the students to answer the questions."
 
     def teachingAdjGen_str(is_expert_mode):
         return "socratic" if is_expert_mode else "standard"

@@ -166,7 +166,7 @@ def get_language_prompts(language_code: str) -> dict:
     
     return prompts.get(language_code, prompts['en'])
 
-async def _build_system_prompt(activity_data: dict, logger_instance: logging.Logger, language_code: str = 'en') -> str:
+def _build_system_prompt(activity_data: dict, logger_instance: logging.Logger, language_code: str = 'en') -> str:
     adj1 = activity_data.get('agent_attitude', 'friendly')
     expert_mode = activity_data.get('expert_mode', False)
     
@@ -379,6 +379,14 @@ async def on_chat_start():
                 await cl.Message(content=ai_first_response_content).send()
                 logger.info(f"Created initial Mistral message for new thread {thread_id}")
             else:
+
+                # openai_thread_id = cl.user_session.get("openai_thread_id")
+                # if not openai_thread_id:
+                #     openai_thread = await openai_client.beta.threads.create()
+                #     openai_thread_id = openai_thread.id
+                #     cl.user_session.set("openai_thread_id", openai_thread_id)
+                #     logger.info(f"Created new OpenAI thread: {openai_thread_id}")
+
                 openai_initial_messages = [{"role": "system", "content": system_prompt_content}]
                 
                 response = await openai_client.chat.completions.create(
@@ -475,6 +483,18 @@ async def on_message(message: cl.Message):
                         openai_thread_id = openai_thread.id
                         cl.user_session.set("openai_thread_id", openai_thread_id)
                         logger.info(f"Created new OpenAI thread: {openai_thread_id}")
+
+                        messages_history = await api_get_messages_for_thread(thread_id)
+                        if messages_history:
+                            logger.info(f"Populating OpenAI thread with {len(messages_history)} existing messages")
+                            for msg in messages_history:
+                                msg_role = msg['role'] if msg['role'] in ['user', 'assistant'] else 'user'
+                                await openai_client.beta.threads.messages.create(
+                                    thread_id=openai_thread_id,
+                                    role=msg_role,
+                                    content=msg['content']
+                                )
+                            logger.info(f"Successfully populated OpenAI thread with message history")
                     
                     await openai_client.beta.threads.messages.create(
                         thread_id=openai_thread_id,

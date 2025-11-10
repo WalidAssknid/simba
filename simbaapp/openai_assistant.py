@@ -5,7 +5,7 @@ from datetime import datetime
 from openai import OpenAI
 from typing import List, Dict, Any, Optional
 import logging
-from templates import build_system_prompt
+from .templates import build_system_prompt
 
 logger = logging.getLogger(__name__)
 

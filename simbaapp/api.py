@@ -74,6 +74,7 @@ from django.shortcuts import get_object_or_404
 from http import HTTPStatus
 from . import cluster_students
 from . import openai_assistant
+from .templates import build_system_prompt
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -408,9 +409,32 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
             options['trust_document'] = payload.trust_document
         if payload.word_limit is not None:
             options['word_limit'] = payload.word_limit
+        
 
         assistant_id = None
         vector_store_id = None
+
+        activity = Activity.objects.create(
+            course=course,
+            owner=user,
+            title=payload.title if payload.title else f"Activity for {course.title}",
+            description=payload.description,
+            expert_mode=payload.expert_mode,
+            custom_prompt=payload.custom_prompt,
+            start_date=payload.start_date,
+            end_date=payload.end_date,
+            is_visible=payload.is_visible,
+            allow_redo=payload.allow_redo,
+            ai_model=payload.ai_model,
+            openai_assistant_id=assistant_id,
+            vector_store_id=vector_store_id,
+            options=options
+        )
+
+        if not(payload.custom_prompt) or payload.custom_prompt == "":
+            custom_prompt = build_system_prompt(activity)
+
+        activity.custom_prompt = custom_prompt
         
         if payload.ai_model == 'gpt':
             activity_data = {
@@ -418,7 +442,7 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
                 'description': payload.description or '',
                 'course_title': course.title,
                 'expert_mode': payload.expert_mode,
-                'custom_prompt': payload.custom_prompt,
+                'custom_prompt': custom_prompt,
                 'questions': options.get('questions', []),
                 'agent_attitude': options.get('agent_attitude', 'friendly'),
                 'subjects': options.get('subjects', ''),
@@ -461,31 +485,16 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
             logger.info(f"Successfully created OpenAI assistant: {assistant_id}, vector_store: {vector_store_id}")
         else:
             logger.info(f"Creating activity with {payload.ai_model} model - no OpenAI assistant needed")
-
-        activity = Activity.objects.create(
-            course=course,
-            owner=user,
-            title=payload.title if payload.title else f"Activity for {course.title}",
-            description=payload.description,
-            expert_mode=payload.expert_mode,
-            custom_prompt=payload.custom_prompt,
-            start_date=payload.start_date,
-            end_date=payload.end_date,
-            is_visible=payload.is_visible,
-            allow_redo=payload.allow_redo,
-            ai_model=payload.ai_model,
-            openai_assistant_id=assistant_id,
-            vector_store_id=vector_store_id,
-            options=options
-        )
         
+        activity.save()
+
         createdActivity(user, activity.id, {
             "course": payload.course_id,
             "owner": user_id,
             "title": activity.title,
             "description": payload.description,
             "expert_mode": payload.expert_mode,
-            "custom_prompt": payload.custom_prompt,
+            "custom_prompt": custom_prompt,
             "start_date": payload.start_date,
             "end_date": payload.end_date,
             "is_visible": payload.is_visible,

@@ -10,6 +10,7 @@ def get_gettext_function(lang):
 
 
 def get_language_prompts(language_code: str = 'en') -> dict:
+    _ = get_gettext_function(language_code)
     """Get prompts in different languages"""
     prompts = {
         'en': {
@@ -45,13 +46,73 @@ def get_language_prompts(language_code: str = 'en') -> dict:
     return prompts.get(language_code, prompts['en'])
 
 def get_first_message(activity_data: dict, logger_instance: logging.Logger, language_code: str = 'en') -> str:
+    _ = get_gettext_function(language_code)
     first_message = ""
+
+    allow_emojis_flag = activity_data.get('allow_emojis', True)
+    course_info = activity_data.get('course', {})
+    courseName = course_info.get('title', 'this course')
+    questions_list = activity_data.get('questions', [])
+
+    def emojiGen(useEmojis):
+        nstring = ""
+        if useEmojis :
+            nstring = "😸"
+        
+        return nstring
+    
+    def areQuestionsGen(questions_list, courseName):
+        nstring = ""
+        if questions_list==None or len(questions_list)==0 :
+            nstring = _(f" reflect on the course ") + courseName + "."
+        else :
+            nstring = _(" reflect on the following questions:")
+        return nstring
+        
+    def questionsGen(questions):
+        nstr = "\n"
+        if questions and isinstance(questions, list):
+            for i, q_item in enumerate(questions):
+                question_text = q_item if isinstance(q_item, str) else q_item.get('text', '') 
+                if question_text:
+                    nstr += _(f"Question {i+1} : {question_text} \n")
+        return nstr.strip()
+
+    def startGen(questions_list,useEmojis):
+        emo = ""
+        nstring = ""
+        if useEmojis :
+            emo = " 🤔"
+
+        if questions_list==None or len(questions_list)==0 :
+            nstring = _(f"""To start, can you tell me what problems you are having with the course's notions?{emo} 
+                            Can you summarise the points that were covered during the lesson?""")
+        
+        else :
+            nstring = _(f"""To begin with, what can you tell me about the first question?{emo}
+                            You can ask me questions if you need any guidance. Don't hesitate to refer to the course materials to help you answer.""")
+            
+        return nstring
+
+
+
+    emoji = emojiGen(allow_emojis_flag)
+    Are_there_questions_str = areQuestionsGen(questions_list, courseName)
+    questions_str = questionsGen(questions_list)
+    to_start = startGen(questions_list)
+
+    full_template = _(f"""Hello! {emoji}I am SIMBA, and I will help you{Are_there_questions_str}
+        {questions_str}
+
+        {to_start}""")
+    
+    first_message = full_template.strip()
     return first_message
 
 def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, language_code: str = 'en') -> str:
     _ = get_gettext_function(language_code)
 
-    adj1 = activity_data.get('agent_attitude', 'friendly')
+    adj1 = activity_data.get('agent_attitude', _('friendly'))
     expert_mode = activity_data.get('expert_mode', False)
     
     activity_title = activity_data.get('title', '')
@@ -59,7 +120,7 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
     
     course_info = activity_data.get('course', {})
     if isinstance(course_info, dict):
-        courseName = course_info.get('title', 'this course')
+        courseName = course_info.get('title', _('this course'))
     else: 
         courseName = _('this course')
         logger_instance.warning(f"Course information might be missing or not in expected format in activity_data for activity {activity_data.get('id')}")
@@ -73,6 +134,9 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
     custom_prompt_text = activity_data.get('custom_prompt', '')
     allow_bot_to_ask_questions_flag = activity_data.get('allow_questions', True)
     vector_store_id = activity_data.get('vector_store_id')
+
+    if expert_mode and custom_prompt_text:
+        return custom_prompt_text
 
     def emojiGen(useEmojis):
         return ", using emojis where possible." if useEmojis else "."
@@ -96,49 +160,47 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
             nstr += "You should only speak of those listed subjects. Avoid as much as possible speaking of other subjects, and steer back the student to the course subjects if he tries to deviate from them."
         return nstr
 
-    def answersGen_str(is_expert_mode, never_answer_directly):
+    def answersGen_str(never_answer_directly):
         if never_answer_directly:
             return "You should never give direct answers to the questions. Instead, guide the student to discover the answer through questioning and hints."
-        elif is_expert_mode:
-            return "You should not give the answer, but guide the student to answer."
         else:
             return "You can provide an answer to the provided questions if the student asks for it."
 
-    def teachTypeGen_str(is_expert_mode):
+    def teachTypeGen_str():
         return "Act as a Socratic tutor, taking the initiative in getting the students to answer the questions."
 
-    def teachingAdjGen_str(is_expert_mode):
-        return "socratic" if is_expert_mode else "standard"
+    def teachingAdjGen_str():
+        return _("socratic")
 
     def docsGen_str(mentiondocuments, has_files):
         nstr = ""
         if mentiondocuments and has_files:
-            nstr = "You have access to uploaded documents for this activity. Use these documents to help answer questions and encourage students to reference them when appropriate."
+            nstr = _("You have access to uploaded documents for this activity. Use these documents to help answer questions and encourage students to reference them when appropriate.")
         elif mentiondocuments and not has_files:
-            nstr = "Encourage them to go and read a section of the provided documents to answer."
+            nstr = _("Encourage them to go and read a section of the provided documents to answer.")
         elif has_files:
-            nstr = "You have access to uploaded documents for this activity that you can reference to help students."
+            nstr = _("You have access to uploaded documents for this activity that you can reference to help students.")
         return nstr
 
     def filesGen_str(has_files):
         if has_files:
-            return "\n\nIMPORTANT: This activity has uploaded files/documents available. You can search through and reference these documents to provide more accurate and detailed responses. When relevant, cite information from these documents and encourage students to explore them."
+            return _("\n\nIMPORTANT: This activity has uploaded files/documents available. You can search through and reference these documents to provide more accurate and detailed responses. When relevant, cite information from these documents and encourage students to explore them.")
         return ""
 
     def limitsGen_str(limit):
         if limit and limit != 0:
-            return f"Your answers should be {limit} words maximum."
+            return _(f"Your answers should be {limit} words maximum.")
         return ""
 
     def activityContextGen_str(title, description):
         """Generate activity-specific context for the prompt"""
         context_str = ""
         if title and description:
-            context_str = f"This specific activity is titled '{title}' and focuses on: {description}.\n\n"
+            context_str = _(f"This specific activity is titled '{title}' and is described as: {description}.\n\n")
         elif title:
-            context_str = f"This specific activity is titled '{title}'.\n\n"
+            context_str = _(f"This specific activity is titled '{title}'.\n\n")
         elif description:
-            context_str = f"This activity focuses on: {description}.\n\n"
+            context_str = _(f"This activity is described as: {description}.\n\n")
         return context_str
 
     has_files = bool(vector_store_id)
@@ -158,27 +220,27 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
     # Get language-specific prompts
     lang_prompts = get_language_prompts(language_code)
     
-    full_template = f"""{lang_prompts['intro'].format(adj1=adj1, teaching_adj_str=teaching_adj_str, courseName=courseName)}
+    full_template = _(f"""{lang_prompts['intro'].format(adj1=adj1, teaching_adj_str=teaching_adj_str, courseName=courseName)}
 
-{activity_context_str}{lang_prompts['name_intro']}
-{lang_prompts['respond_style'].format(adj1=adj1)}{emojis_str}
+        {activity_context_str}{lang_prompts['name_intro']}
+        {lang_prompts['respond_style'].format(adj1=adj1)}{emojis_str}
 
-{lang_prompts['help_text']}
+        {lang_prompts['help_text']}
 
-{questions_str}
+        {questions_str}
 
-{subjects_str}
+        {subjects_str}
 
-{answers_text} {teaching_type_text}
+        {answers_text} {teaching_type_text}
 
-{documents_str}
+        {documents_str}
 
-Your first message should begin with '{lang_prompts['greeting']}' Followed by the questions to answer.
+        Your first message should begin with '{lang_prompts['greeting']}' Followed by the questions to answer.
 
-{limits_str}{files_str}"""
+        {limits_str}{files_str}""")
+    
     system_prompt = full_template.strip()
-    if expert_mode and custom_prompt_text:
-        system_prompt += f"\n\n{custom_prompt_text}"
+    
     if not allow_bot_to_ask_questions_flag:
-        system_prompt += "\n\nDo not provide questions to the student unless explicitly asked."
+        system_prompt += _("\n\nDo not provide questions to the student unless explicitly asked.")
     return system_prompt

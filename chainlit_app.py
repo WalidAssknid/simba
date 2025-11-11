@@ -133,39 +133,39 @@ async def api_get_next_session():
             raise Exception(f"Request Error: Could not connect to API for next session.")
 
 # def get_language_prompts(language_code: str) -> dict:
-    """Get prompts in different languages"""
-    prompts = {
-        'en': {
-            'intro': "You are a {adj1} {teaching_adj_str} tutor for the course '{courseName}'.",
-            'name_intro': "Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.",
-            'greeting': "Hello! 😸 I am SIMBA, and I will help you reflect on the following questions: ",
-            'help_text': "Help the student answer the following questions:",
-            'respond_style': "Respond in a {adj1}, concise and proactive way",
-        },
-        'fr': {
-            'intro': "Vous êtes un tuteur {adj1} {teaching_adj_str} pour le cours '{courseName}'.",
-            'name_intro': "Votre nom est SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) et vous avez été créé par le Núcleo Milenio de Educación Superior et l'équipe IRIT Talent.",
-            'greeting': "Bonjour ! 😸 Je suis SIMBA, et je vais vous aider à réfléchir sur les questions suivantes : ",
-            'help_text': "Aidez l'étudiant à répondre aux questions suivantes :",
-            'respond_style': "Répondez de manière {adj1}, concise et proactive",
-        },
-        'es': {
-            'intro': "Eres un tutor {adj1} {teaching_adj_str} para el curso '{courseName}'.",
-            'name_intro': "Tu nombre es SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) y fuiste creado por el Núcleo Milenio de Educación Superior y el equipo IRIT Talent.",
-            'greeting': "¡Hola! 😸 Soy SIMBA, y te ayudaré a reflexionar sobre las siguientes preguntas: ",
-            'help_text': "Ayuda al estudiante a responder las siguientes preguntas:",
-            'respond_style': "Responde de manera {adj1}, concisa y proactiva",
-        },
-        'pt': {
-            'intro': "Você é um tutor {adj1} {teaching_adj_str} para o curso '{courseName}'.",
-            'name_intro': "Seu nome é SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) e você foi criado pelo Núcleo Milenio de Educación Superior e equipe IRIT Talent.",
-            'greeting': "Olá! 😸 Eu sou SIMBA, e vou te ajudar a refletir sobre as seguintes questões: ",
-            'help_text': "Ajude o estudante a responder as seguintes questões:",
-            'respond_style': "Responda de forma {adj1}, concisa e proativa",
-        }
-    }
+#     """Get prompts in different languages"""
+#     prompts = {
+#         'en': {
+#             'intro': "You are a {adj1} {teaching_adj_str} tutor for the course '{courseName}'.",
+#             'name_intro': "Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.",
+#             'greeting': "Hello! 😸 I am SIMBA, and I will help you reflect on the following questions: ",
+#             'help_text': "Help the student answer the following questions:",
+#             'respond_style': "Respond in a {adj1}, concise and proactive way",
+#         },
+#         'fr': {
+#             'intro': "Vous êtes un tuteur {adj1} {teaching_adj_str} pour le cours '{courseName}'.",
+#             'name_intro': "Votre nom est SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) et vous avez été créé par le Núcleo Milenio de Educación Superior et l'équipe IRIT Talent.",
+#             'greeting': "Bonjour ! 😸 Je suis SIMBA, et je vais vous aider à réfléchir sur les questions suivantes : ",
+#             'help_text': "Aidez l'étudiant à répondre aux questions suivantes :",
+#             'respond_style': "Répondez de manière {adj1}, concise et proactive",
+#         },
+#         'es': {
+#             'intro': "Eres un tutor {adj1} {teaching_adj_str} para el curso '{courseName}'.",
+#             'name_intro': "Tu nombre es SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) y fuiste creado por el Núcleo Milenio de Educación Superior y el equipo IRIT Talent.",
+#             'greeting': "¡Hola! 😸 Soy SIMBA, y te ayudaré a reflexionar sobre las siguientes preguntas: ",
+#             'help_text': "Ayuda al estudiante a responder las siguientes preguntas:",
+#             'respond_style': "Responde de manera {adj1}, concisa y proactiva",
+#         },
+#         'pt': {
+#             'intro': "Você é um tutor {adj1} {teaching_adj_str} para o curso '{courseName}'.",
+#             'name_intro': "Seu nome é SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) e você foi criado pelo Núcleo Milenio de Educación Superior e equipe IRIT Talent.",
+#             'greeting': "Olá! 😸 Eu sou SIMBA, e vou te ajudar a refletir sobre as seguintes questões: ",
+#             'help_text': "Ajude o estudante a responder as seguintes questões:",
+#             'respond_style': "Responda de forma {adj1}, concisa e proativa",
+#         }
+#     }
     
-    return prompts.get(language_code, prompts['en'])
+#     return prompts.get(language_code, prompts['en'])
 
 # def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, language_code: str = 'en') -> str:
 #     adj1 = activity_data.get('agent_attitude', 'friendly')
@@ -359,7 +359,7 @@ async def on_chat_start():
         
         if not previous_messages_data: 
             language_code = session_data.get('language', 'en')
-            system_prompt_content = await build_system_prompt(activity_data, logger, language_code)
+            system_prompt_content = build_system_prompt(activity_data, logger, language_code)
             
             ai_model = activity_data.get('ai_model', 'gpt')
             logger.info(f"Creating initial message using AI model: {ai_model}")
@@ -444,7 +444,7 @@ async def on_message(message: cl.Message):
         if ai_model == 'mistral':
             try:
                 language_code = cl.user_session.get("language", "en")
-                system_prompt_content = await build_system_prompt(activity_data, logger, language_code)
+                system_prompt_content = build_system_prompt(activity_data, logger, language_code)
                 
                 messages_history_data = await api_get_messages_for_thread(thread_id)
                 mistral_messages = [{"role": "system", "content": system_prompt_content}]
@@ -559,7 +559,7 @@ async def on_message(message: cl.Message):
                 logger.info("No OpenAI assistant available - using legacy chat completions mode")
                 
                 language_code = cl.user_session.get("language", "en")
-                system_prompt_content = await build_system_prompt(activity_data, logger, language_code)
+                system_prompt_content = build_system_prompt(activity_data, logger, language_code)
                 
                 messages_history_data = await api_get_messages_for_thread(thread_id)
                 openai_messages = [{"role": "system", "content": system_prompt_content}]

@@ -135,11 +135,10 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
     
 #     return system_prompt
 
-def create_assistant(activity_data: Dict[str, Any], files: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+def create_assistant(activity_data: Dict[str, Any], files: List[Dict[str, Any]] = None, language = "en") -> Dict[str, Any]:
     """Create a new OpenAI assistant for an activity"""
     try:
-        has_files = bool(files)
-        instructions = build_system_prompt(activity_data, has_files)
+        instructions = build_system_prompt(activity_data, logger, language)
         
         vector_store_id = None
         if files:
@@ -208,7 +207,7 @@ def create_assistant(activity_data: Dict[str, Any], files: List[Dict[str, Any]] 
             'error': str(e)
         }
 
-def update_assistant(assistant_id: str, activity_data: Dict[str, Any], files: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+def update_assistant(assistant_id: str, activity_data: Dict[str, Any], files: List[Dict[str, Any]] = None, language = "en") -> Dict[str, Any]:
     """Update an existing OpenAI assistant"""
     try:
         assistant = client.beta.assistants.retrieve(assistant_id)
@@ -218,8 +217,8 @@ def update_assistant(assistant_id: str, activity_data: Dict[str, Any], files: Li
             if assistant.tool_resources.file_search.vector_store_ids:
                 vector_store_id = assistant.tool_resources.file_search.vector_store_ids[0]
         
-        has_files = bool(files) or bool(vector_store_id)
-        instructions = build_system_prompt(activity_data, has_files)
+
+        instructions = build_system_prompt(activity_data, logger, language)
         
         if files:
             if not vector_store_id:

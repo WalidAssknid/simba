@@ -133,7 +133,6 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
     word_limit_val = activity_data.get('word_limit', 0)
     custom_prompt_text = activity_data.get('custom_prompt', '')
     allow_bot_to_ask_questions_flag = activity_data.get('allow_questions', True)
-    vector_store_id = activity_data.get('vector_store_id')
 
     if expert_mode and custom_prompt_text:
         return custom_prompt_text
@@ -172,20 +171,16 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
     def teachingAdjGen_str():
         return _("socratic")
 
-    def docsGen_str(mentiondocuments, has_files):
+    def docsGen_str(mentiondocuments):
         nstr = ""
-        if mentiondocuments and has_files:
-            nstr = _("You have access to uploaded documents for this activity. Use these documents to help answer questions and encourage students to reference them when appropriate.")
-        elif mentiondocuments and not has_files:
+        if mentiondocuments :
             nstr = _("Encourage them to go and read a section of the provided documents to answer.")
-        elif has_files:
-            nstr = _("You have access to uploaded documents for this activity that you can reference to help students.")
         return nstr
 
-    def filesGen_str(has_files):
-        if has_files:
-            return _("\n\nIMPORTANT: This activity has uploaded files/documents available. You can search through and reference these documents to provide more accurate and detailed responses. When relevant, cite information from these documents and encourage students to explore them.")
-        return ""
+    # def filesGen_str(has_files):
+    #     if has_files:
+    #         return _("\n\nIMPORTANT: This activity has uploaded files/documents available. You can search through and reference these documents to provide more accurate and detailed responses. When relevant, cite information from these documents and encourage students to explore them.")
+    #     return ""
 
     def limitsGen_str(limit):
         if limit and limit != 0:
@@ -203,17 +198,15 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
             context_str = _(f"This activity is described as: {description}.\n\n")
         return context_str
 
-    has_files = bool(vector_store_id)
-
     emojis_str = emojiGen(allow_emojis_flag)
     questions_str = questionsGen_str(questions_list)
     subjects_str = subjectsGen_str(activity_subjects, restrict_to_subject_flag)
-    teaching_adj_str = teachingAdjGen_str(expert_mode)
+    teaching_adj_str = teachingAdjGen_str()
     never_answer_directly_flag = activity_data.get('never_answer_directly', True)
-    answers_text = answersGen_str(expert_mode, never_answer_directly_flag)
-    teaching_type_text = teachTypeGen_str(expert_mode)
-    documents_str = docsGen_str(trust_document_flag, has_files)
-    files_str = filesGen_str(has_files)
+    answers_text = answersGen_str(never_answer_directly_flag)
+    teaching_type_text = teachTypeGen_str()
+    documents_str = docsGen_str(trust_document_flag)
+    # files_str = filesGen_str(trust_document_flag)
     limits_str = limitsGen_str(word_limit_val)
     activity_context_str = activityContextGen_str(activity_title, activity_description)
 
@@ -237,7 +230,7 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
 
         Your first message should begin with '{lang_prompts['greeting']}' Followed by the questions to answer.
 
-        {limits_str}{files_str}""")
+        {limits_str}""")
     
     system_prompt = full_template.strip()
     

@@ -3,6 +3,7 @@ version: '3.8'
 services:
   web:
     build: .
+    restart: always
     env_file:
       - .env
     environment:
@@ -26,6 +27,7 @@ services:
   
   chainlit:
     build: .
+    restart: always
     env_file:
       - .env
     environment:

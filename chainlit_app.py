@@ -12,7 +12,7 @@ import requests
 import json
 from typing import Dict, Any, Optional
 from datetime import datetime
-from simbaapp.templates import get_language_prompts, build_system_prompt
+from simbaapp.templates import get_language_prompts, build_system_prompt, get_first_message
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -358,6 +358,9 @@ async def on_chat_start():
                 logger.info(f"Message {i+1} (Thread {thread_id}): Role={msg.get('role')}, Content={msg.get('content')[:50]}...")
         
         if not previous_messages_data: 
+            # Create the first message
+            fixedFirst = True #For when the choice will exist
+
             language_code = session_data.get('language', 'en')
             system_prompt_content = build_system_prompt(activity_data, logger, language_code)
             
@@ -365,17 +368,20 @@ async def on_chat_start():
             logger.info(f"Creating initial message using AI model: {ai_model}")
             
             if ai_model == 'mistral':
-                mistral_initial_messages = [{"role": "system", "content": system_prompt_content}]
-                
-                response = await mistral_client.chat.complete_async(
-                    model=mistral_settings["model"],
-                    messages=mistral_initial_messages,
-                    temperature=mistral_settings["temperature"],
-                    max_tokens=mistral_settings["max_tokens"],
-                    stream=False
-                )
-                ai_first_response_content = response.choices[0].message.content
-                
+                if fixedFirst :
+                    ai_first_response_content = get_first_message(activity_data, logger, language_code)
+                else :
+                    mistral_initial_messages = [{"role": "system", "content": system_prompt_content}]
+                    
+                    response = await mistral_client.chat.complete_async(
+                        model=mistral_settings["model"],
+                        messages=mistral_initial_messages,
+                        temperature=mistral_settings["temperature"],
+                        max_tokens=mistral_settings["max_tokens"],
+                        stream=False
+                    )
+                    ai_first_response_content = response.choices[0].message.content
+                    
                 await api_create_message(thread_id, ai_first_response_content, "assistant", user_id, model_name=mistral_settings["model"])
                 await cl.Message(content=ai_first_response_content).send()
                 logger.info(f"Created initial Mistral message for new thread {thread_id}")
@@ -387,15 +393,17 @@ async def on_chat_start():
                 #     openai_thread_id = openai_thread.id
                 #     cl.user_session.set("openai_thread_id", openai_thread_id)
                 #     logger.info(f"Created new OpenAI thread: {openai_thread_id}")
-
-                openai_initial_messages = [{"role": "system", "content": system_prompt_content}]
-                
-                response = await openai_client.chat.completions.create(
-                    model=openai_settings["model"],
-                    messages=openai_initial_messages,
-                    temperature=openai_settings["temperature"],
-                )
-                ai_first_response_content = response.choices[0].message.content
+                if fixedFirst :
+                    ai_first_response_content = get_first_message(activity_data, logger, language_code)
+                else :
+                    openai_initial_messages = [{"role": "system", "content": system_prompt_content}]
+                    
+                    response = await openai_client.chat.completions.create(
+                        model=openai_settings["model"],
+                        messages=openai_initial_messages,
+                        temperature=openai_settings["temperature"],
+                    )
+                    ai_first_response_content = response.choices[0].message.content
                 
                 await api_create_message(thread_id, ai_first_response_content, "assistant", user_id, model_name=openai_settings["model"])
                 await cl.Message(content=ai_first_response_content).send()

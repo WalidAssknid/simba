@@ -54,29 +54,33 @@ def get_first_message(activity_data: dict, logger_instance: logging.Logger, lang
     courseName = course_info.get('title', 'this course')
     questions_list = activity_data.get('questions', [])
 
+    logger_instance.info(msg="question list " + str(questions_list))
+
     def emojiGen(useEmojis):
         nstring = ""
         if useEmojis :
             nstring = "😸"
         
-        return nstring
+        return nstring.strip()
     
-    def areQuestionsGen(questions_list, courseName):
-        nstring = ""
-        if questions_list==None or len(questions_list)==0 :
-            nstring = _(f" reflect on the course ") + courseName + "."
-        else :
-            nstring = _(" reflect on the following questions:")
-        return nstring
-        
     def questionsGen(questions):
-        nstr = "\n"
+        nstr = ""
         if questions and isinstance(questions, list):
             for i, q_item in enumerate(questions):
                 question_text = q_item if isinstance(q_item, str) else q_item.get('text', '') 
                 if question_text:
                     nstr += _(f"Question {i+1} : {question_text} \n")
         return nstr.strip()
+    
+    def areQuestionsGen(questions_list, courseName):
+        nstring = ""
+        questions_str = questionsGen(questions_list)
+        if questions_list==None or len(questions_list)==0 :
+            nstring = _(" reflect on the course '") + courseName + "'. \n"
+        else :
+            nstring = _(" reflect on the following questions: \n") + questions_str
+        return nstring
+        
 
     def startGen(questions_list,useEmojis):
         emo = ""
@@ -92,18 +96,16 @@ def get_first_message(activity_data: dict, logger_instance: logging.Logger, lang
             nstring = _(f"""To begin with, what can you tell me about the first question?{emo}
                             You can ask me questions if you need any guidance. Don't hesitate to refer to the course materials to help you answer.""")
             
-        return nstring
+        return nstring.strip()
 
 
 
     emoji = emojiGen(allow_emojis_flag)
     Are_there_questions_str = areQuestionsGen(questions_list, courseName)
-    questions_str = questionsGen(questions_list)
-    to_start = startGen(questions_list)
+    
+    to_start = startGen(questions_list, allow_emojis_flag)
 
     full_template = _(f"""Hello! {emoji}I am SIMBA, and I will help you{Are_there_questions_str}
-        {questions_str}
-
         {to_start}""")
     
     first_message = full_template.strip()

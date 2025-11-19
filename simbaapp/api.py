@@ -600,7 +600,7 @@ def update_activity_api(request, activity_id: str, payload: ActivityUpdateSchema
         user_language = request.session.get('django_language', 'en')
 
         if not(payload.custom_prompt) or payload.custom_prompt == "":
-            custom_prompt = build_system_prompt(activity, logger, user_language)
+            custom_prompt = build_system_prompt(activity_data, logger, user_language)
         else :
             custom_prompt = payload.custom_prompt
 

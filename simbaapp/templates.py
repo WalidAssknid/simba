@@ -21,7 +21,7 @@ def get_language_prompts(language_code: str = 'en') -> dict:
             'respond_style': "Respond in a {adj1}, concise and proactive way",
         },
         'fr': {
-            'intro': "Vous êtes un tuteur {adj1} {teaching_adj_str} pour le cours '{courseName}'.",
+            'intro': "Tu es un tuteur {adj1} {teaching_adj_str} pour le cours '{courseName}'.",
             'name_intro': "Votre nom est SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) et vous avez été créé par le Núcleo Milenio de Educación Superior et l'équipe IRIT Talent.",
             'greeting': "Bonjour ! 😸 Je suis SIMBA, et je vais vous aider à réfléchir sur les questions suivantes : ",
             'help_text': "Aidez l'étudiant à répondre aux questions suivantes :",
@@ -89,12 +89,10 @@ def get_first_message(activity_data: dict, logger_instance: logging.Logger, lang
             emo = " 🤔"
 
         if questions_list==None or len(questions_list)==0 :
-            nstring = _(f"""To start, can you tell me what problems you are having with the course's notions?{emo} 
-                            Can you summarise the points that were covered during the lesson?""")
+            nstring = _(f"To begin with, can you tell me what problems you are having with the course's notions?{emo}\nCan you summarise the points that were covered during the lesson?")
         
         else :
-            nstring = _(f"""To begin with, what can you tell me about the first question?{emo}
-                            You can ask me questions if you need any guidance. Don't hesitate to refer to the course materials to help you answer.""")
+            nstring = _(f"To begin with, what can you tell me about the first question?{emo}\nYou can ask me questions if you need any guidance. Don't hesitate to refer to the course materials to help you answer.")
             
         return nstring.strip()
 
@@ -105,8 +103,7 @@ def get_first_message(activity_data: dict, logger_instance: logging.Logger, lang
     
     to_start = startGen(questions_list, allow_emojis_flag)
 
-    full_template = _(f"""Hello! {emoji}I am SIMBA, and I will help you{Are_there_questions_str}
-        {to_start}""")
+    full_template = _(f"Hello! {emoji}I am SIMBA, and I will help you{Are_there_questions_str}\n{to_start}")
     
     first_message = full_template.strip()
     return first_message

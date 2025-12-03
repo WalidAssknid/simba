@@ -9,41 +9,41 @@ def get_gettext_function(lang):
     return translations.gettext
 
 
-def get_language_prompts(language_code: str = 'en') -> dict:
-    _ = get_gettext_function(language_code)
-    """Get prompts in different languages"""
-    prompts = {
-        'en': {
-            'intro': "You are a {adj1} {teaching_adj_str} tutor for the course '{courseName}'.",
-            'name_intro': "Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.",
-            'greeting': "Hello! 😸 I am SIMBA, and I will help you reflect on the following questions: ",
-            'help_text': "Help the student answer the following questions:",
-            'respond_style': "Respond in a {adj1}, concise and proactive way",
-        },
-        'fr': {
-            'intro': "Tu es un tuteur {adj1} {teaching_adj_str} pour le cours '{courseName}'.",
-            'name_intro': "Votre nom est SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) et vous avez été créé par le Núcleo Milenio de Educación Superior et l'équipe IRIT Talent.",
-            'greeting': "Bonjour ! 😸 Je suis SIMBA, et je vais vous aider à réfléchir sur les questions suivantes : ",
-            'help_text': "Aidez l'étudiant à répondre aux questions suivantes :",
-            'respond_style': "Répondez de manière {adj1}, concise et proactive",
-        },
-        'es': {
-            'intro': "Eres un tutor {adj1} {teaching_adj_str} para el curso '{courseName}'.",
-            'name_intro': "Tu nombre es SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) y fuiste creado por el Núcleo Milenio de Educación Superior y el equipo IRIT Talent.",
-            'greeting': "¡Hola! 😸 Soy SIMBA, y te ayudaré a reflexionar sobre las siguientes preguntas: ",
-            'help_text': "Ayuda al estudiante a responder las siguientes preguntas:",
-            'respond_style': "Responde de manera {adj1}, concisa y proactiva",
-        },
-        'pt': {
-            'intro': "Você é um tutor {adj1} {teaching_adj_str} para o curso '{courseName}'.",
-            'name_intro': "Seu nome é SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) e você foi criado pelo Núcleo Milenio de Educación Superior e equipe IRIT Talent.",
-            'greeting': "Olá! 😸 Eu sou SIMBA, e vou te ajudar a refletir sobre as seguintes questões: ",
-            'help_text': "Ajude o estudante a responder as seguintes questões:",
-            'respond_style': "Responda de forma {adj1}, concisa e proativa",
-        }
-    }
+# def get_language_prompts(language_code: str = 'en') -> dict:
+#     _ = get_gettext_function(language_code)
+#     """Get prompts in different languages"""
+#     prompts = {
+#         'en': {
+#             'intro': "You are a {adj1} {teaching_adj_str} tutor for the course '{courseName}'.",
+#             'name_intro': "Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.",
+#             'greeting': "Hello! 😸 I am SIMBA, and I will help you reflect on the following questions: ",
+#             'help_text': "Help the student answer the following questions:",
+#             'respond_style': "Respond in a {adj1}, concise and proactive way",
+#         },
+#         'fr': {
+#             'intro': "Tu es un tuteur {adj1} {teaching_adj_str} pour le cours '{courseName}'.",
+#             'name_intro': "Votre nom est SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) et vous avez été créé par le Núcleo Milenio de Educación Superior et l'équipe IRIT Talent.",
+#             'greeting': "Bonjour ! 😸 Je suis SIMBA, et je vais vous aider à réfléchir sur les questions suivantes : ",
+#             'help_text': "Aidez l'étudiant à répondre aux questions suivantes :",
+#             'respond_style': "Répondez de manière {adj1}, concise et proactive",
+#         },
+#         'es': {
+#             'intro': "Eres un tutor {adj1} {teaching_adj_str} para el curso '{courseName}'.",
+#             'name_intro': "Tu nombre es SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) y fuiste creado por el Núcleo Milenio de Educación Superior y el equipo IRIT Talent.",
+#             'greeting': "¡Hola! 😸 Soy SIMBA, y te ayudaré a reflexionar sobre las siguientes preguntas: ",
+#             'help_text': "Ayuda al estudiante a responder las siguientes preguntas:",
+#             'respond_style': "Responde de manera {adj1}, concisa y proactiva",
+#         },
+#         'pt': {
+#             'intro': "Você é um tutor {adj1} {teaching_adj_str} para o curso '{courseName}'.",
+#             'name_intro': "Seu nome é SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) e você foi criado pelo Núcleo Milenio de Educación Superior e equipe IRIT Talent.",
+#             'greeting': "Olá! 😸 Eu sou SIMBA, e vou te ajudar a refletir sobre as seguintes questões: ",
+#             'help_text': "Ajude o estudante a responder as seguintes questões:",
+#             'respond_style': "Responda de forma {adj1}, concisa e proativa",
+#         }
+#     }
     
-    return prompts.get(language_code, prompts['en'])
+#     return prompts.get(language_code, prompts['en'])
 
 def get_first_message(activity_data: dict, logger_instance: logging.Logger, language_code: str = 'en') -> str:
     _ = get_gettext_function(language_code)
@@ -69,7 +69,7 @@ def get_first_message(activity_data: dict, logger_instance: logging.Logger, lang
             for i, q_item in enumerate(questions):
                 question_text = q_item if isinstance(q_item, str) else q_item.get('text', '') 
                 if question_text:
-                    nstr += _(f"Question {i+1} : {question_text} \n")
+                    nstr += _("Question {ind} : {question_text} \n").format(ind=i+1, question_text = question_text)
         return nstr.strip()
     
     def areQuestionsGen(questions_list, courseName):
@@ -89,10 +89,10 @@ def get_first_message(activity_data: dict, logger_instance: logging.Logger, lang
             emo = " 🤔"
 
         if questions_list==None or len(questions_list)==0 :
-            nstring = _(f"To begin with, can you tell me what problems you are having with the course's notions?{emo}\nCan you summarise the points that were covered during the lesson?")
+            nstring = _("To begin with, can you tell me what problems you are having with the course's notions?{emo}\nCan you summarise the points that were covered during the lesson?").format(emo=emo)
         
         else :
-            nstring = _(f"To begin with, what can you tell me about the first question?{emo}\nYou can ask me questions if you need any guidance. Don't hesitate to refer to the course materials to help you answer.")
+            nstring = _("To begin with, what can you tell me about the first question?{emo}\nYou can ask me questions if you need any guidance. Don't hesitate to refer to the course materials to help you answer.").format(emo=emo)
             
         return nstring.strip()
 
@@ -103,7 +103,7 @@ def get_first_message(activity_data: dict, logger_instance: logging.Logger, lang
     
     to_start = startGen(questions_list, allow_emojis_flag)
 
-    full_template = _(f"Hello! {emoji}I am SIMBA, and I will help you{Are_there_questions_str}\n{to_start}")
+    full_template = _("Hello! {emoji}I am SIMBA, and I will help you{Are_there_questions_str}\n{to_start}").format(emoji=emoji,Are_there_questions_str=Are_there_questions_str,to_start=to_start)
     
     first_message = full_template.strip()
     return first_message
@@ -137,35 +137,38 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
         return custom_prompt_text
 
     def emojiGen(useEmojis):
-        return ", using emojis where possible." if useEmojis else "."
+        return _(", using emojis where possible.") if useEmojis else "."
 
     def questionsGen_str(questions):
         nstr = ""
-        if questions and isinstance(questions, list):
+        if questions and isinstance(questions, list) and len(questions)>0:
+            nstr = _("Help the student answer the following questions:\n")
             for i, q_item in enumerate(questions):
                 question_text = q_item if isinstance(q_item, str) else q_item.get('text', '') 
                 if question_text:
-                    nstr += f"Question {i+1} : {question_text} \n"
+                    nstr += _("Question {ind} : {question_text} \n").format(ind = i+1, question_text=question_text)
+        else :
+            nstr = _("Help the student explore the course and its notions.\n")
         return nstr.strip()
 
     def subjectsGen_str(subjects, restricted):
         nstr = ""
         if subjects:
-            nstr += "You should help the student to reflect in depth on the following course subjects :\n <Beginning of the course subjects>\n"
+            nstr += _("You should help the student to reflect in depth on the following course subjects :\n <Beginning of the course subjects>\n")
             nstr += subjects
-            nstr += "\n<end of the course subjects>\n"
+            nstr += _("\n<end of the course subjects>\n")
         if restricted:
-            nstr += "You should only speak of those listed subjects. Avoid as much as possible speaking of other subjects, and steer back the student to the course subjects if he tries to deviate from them."
+            nstr += _("You should only speak of those listed subjects. Avoid as much as possible speaking of other subjects, and steer back the student to the course subjects if he tries to deviate from them.")
         return nstr
 
     def answersGen_str(never_answer_directly):
         if never_answer_directly:
-            return "You should never give direct answers to the questions. Instead, guide the student to discover the answer through questioning and hints."
+            return _("You should never give direct answers to the questions. Instead, guide the student to discover the answer through questioning and hints.")
         else:
-            return "You can provide an answer to the provided questions if the student asks for it."
+            return _("You can provide an answer to the provided questions if the student asks for it.")
 
     def teachTypeGen_str():
-        return "Act as a Socratic tutor, taking the initiative in getting the students to answer the questions."
+        return _("Act as a Socratic tutor, taking the initiative in getting the students to answer the questions.")
 
     def teachingAdjGen_str():
         return _("socratic")
@@ -183,18 +186,18 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
 
     def limitsGen_str(limit):
         if limit and limit != 0:
-            return _(f"Your answers should be {limit} words maximum.")
+            return _("Your answers should be {limit} words maximum.").format(limit=limit)
         return ""
 
     def activityContextGen_str(title, description):
         """Generate activity-specific context for the prompt"""
         context_str = ""
         if title and description:
-            context_str = _(f"This specific activity is titled '{title}' and is described as: {description}.\n\n")
+            context_str = _("This specific activity is titled '{title}' and is described as: {description}.\n\n").format(title=title,description=description)
         elif title:
-            context_str = _(f"This specific activity is titled '{title}'.\n\n")
+            context_str = _("This specific activity is titled '{title}'.\n\n").format(title=title)
         elif description:
-            context_str = _(f"This activity is described as: {description}.\n\n")
+            context_str = _("This activity is described as: {description}.\n\n").format(description=description)
         return context_str
 
     emojis_str = emojiGen(allow_emojis_flag)
@@ -209,15 +212,10 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
     limits_str = limitsGen_str(word_limit_val)
     activity_context_str = activityContextGen_str(activity_title, activity_description)
 
-    # Get language-specific prompts
-    lang_prompts = get_language_prompts(language_code)
-    
-    full_template = _(f"""{lang_prompts['intro'].format(adj1=adj1, teaching_adj_str=teaching_adj_str, courseName=courseName)}
+    full_template = _("""You are a {adj1} {teaching_adj_str} tutor for the course '{courseName}'.
 
-        {activity_context_str}{lang_prompts['name_intro']}
-        {lang_prompts['respond_style'].format(adj1=adj1)}{emojis_str}
-
-        {lang_prompts['help_text']}
+        {activity_context_str}Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.
+        Respond in a {adj1}, concise and proactive way{emojis_str}
 
         {questions_str}
 
@@ -227,9 +225,17 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
 
         {documents_str}
 
-        Your first message should begin with '{lang_prompts['greeting']}' Followed by the questions to answer.
-
-        {limits_str}""")
+        {limits_str}""").format(adj1=adj1,
+                                teaching_adj_str=teaching_adj_str,
+                                courseName=courseName,
+                                activity_context_str=activity_context_str,
+                                emojis_str=emojis_str,
+                                questions_str=questions_str,
+                                subjects_str=subjects_str,
+                                answers_text=answers_text,
+                                teaching_type_text=teaching_type_text,
+                                documents_str=documents_str,
+                                limits_str=limits_str)
     
     system_prompt = full_template.strip()
     

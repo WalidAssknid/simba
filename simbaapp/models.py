@@ -47,7 +47,7 @@ class User(models.Model):
     
     def can_join_course(self):
         """Check if user can join a new course (limit: 3 total including owned)"""
-        total_courses = self.get_owned_courses_count() + self.get_enrolled_courses_count()
+        total_courses = self.get_owned_courses_count()
         return total_courses < 3
 
 class Course(models.Model):

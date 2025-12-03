@@ -354,7 +354,7 @@ def courses_view(request):
     
     # Show login success message only once
     if request.session.pop('show_login_success', False):
-        messages.success(request, _(f"Welcome back, {user.username}!"))
+        messages.success(request, _("Welcome back, {username}!").format(username = user.username))
     
     # Get courses where user is owner (teacher)
     owned_courses = Course.objects.filter(owner=user).order_by('-created_at')
@@ -428,7 +428,7 @@ def create_course_view(request):
             response_data = response.json()
 
             if response.status_code == 201:
-                messages.success(request, _(f"Course created successfully! Enrollment code: {response_data['enrollment_code']}"))
+                messages.success(request, _("Course created successfully! Enrollment code: {code}").format(code = response_data['enrollment_code']))
                 return redirect('courses')
             else:
                  messages.error(request, response_data.get('message', 'Course creation failed.'))
@@ -649,17 +649,17 @@ def invite_join_view(request, token):
         # Check if user can join more courses
         if not user.can_join_course():
             total_courses = user.get_owned_courses_count() + user.get_enrolled_courses_count()
-            messages.error(request, _(f"You can only be in up to 3 courses total. You are currently in {total_courses} courses."))
+            messages.error(request, _("You can only be in up to 3 courses total. You are currently in {totc} courses.").format(totc = total_courses))
             return redirect('courses')
         
         # Check if user is already the owner
         if course.owner.id == user.id:
-            messages.warning(request, _(f"You are already the owner of the course '{course.title}'."))
+            messages.warning(request, _("You are already the owner of the course '{ct}'.").format(ct = course.title))
             return redirect('course_detail', course_id=course.id)
         
         # Check if user is already enrolled
         if CourseEnrollment.objects.filter(user=user, course=course).exists():
-            messages.warning(request, _(f"You are already enrolled in the course '{course.title}'."))
+            messages.warning(request, _("You are already enrolled in the course '{ct}'.").format(ct = course.title))
             return redirect('course_detail', course_id=course.id)
         
         # Enroll user with the role specified in the token
@@ -669,7 +669,7 @@ def invite_join_view(request, token):
             role=invite_token.role
         )
         
-        messages.success(request, _(f"Successfully enrolled in course '{course.title}' as {invite_token.role}!"))
+        messages.success(request, _("Successfully enrolled in course '{ct}' as {itr}!").format(ct = course.title, itr = invite_token.role))
         return redirect('course_detail', course_id=course.id)
         
     except InviteToken.DoesNotExist:
@@ -714,13 +714,13 @@ def activity_join_view(request, token):
         
         # Check if user is already the owner
         if course.owner.id == user.id:
-            messages.info(request, _(f"Welcome back! You are the owner of '{course.title}'."))
+            messages.info(request, _("Welcome back! You are the owner of '{ct}'.").format(ct=course.title))
             return redirect(f'/courses/{course.id}/?expand_activity={activity.id}')
         
         # Check if user is already enrolled
         existing_enrollment = CourseEnrollment.objects.filter(user=user, course=course).first()
         if existing_enrollment:
-            messages.info(request, _(f"Welcome back to '{course.title}'!"))
+            messages.info(request, _("Welcome back to '{ct}'!").format(ct=course.title))
             return redirect(f'/courses/{course.id}/?expand_activity={activity.id}')
         
         # Enroll user as student (default role for activity links)
@@ -730,7 +730,7 @@ def activity_join_view(request, token):
             role='student'
         )
         
-        messages.success(request, _(f"Successfully joined course '{course.title}' and activity '{activity.title}'!"))
+        messages.success(request, _("Successfully joined course '{ct}' and activity '{at}'!").format(ct = course.title, at = activity.title))
         return redirect(f'/courses/{course.id}/?expand_activity={activity.id}')
         
     except ActivityToken.DoesNotExist:
@@ -765,8 +765,8 @@ def join_course_view(request):
         
         # Check if user can join more courses
         if not user.can_join_course():
-            total_courses = user.get_owned_courses_count() + user.get_enrolled_courses_count()
-            messages.error(request, _(f"You can only be in up to 3 courses total. You are currently in {total_courses} courses."))
+            total_courses = user.get_owned_courses_count()
+            messages.error(request, _("You can only be owner of up to 3 courses in total. You are currently owner of {total_courses} courses.").format(total_courses = total_courses))
             return render(request, 'join_course.html', {'enrolled_courses': all_courses})
             
         try:
@@ -774,12 +774,12 @@ def join_course_view(request):
             
             # Check if user is already the owner
             if course.owner.id == user.id:
-                messages.warning(request, _(f"You are already the owner of the course '{course.title}'."))
+                messages.warning(request, _("You are already the owner of the course '{ct}'.").format(ct = course.title))
                 return redirect('course_detail', course_id=course.id)
             
             # Check if user is already enrolled
             if CourseEnrollment.objects.filter(user=user, course=course).exists():
-                messages.warning(request, _(f"You are already enrolled in the course '{course.title}'."))
+                messages.warning(request, _("You are already enrolled in the course '{ct}'.").format(ct = course.title))
                 return redirect('course_detail', course_id=course.id)
             else:
                 # Always enroll as student when using enrollment code
@@ -789,7 +789,7 @@ def join_course_view(request):
                     role='student'
                 )
                 
-                messages.success(request, _(f"Successfully enrolled in course '{course.title}' as student!"))
+                messages.success(request, _("Successfully enrolled in course '{ct}' as student!").format(ct = course.title))
             
             return redirect('course_detail', course_id=course.id)
             
@@ -931,7 +931,7 @@ def dashboard_view(request):
                 course_object_for_context = courses.first()
         except ValueError:
             logger.error(f"Invalid course ID format: {selected_course_id}")
-            messages.warning(request, _(f"Invalid course ID format: '{selected_course_id}'. Defaulting to all courses."))
+            messages.warning(request, _("Invalid course ID format: '{selected_course_id}'. Defaulting to all courses.").format(selected_course_id = selected_course_id))
             authoritative_id_for_logic_and_template = None
             course_object_for_context = courses.first() 
     else:
@@ -1524,7 +1524,7 @@ def admin_users_view(request):
             })
             
             if response.status_code == 201:
-                messages.success(request, _(f"User '{username}' created successfully."))
+                messages.success(request, _("User '{username}' created successfully.").format(username=username))
             else:
                 error_data = response.json()
                 messages.error(request, f"Failed to create user: {error_data.get('message', 'Unknown error')}")

@@ -37,7 +37,7 @@
                     </label>
                 </div>
                 <small class="form-text">
-                    {% trans 'Expert Mode enables advanced customization options for the activity.' %}
+                    {% trans 'Expert Mode Allows you to enter your own prompt for this activity.' %}
                 </small>
             </div>
             <div class="form-group" id="custom-prompt-group" style="display:none;">
@@ -79,8 +79,8 @@
                     {% trans 'AI Model' %}
                 </label>
                 <select name="ai_model" id="ai-model" class="form-control">
-                    <option value="gpt">{% trans 'GPT (OpenAI)' %}</option>
                     <option value="mistral">{% trans 'Mistral AI' %}</option>
+                    <option value="gpt">{% trans 'GPT (OpenAI)' %}</option>
                 </select>
                 <small class="form-text">
                     {% trans 'Choose the AI model to power this activity. GPT supports file uploads and advanced features, while Mistral provides fast and efficient responses.' %}

@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-07-16 16:14+0200\n"
-"PO-Revision-Date: 2025-07-16 16:18+0200\n"
+"POT-Creation-Date: 2025-12-05 17:50+0100\n"
+"PO-Revision-Date: 2025-12-05 17:53+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: fr\n"
@@ -17,6 +17,223 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "X-Generator: Poedit 3.6\n"
+
+#: .\simbaapp\templates.py:74 .\simbaapp\templates.py:162
+#, python-brace-format
+msgid "Question {ind} : {question_text} \n"
+msgstr "Question {ind} : {question_text}\n"
+
+#: .\simbaapp\templates.py:81
+msgid " reflect on the course '"
+msgstr " réfléchir sur le cours '"
+
+#: .\simbaapp\templates.py:83
+msgid " reflect on the following questions: \n"
+msgstr " réfléchir aux questions suivantes :\n"
+
+#: .\simbaapp\templates.py:94
+#, python-brace-format
+msgid ""
+"To begin with, can you tell me what problems you are having with the "
+"course's notions?{emo}\n"
+"Can you summarise the points that were covered during the lesson?"
+msgstr ""
+"Pour commencer, pouvez-vous me dire quels sont les problèmes que vous "
+"rencontrez avec les notions du cours ?{emo}\n"
+"Pouvez-vous résumer les points abordés pendant le cours ?"
+
+#: .\simbaapp\templates.py:97
+#, python-brace-format
+msgid ""
+"To begin with, what can you tell me about the first question?{emo}\n"
+"You can ask me questions if you need any guidance. Don't hesitate to refer "
+"to the course materials to help you answer."
+msgstr ""
+"Pour commencer, que pouvez-vous me dire sur la première question ?{emo}\n"
+"Vous pouvez me poser des questions si vous avez besoin de conseils. "
+"N'hésitez pas à vous référer aux supports de cours pour vous aider à "
+"répondre."
+
+#: .\simbaapp\templates.py:108
+#, python-brace-format
+msgid ""
+"Hello! {emoji}I am SIMBA, and I will help you{Are_there_questions_str}\n"
+"{to_start}"
+msgstr ""
+"Bonjour ! {emoji}Je suis SIMBA, et je vais vous "
+"aider{Are_there_questions_str}\n"
+"{to_start}"
+
+#: .\simbaapp\templates.py:117 .\simbaapp\templates.py:148
+msgid "friendly"
+msgstr "amical"
+
+#: .\simbaapp\templates.py:125 .\simbaapp\templates.py:127
+msgid "this course"
+msgstr "ce cours"
+
+#: .\simbaapp\templates.py:143
+msgid ", using emojis where possible."
+msgstr ", en utilisant des émojis dans la mesure du possible."
+
+#: .\simbaapp\templates.py:150
+msgid "informal"
+msgstr "Informel"
+
+#: .\simbaapp\templates.py:152
+msgid "formal"
+msgstr "formel"
+
+#: .\simbaapp\templates.py:158
+msgid "Help the student answer the following questions:\n"
+msgstr "Aide l'élève à répondre aux questions suivantes :\n"
+
+#: .\simbaapp\templates.py:164
+msgid "Help the student explore the course and its notions.\n"
+msgstr "Aide l'étudiant à explorer le cours et ses notions.\n"
+
+#: .\simbaapp\templates.py:170
+msgid ""
+"You should help the student to reflect in depth on the following course "
+"subjects :\n"
+" <Beginning of the course subjects>\n"
+msgstr ""
+"Tu dois aider l'étudiant à approfondir sa réflexion sur les sujets de cours "
+"suivants :\n"
+" <Début des sujets de cours>\n"
+
+#: .\simbaapp\templates.py:172
+msgid ""
+"\n"
+"<end of the course subjects>\n"
+msgstr ""
+"\n"
+"<fin des sujets du cours>\n"
+
+#: .\simbaapp\templates.py:174
+msgid ""
+"You should only speak of those listed subjects. Avoid as much as possible "
+"speaking of other subjects, and steer back the student to the course "
+"subjects if he tries to deviate from them."
+msgstr ""
+"Tu ne dois parler que des sujets énumérés. Évites autant que possible de "
+"parler d'autres sujets et ramènes l'étudiant aux sujets du cours s'il tente "
+"de s'en écarter."
+
+#: .\simbaapp\templates.py:179
+msgid ""
+"You should never give direct answers to the questions. Instead, guide the "
+"student to discover the answer through questioning and hints."
+msgstr ""
+"Tu ne dois jamais donner de réponses directes aux questions. Au contraire, "
+"guides l'élève pour qu'il découvre la réponse par le biais de questions et "
+"d'indices."
+
+#: .\simbaapp\templates.py:181
+msgid ""
+"You can provide an answer to the provided questions if the student asks for "
+"it."
+msgstr "Tu peux répondre aux questions fournies si l’étudiant le demande."
+
+#: .\simbaapp\templates.py:184
+msgid ""
+"Act as a Socratic tutor, taking the initiative in getting the students to "
+"answer the questions."
+msgstr ""
+"Agis comme un tuteur socratique, en prenant l'initiative d'amener les "
+"étudiants à répondre aux questions."
+
+#: .\simbaapp\templates.py:187
+msgid "socratic"
+msgstr "socratique"
+
+#: .\simbaapp\templates.py:192
+msgid ""
+"Encourage them to go and read a section of the provided documents to answer."
+msgstr "Encourage-les à lire une section des documents fournis pour répondre."
+
+#: .\simbaapp\templates.py:202
+#, python-brace-format
+msgid "Your answers should be {limit} words maximum."
+msgstr "Tes réponses doivent comporter {limit} mots au maximum."
+
+#: .\simbaapp\templates.py:209
+#, python-brace-format
+msgid ""
+"This specific activity is titled '{title}' and is described as: "
+"{description}.\n"
+"\n"
+msgstr ""
+"Cette activité spécifique est intitulée ‘{title}’ et est décrite comme : "
+"{description}.\n"
+"\n"
+
+#: .\simbaapp\templates.py:211
+#, python-brace-format
+msgid ""
+"This specific activity is titled '{title}'.\n"
+"\n"
+msgstr ""
+"Cette activité spécifique est intitulée ‘{title}’.\n"
+"\n"
+
+#: .\simbaapp\templates.py:213
+#, python-brace-format
+msgid ""
+"This activity is described as: {description}.\n"
+"\n"
+msgstr ""
+"Cette activité est décrite comme : {description}.\n"
+"\n"
+
+#: .\simbaapp\templates.py:229
+#, python-brace-format
+msgid ""
+"You are a {adj1} {teaching_adj_str} tutor for the course '{courseName}'.\n"
+"\n"
+"        {activity_context_str}Your name is SIMBA 😸 (Sistema Inteligente de "
+"Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de "
+"Educación Superior and IRIT Talent team.\n"
+"        Respond in a {adj1}, concise and proactive way{emojis_str}\n"
+"\n"
+"        {questions_str}\n"
+"\n"
+"        {subjects_str}\n"
+"\n"
+"        {answers_text} {teaching_type_text}\n"
+"\n"
+"        {documents_str}\n"
+"\n"
+"        {limits_str}"
+msgstr ""
+"Tu es un enseignant {teaching_adj_str} et {adj1} pour le cours "
+"'{courseName}'.\n"
+"\n"
+"        {activity_context_str}Ton nom est SIMBA 😸 (Sistema Inteligente de "
+"Medición, Bienestar y Apoyo) et vous avez été créé par le Núcleo Milenio de "
+"Educación Superior et l'équipe Talent de l'IRIT.\n"
+"        Réponds de manière {adj1}, concise et proactive{emojis_str}\n"
+"\n"
+"        {questions_str}\n"
+"\n"
+"        {subjects_str}\n"
+"\n"
+"        {answers_text} {teaching_type_text}\n"
+"\n"
+"        {documents_str}\n"
+"\n"
+"        {limits_str}"
+
+#: .\simbaapp\templates.py:257
+msgid ""
+"\n"
+"\n"
+"Do not provide questions to the student unless explicitly asked."
+msgstr ""
+"\n"
+"\n"
+"Ne pose pas de questions supplémentaires à l'étudiant à moins qu'il ne le "
+"demande explicitement."
 
 #: .\simbaapp\templates\activities.html:10
 #: .\simbaapp\templates\dashboard.html:842
@@ -53,7 +270,7 @@ msgstr ""
 #: .\simbaapp\templates\activities.html:49
 #: .\simbaapp\templates\course_detail.html:108
 msgid "Course Participants"
-msgstr "Course Participants"
+msgstr "Participants du cours"
 
 #: .\simbaapp\templates\activities.html:78
 #: .\simbaapp\templates\course_detail.html:165
@@ -207,7 +424,7 @@ msgstr "S'inscrire à un cours"
 
 #: .\simbaapp\templates\base.html:141 .\simbaapp\templates\profile.html:3
 msgid "Manage Account"
-msgstr "Gérer le compte"
+msgstr "Gérer mon compte"
 
 #: .\simbaapp\templates\base.html:142
 #: .\simbaapp\templates\email_verification_status.html:159
@@ -294,6 +511,14 @@ msgstr "Retirer {{ enrollment.user.username }} du cours"
 msgid "This course doesn't have any activities yet."
 msgstr "Ce cours n'a pas encore d'activités."
 
+#: .\simbaapp\templates\courses.html:18
+msgid "Edit course"
+msgstr "Éditer le cours"
+
+#: .\simbaapp\templates\courses.html:19
+msgid "Delete course"
+msgstr "Supprimer le cours"
+
 #: .\simbaapp\templates\courses.html:30
 msgid "TEACHER EDITOR"
 msgstr "ENSEIGNANT EDITEUR"
@@ -348,7 +573,7 @@ msgstr "Description :"
 
 #: .\simbaapp\templates\courses.html:90
 msgid "Update Course"
-msgstr "Mettre le cours à jour"
+msgstr "Modifier le cours"
 
 #: .\simbaapp\templates\courses.html:100 .\simbaapp\templates\courses.html:105
 msgid "Delete Course"
@@ -382,7 +607,7 @@ msgstr ""
 
 #: .\simbaapp\templates\dashboard.html:833
 msgid "Teacher View"
-msgstr "Enseignant"
+msgstr "Vue enseignant"
 
 #: .\simbaapp\templates\dashboard.html:835
 msgid "You need to be enrolled as a student in a course"
@@ -390,7 +615,7 @@ msgstr "Vous devez avoir rejoint un cours en tant qu'étudiant"
 
 #: .\simbaapp\templates\dashboard.html:836
 msgid "Student View"
-msgstr "Elève"
+msgstr "Vue élève"
 
 #: .\simbaapp\templates\dashboard.html:850
 msgid "All Activities"
@@ -430,7 +655,7 @@ msgstr "Total des messages"
 
 #: .\simbaapp\templates\dashboard.html:888
 msgid "Avg Message Length"
-msgstr "Longueur moyenne du message"
+msgstr "Longueur moyenne des messages"
 
 #: .\simbaapp\templates\dashboard.html:892
 msgid "Avg Time per Student"
@@ -560,7 +785,7 @@ msgstr "Télécharger la conversation"
 
 #: .\simbaapp\templates\dashboard.html:1024
 msgid "Word Cloud Analysis"
-msgstr "Analyse du nuage de mots"
+msgstr "Générer un nuage de mots"
 
 #: .\simbaapp\templates\dashboard.html:1025
 msgid ""
@@ -669,27 +894,27 @@ msgstr "Statistiques sur les conversations"
 
 #: .\simbaapp\templates\dashboard.html:1152
 msgid "Total Turns"
-msgstr "Nombre total de tours"
+msgstr "Nombre total d’échanges"
 
 #: .\simbaapp\templates\dashboard.html:1153
 msgid "User Turns"
-msgstr "Tours d'utilisateurs"
+msgstr "Messages d’utilisateurs"
 
 #: .\simbaapp\templates\dashboard.html:1154
 msgid "Model Turns"
-msgstr "Tours de modèle"
+msgstr "Messages du modèle"
 
 #: .\simbaapp\templates\dashboard.html:1155
 msgid "Turn Ratio"
-msgstr "Ratio de tours"
+msgstr "Ratio de messages"
 
 #: .\simbaapp\templates\dashboard.html:1156
 msgid "Num Activities"
-msgstr "Nb d'activités"
+msgstr "Nb d’activités"
 
 #: .\simbaapp\templates\dashboard.html:1157
 msgid "Vocab Size"
-msgstr "Tail. Vocab"
+msgstr "Taille Vocab."
 
 #: .\simbaapp\templates\dashboard.html:1158
 msgid "Avg Word Length"
@@ -813,7 +1038,7 @@ msgstr ""
 
 #: .\simbaapp\templates\home.html:82
 msgid "Get Started"
-msgstr "Commencer"
+msgstr "Débuter"
 
 #: .\simbaapp\templates\home.html:83
 msgid "Learn More"
@@ -837,7 +1062,7 @@ msgstr "Suivre les progrès et les perspectives"
 
 #: .\simbaapp\templates\home.html:130
 msgid "Getting Started with SIMBA"
-msgstr "Démarrer avec SIMBA"
+msgstr "Débuter avec SIMBA"
 
 #: .\simbaapp\templates\home.html:133
 msgid "Everything You Need to Know"
@@ -1211,8 +1436,10 @@ msgstr ""
 "Permet de personnaliser les instructions de l'assistant pour cette activité."
 
 #: .\simbaapp\templates\popup_activity.html:40
-msgid "Expert Mode enables advanced customization options for the activity."
-msgstr "Le mode expert permet de personnaliser l'activité de manière avancée."
+msgid "Expert Mode Allows you to enter your own prompt for this activity."
+msgstr ""
+"Le mode expert vous permet de rédiger votre propre prompt pour cette "
+"activité."
 
 #: .\simbaapp\templates\popup_activity.html:44
 msgid "Custom assistant instructions"
@@ -1252,7 +1479,7 @@ msgstr "Quelle attitude l'assistant doit-il adopter à l'égard des étudiants ?
 
 #: .\simbaapp\templates\popup_activity.html:69
 msgid "Friendly"
-msgstr "Convivial"
+msgstr "Amical"
 
 #: .\simbaapp\templates\popup_activity.html:70
 msgid "Informal"
@@ -1271,12 +1498,12 @@ msgid "AI Model"
 msgstr "Modèle IA"
 
 #: .\simbaapp\templates\popup_activity.html:82
-msgid "GPT (OpenAI)"
-msgstr "GPT (OpenAI)"
-
-#: .\simbaapp\templates\popup_activity.html:83
 msgid "Mistral AI"
 msgstr "Mistral AI"
+
+#: .\simbaapp\templates\popup_activity.html:83
+msgid "GPT (OpenAI)"
+msgstr "GPT (OpenAI)"
 
 #: .\simbaapp\templates\popup_activity.html:86
 msgid ""
@@ -1289,7 +1516,8 @@ msgstr ""
 
 #: .\simbaapp\templates\popup_activity.html:91
 msgid "Course or activity subjects (comma separated)."
-msgstr "Matières du cours ou de l'activité (séparées par des virgules)."
+msgstr ""
+"Sujets abordés lors du cours ou de l'activité (séparées par des virgules)."
 
 #: .\simbaapp\templates\popup_activity.html:95
 msgid "List subjects to guide the assistant (for example, optics, energy)."
@@ -1318,7 +1546,7 @@ msgstr ""
 
 #: .\simbaapp\templates\popup_activity.html:125
 msgid "Never answer the questions of the student directly"
-msgstr "Ne réponds jamais directement répondre aux questions de l'étudiant"
+msgstr "Ne jamais répondre directement répondre aux questions de l’activité"
 
 #: .\simbaapp\templates\popup_activity.html:129
 msgid ""
@@ -1476,43 +1704,113 @@ msgstr ""
 msgid "Send Verification Email"
 msgstr "Envoi d'un courriel de vérification"
 
-#: .\simbaapp\views.py:63
+#: .\simbaapp\views.py:72
 msgid "Successfully logged out!"
 msgstr "Déconnecté avec succès!"
 
-#: .\simbaapp\views.py:86
+#: .\simbaapp\views.py:98
 msgid "Registration successful!"
 msgstr "Vous avez été inscrit avec succès!"
 
-#: .\simbaapp\views.py:142
+#: .\simbaapp\views.py:157
 msgid "Your email has been verified successfully! You can now log in."
 msgstr ""
 "Votre adresse mail a été vérifié avec succès! Vous pouvez maintenant vous "
 "connecter."
 
-#: .\simbaapp\views.py:176
+#: .\simbaapp\views.py:194
 msgid "Verification email sent! Please check your inbox."
 msgstr ""
 "Un email de vérification a été envoyé. Veuillez vérifier votre boite de "
 "réception."
 
-#: .\simbaapp\views.py:201
+#: .\simbaapp\views.py:221
 msgid "If your email is registered, you will receive a password reset link."
 msgstr ""
 "Si votre email est enregistré, vous recevrez un lien de récupération de mot "
 "de passe."
 
-#: .\simbaapp\views.py:243
+#: .\simbaapp\views.py:265
 msgid "Your password has been reset successfully! You can now log in."
 msgstr ""
 "Votre mot de passe a été changé avec succès. Vous pouvez maintenant vous "
 "connecter."
 
-#: .\simbaapp\views.py:606
+#: .\simbaapp\views.py:385
+#, python-brace-format
+msgid "Welcome back, {username}!"
+msgstr "Bienvenue, {username} !"
+
+#: .\simbaapp\views.py:436
+#, python-brace-format
+msgid ""
+"You can only create up to 3 courses. You currently have {ccount} courses."
+msgstr ""
+"Vous ne pouvez pas créer plus de 3 cours au total. Vous avez actuellement "
+"{ccount} cours."
+
+#: .\simbaapp\views.py:462
+#, python-brace-format
+msgid "Course created successfully! Enrollment code: {code}"
+msgstr "Cours mis à jour avec succès ! Code d’inscription : {code}"
+
+#: .\simbaapp\views.py:640
 msgid "Activity created successfully!"
 msgstr "L'activité a été créée avec succès."
 
-#: .\simbaapp\views.py:854
+#: .\simbaapp\views.py:688
+#, python-brace-format
+msgid ""
+"You can only create up to 3 courses total. You have created {totc} courses."
+msgstr ""
+"Vous ne pouvez pas créer plus de 3 cours au total. Vous avez créé {totc} "
+"cours."
+
+#: .\simbaapp\views.py:693 .\simbaapp\views.py:818
+#, python-brace-format
+msgid "You are already the owner of the course '{ct}'."
+msgstr "Vous êtes déjà le propriétaire du cours \"{ct}\"."
+
+#: .\simbaapp\views.py:698 .\simbaapp\views.py:823
+#, python-brace-format
+msgid "You are already enrolled in the course '{ct}'."
+msgstr "Vous êtes déjà inscrit au cours \"{ct}\"."
+
+#: .\simbaapp\views.py:708
+#, python-brace-format
+msgid "Successfully enrolled in course '{ct}' as {itr}!"
+msgstr "Inscription réussie au cours '{ct}' en tant que {itr} !"
+
+#: .\simbaapp\views.py:755
+#, python-brace-format
+msgid "Welcome back! You are the owner of '{ct}'."
+msgstr "Bienvenue à tous ! Vous êtes le propriétaire de '{ct}'."
+
+#: .\simbaapp\views.py:761
+#, python-brace-format
+msgid "Welcome back to '{ct}'!"
+msgstr "Bienvenue sur ‘{ct}’ !"
+
+#: .\simbaapp\views.py:771
+#, python-brace-format
+msgid "Successfully joined course '{ct}' and activity '{at}'!"
+msgstr "Vous avez rejoint avec succès le cours '{ct}' et l'activité '{at}' !"
+
+#: .\simbaapp\views.py:810
+#, python-brace-format
+msgid ""
+"You can only be owner of up to 3 courses in total. You are currently owner "
+"of {total_courses} courses."
+msgstr ""
+"Vous ne pouvez être propriétaire que de 3 cours au maximum. Vous êtes "
+"actuellement propriétaire de {total_courses} cours."
+
+#: .\simbaapp\views.py:833
+#, python-brace-format
+msgid "Successfully enrolled in course '{ct}' as student!"
+msgstr "Inscription réussie au cours '{ct}' en tant qu'étudiant !"
+
+#: .\simbaapp\views.py:895
 msgid ""
 "You don't have teacher privileges in any courses. You need to own a course "
 "or be enrolled as a teacher."
@@ -1520,7 +1818,7 @@ msgstr ""
 "Vous n'avez le status d'enseignant dans aucun cours. Vous devez avoir créé "
 "un cours ou y avoir été invité en tant qu'enseignant."
 
-#: .\simbaapp\views.py:858
+#: .\simbaapp\views.py:899
 msgid ""
 "You are not enrolled as a student in any courses. Join a course as a student "
 "to access this view."
@@ -1528,7 +1826,7 @@ msgstr ""
 "Vous n'êtes inscrit à aucun cours en tant qu'étudiant. Inscrivez-vous à un "
 "cours en tant qu'étudiant pour accéder à cette page."
 
-#: .\simbaapp\views.py:876
+#: .\simbaapp\views.py:917
 msgid ""
 "You don't have any courses yet. Create a course or join one as a teacher to "
 "access analytics features."
@@ -1536,7 +1834,7 @@ msgstr ""
 "Vous n'avez encore aucun cours. Créez un cours ou rejoignez-en un en tant "
 "qu'enseignant pour accéder aux fonctions d'analyse."
 
-#: .\simbaapp\views.py:882
+#: .\simbaapp\views.py:923
 msgid ""
 "You are not enrolled in any courses as a student yet. Join a course to view "
 "your statistics."
@@ -1544,23 +1842,36 @@ msgstr ""
 "Vous n'êtes encore inscrit à aucun cours en tant qu'étudiant. Inscrivez-vous "
 "à un cours pour consulter vos statistiques."
 
-#: .\simbaapp\views.py:1317
+#: .\simbaapp\views.py:975
+#, python-brace-format
+msgid ""
+"Invalid course ID format: '{selected_course_id}'. Defaulting to all courses."
+msgstr ""
+"Format d'identifiant de cours non valide : '{selected_course_id}'. Par "
+"défaut, tous les cours sont pris en compte."
+
+#: .\simbaapp\views.py:1361
 msgid "Course updated successfully!"
 msgstr "Cours mis à jour avec succès !"
 
-#: .\simbaapp\views.py:1430
+#: .\simbaapp\views.py:1477
 msgid "Profile updated successfully!"
 msgstr "Profil mis à jour avec succès !"
 
-#: .\simbaapp\views.py:1679
+#: .\simbaapp\views.py:1577
+#, python-brace-format
+msgid "User '{username}' created successfully."
+msgstr "Utilisateur ‘{username}' créé avec succès."
+
+#: .\simbaapp\views.py:1732
 msgid "User deleted successfully."
 msgstr "Suppression de l'utilisateur réussie."
 
-#: .\simbaapp\views.py:1710
+#: .\simbaapp\views.py:1766
 msgid "Course deleted successfully."
 msgstr "Cours supprimé avec succès."
 
-#: .\simbaapp\views.py:1741
+#: .\simbaapp\views.py:1800
 msgid "Activity deleted successfully."
 msgstr "Activité supprimée avec succès."
 

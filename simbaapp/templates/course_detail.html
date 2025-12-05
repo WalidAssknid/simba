@@ -679,6 +679,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         form.querySelector('#activity-title').value = activity.title || '';
                         form.querySelector('#activity-description').value = activity.description || '';
                         form.querySelector('#activity-expert-mode').checked = activity.expert_mode;
+                        form.querySelector('#custom-prompt').value = activity.custom_prompt;
                         
                         const customPromptGroup = form.querySelector('#custom-prompt-group');
                         customPromptGroup.style.display = activity.expert_mode ? 'block' : 'none';

@@ -5,140 +5,140 @@ from datetime import datetime
 from openai import OpenAI
 from typing import List, Dict, Any, Optional
 import logging
+from .templates import build_system_prompt
 
 logger = logging.getLogger(__name__)
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-def _build_instructions(activity_data: Dict[str, Any], has_files: bool = False) -> str:
-    """Build the instructions for the OpenAI assistant based on activity data"""
+# def _build_instructions(activity_data: Dict[str, Any], has_files: bool = False) -> str:
+#     """Build the instructions for the OpenAI assistant based on activity data"""
     
-    course_title = activity_data.get('course_title', 'this course')
+#     course_title = activity_data.get('course_title', 'this course')
     
-    # Get activity-specific information
-    activity_title = activity_data.get('title', '')
-    activity_description = activity_data.get('description', '')
+#     # Get activity-specific information
+#     activity_title = activity_data.get('title', '')
+#     activity_description = activity_data.get('description', '')
     
-    adj1 = activity_data.get('agent_attitude', 'friendly')
-    expert_mode = activity_data.get('expert_mode', False)
-    allow_emojis = activity_data.get('allow_emojis', True)
-    questions = activity_data.get('questions', [])
-    subjects = activity_data.get('subjects', '')
-    restrict_to_subject = activity_data.get('restrict_to_subject', False)
-    trust_document = activity_data.get('trust_document', True)
-    word_limit = activity_data.get('word_limit', 0)
-    custom_prompt = activity_data.get('custom_prompt', '')
-    allow_bot_questions = activity_data.get('allow_questions', True)
+#     adj1 = activity_data.get('agent_attitude', 'friendly')
+#     expert_mode = activity_data.get('expert_mode', False)
+#     allow_emojis = activity_data.get('allow_emojis', True)
+#     questions = activity_data.get('questions', [])
+#     subjects = activity_data.get('subjects', '')
+#     restrict_to_subject = activity_data.get('restrict_to_subject', False)
+#     trust_document = activity_data.get('trust_document', True)
+#     word_limit = activity_data.get('word_limit', 0)
+#     custom_prompt = activity_data.get('custom_prompt', '')
+#     allow_bot_questions = activity_data.get('allow_questions', True)
 
-    def emoji_gen(use_emojis):
-        return ", using emojis where possible." if use_emojis else "."
+#     def emoji_gen(use_emojis):
+#         return ", using emojis where possible." if use_emojis else "."
 
-    def questions_gen_str(questions_list):
-        if not questions_list:
-            return ""
-        result = ""
-        for i, question in enumerate(questions_list, 1):
-            result += f"Question {i}: {question}\n"
-        return result.strip()
+#     def questions_gen_str(questions_list):
+#         if not questions_list:
+#             return ""
+#         result = ""
+#         for i, question in enumerate(questions_list, 1):
+#             result += f"Question {i}: {question}\n"
+#         return result.strip()
 
-    def subjects_gen_str(subjects_text, restricted):
-        if not subjects_text:
-            return ""
-        result = "You should help the student to reflect in depth on the following course subjects:\n"
-        result += f"<Beginning of the course subjects>\n{subjects_text}\n<end of the course subjects>\n"
-        if restricted:
-            result += "You should only speak of those listed subjects. Avoid as much as possible speaking of other subjects, and steer back the student to the course subjects if he tries to deviate from them."
-        return result
+#     def subjects_gen_str(subjects_text, restricted):
+#         if not subjects_text:
+#             return ""
+#         result = "You should help the student to reflect in depth on the following course subjects:\n"
+#         result += f"<Beginning of the course subjects>\n{subjects_text}\n<end of the course subjects>\n"
+#         if restricted:
+#             result += "You should only speak of those listed subjects. Avoid as much as possible speaking of other subjects, and steer back the student to the course subjects if he tries to deviate from them."
+#         return result
 
-    def answers_gen_str(is_expert_mode):
-        if is_expert_mode:
-            return "You should not give the answer, but guide the student to answer."
-        else:
-            return "You can provide an answer to the provided questions if the student asks for it."
+#     def answers_gen_str(is_expert_mode):
+#         if is_expert_mode:
+#             return "You should not give the answer, but guide the student to answer."
+#         else:
+#             return "You can provide an answer to the provided questions if the student asks for it."
 
-    def teach_type_gen_str(is_expert_mode):
-        if is_expert_mode:
-            return "Act as a Socratic tutor, taking the initiative in getting the students to answer the questions."
-        else:
-            return "Act as a standard teacher."
+#     def teach_type_gen_str(is_expert_mode):
+#         if is_expert_mode:
+#             return "Act as a Socratic tutor, taking the initiative in getting the students to answer the questions."
+#         else:
+#             return "Act as a standard teacher."
 
-    def teaching_adj_gen_str(is_expert_mode):
-        return "socratic" if is_expert_mode else "standard"
+#     def teaching_adj_gen_str(is_expert_mode):
+#         return "socratic" if is_expert_mode else "standard"
 
-    def docs_gen_str(mention_documents, has_files):
-        if mention_documents and has_files:
-            return "You have access to uploaded documents for this activity. Use these documents to help answer questions and encourage students to reference them when appropriate."
-        elif mention_documents and not has_files:
-            return "Encourage them to go and read a section of the provided documents to answer."
-        elif has_files:
-            return "You have access to uploaded documents for this activity that you can reference to help students."
-        return ""
+#     def docs_gen_str(mention_documents, has_files):
+#         if mention_documents and has_files:
+#             return "You have access to uploaded documents for this activity. Use these documents to help answer questions and encourage students to reference them when appropriate."
+#         elif mention_documents and not has_files:
+#             return "Encourage them to go and read a section of the provided documents to answer."
+#         elif has_files:
+#             return "You have access to uploaded documents for this activity that you can reference to help students."
+#         return ""
 
-    def files_gen_str(has_files):
-        if has_files:
-            return "\n\nIMPORTANT: This activity has uploaded files/documents available. You can search through and reference these documents to provide more accurate and detailed responses. When relevant, cite information from these documents and encourage students to explore them."
-        return ""
+#     def files_gen_str(has_files):
+#         if has_files:
+#             return "\n\nIMPORTANT: This activity has uploaded files/documents available. You can search through and reference these documents to provide more accurate and detailed responses. When relevant, cite information from these documents and encourage students to explore them."
+#         return ""
 
-    def limits_gen_str(limit):
-        return f"Your answers should be {limit} words maximum." if limit and limit != 0 else ""
+#     def limits_gen_str(limit):
+#         return f"Your answers should be {limit} words maximum." if limit and limit != 0 else ""
 
-    def activity_context_gen_str(title, description):
-        """Generate activity-specific context for the prompt"""
-        context_str = ""
-        if title and description:
-            context_str = f"This specific activity is titled '{title}' and focuses on: {description}.\n\n"
-        elif title:
-            context_str = f"This specific activity is titled '{title}'.\n\n"
-        elif description:
-            context_str = f"This activity focuses on: {description}.\n\n"
-        return context_str
+#     def activity_context_gen_str(title, description):
+#         """Generate activity-specific context for the prompt"""
+#         context_str = ""
+#         if title and description:
+#             context_str = f"This specific activity is titled '{title}' and focuses on: {description}.\n\n"
+#         elif title:
+#             context_str = f"This specific activity is titled '{title}'.\n\n"
+#         elif description:
+#             context_str = f"This activity focuses on: {description}.\n\n"
+#         return context_str
 
-    emojis_str = emoji_gen(allow_emojis)
-    questions_str = questions_gen_str(questions)
-    subjects_str = subjects_gen_str(subjects, restrict_to_subject)
-    teaching_adj_str = teaching_adj_gen_str(expert_mode)
-    answers_text = answers_gen_str(expert_mode)
-    teaching_type_text = teach_type_gen_str(expert_mode)
-    documents_str = docs_gen_str(trust_document, has_files)
-    files_str = files_gen_str(has_files)
-    limits_str = limits_gen_str(word_limit)
-    activity_context_str = activity_context_gen_str(activity_title, activity_description)
+#     emojis_str = emoji_gen(allow_emojis)
+#     questions_str = questions_gen_str(questions)
+#     subjects_str = subjects_gen_str(subjects, restrict_to_subject)
+#     teaching_adj_str = teaching_adj_gen_str(expert_mode)
+#     answers_text = answers_gen_str(expert_mode)
+#     teaching_type_text = teach_type_gen_str(expert_mode)
+#     documents_str = docs_gen_str(trust_document, has_files)
+#     files_str = files_gen_str(has_files)
+#     limits_str = limits_gen_str(word_limit)
+#     activity_context_str = activity_context_gen_str(activity_title, activity_description)
 
-    full_template = f"""You are a {adj1} {teaching_adj_str} tutor for the course '{course_title}'.
+#     full_template = f"""You are a {adj1} {teaching_adj_str} tutor for the course '{course_title}'.
 
-{activity_context_str}Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.
-Respond in a {adj1}, concise and proactive way{emojis_str}
+# {activity_context_str}Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.
+# Respond in a {adj1}, concise and proactive way{emojis_str}
 
-Help the student answer the following questions:
+# Help the student answer the following questions:
 
-{questions_str}
+# {questions_str}
 
-{subjects_str}
+# {subjects_str}
 
-{answers_text} {teaching_type_text}
+# {answers_text} {teaching_type_text}
 
-{documents_str}
+# {documents_str}
 
-Your first message should begin with 'Hello! 😸 I am SIMBA, and I will help you reflect on the following questions: ' Followed by the questions to answer.
+# Your first message should begin with 'Hello! 😸 I am SIMBA, and I will help you reflect on the following questions: ' Followed by the questions to answer.
 
-{limits_str}{files_str}"""
+# {limits_str}{files_str}"""
 
-    system_prompt = full_template.strip()
+#     system_prompt = full_template.strip()
     
-    if expert_mode and custom_prompt:
-        system_prompt += f"\n\n{custom_prompt}"
+#     if expert_mode and custom_prompt:
+#         system_prompt += f"\n\n{custom_prompt}"
 
-    if not allow_bot_questions:
-        system_prompt += "\n\nDo not provide questions to the student unless explicitly asked."
+#     if not allow_bot_questions:
+#         system_prompt += "\n\nDo not provide questions to the student unless explicitly asked."
     
-    return system_prompt
+#     return system_prompt
 
-def create_assistant(activity_data: Dict[str, Any], files: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+def create_assistant(activity_data: Dict[str, Any], files: List[Dict[str, Any]] = None, language: str = "en") -> Dict[str, Any]:
     """Create a new OpenAI assistant for an activity"""
     try:
-        has_files = bool(files)
-        instructions = _build_instructions(activity_data, has_files)
+        instructions = build_system_prompt(activity_data, logger, language)
         
         vector_store_id = None
         if files:
@@ -207,7 +207,7 @@ def create_assistant(activity_data: Dict[str, Any], files: List[Dict[str, Any]] 
             'error': str(e)
         }
 
-def update_assistant(assistant_id: str, activity_data: Dict[str, Any], files: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+def update_assistant(assistant_id: str, activity_data: Dict[str, Any], files: List[Dict[str, Any]] = None, language = "en") -> Dict[str, Any]:
     """Update an existing OpenAI assistant"""
     try:
         assistant = client.beta.assistants.retrieve(assistant_id)
@@ -217,8 +217,8 @@ def update_assistant(assistant_id: str, activity_data: Dict[str, Any], files: Li
             if assistant.tool_resources.file_search.vector_store_ids:
                 vector_store_id = assistant.tool_resources.file_search.vector_store_ids[0]
         
-        has_files = bool(files) or bool(vector_store_id)
-        instructions = _build_instructions(activity_data, has_files)
+
+        instructions = build_system_prompt(activity_data, logger, language)
         
         if files:
             if not vector_store_id:

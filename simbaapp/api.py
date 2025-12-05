@@ -74,6 +74,7 @@ from django.shortcuts import get_object_or_404
 from http import HTTPStatus
 from . import cluster_students
 from . import openai_assistant
+from .templates import build_system_prompt
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -408,29 +409,58 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
             options['trust_document'] = payload.trust_document
         if payload.word_limit is not None:
             options['word_limit'] = payload.word_limit
+        
 
         assistant_id = None
         vector_store_id = None
+
+        activity = Activity.objects.create(
+            course=course,
+            owner=user,
+            title=payload.title if payload.title else f"Activity for {course.title}",
+            description=payload.description,
+            expert_mode=payload.expert_mode,
+            custom_prompt=payload.custom_prompt,
+            start_date=payload.start_date,
+            end_date=payload.end_date,
+            is_visible=payload.is_visible,
+            allow_redo=payload.allow_redo,
+            ai_model=payload.ai_model,
+            openai_assistant_id=assistant_id,
+            vector_store_id=vector_store_id,
+            options=options
+        )
+
+        activity_data = {
+            'title': payload.title or f"Activity for {course.title}",
+            'description': payload.description or '',
+            'course_title': course.title,
+            'expert_mode': payload.expert_mode,
+            'custom_prompt': payload.custom_prompt,
+            'questions': options.get('questions', []),
+            'agent_attitude': options.get('agent_attitude', 'friendly'),
+            'subjects': options.get('subjects', ''),
+            'restrict_to_subject': options.get('restrict_to_subject', False),
+            'allow_questions': options.get('allow_questions', True),
+            'never_answer_directly': options.get('never_answer_directly', True),
+            'allow_emojis': options.get('allow_emojis', True),
+            'trust_document': options.get('trust_document', True),
+            'word_limit': options.get('word_limit', 0),
+            'start_date': payload.start_date,
+            'end_date': payload.end_date
+        }
+
+        user_language = options.get("language","en")
+
+        if not(payload.custom_prompt) or payload.custom_prompt == "":
+            custom_prompt = build_system_prompt(activity_data, logger, user_language)
+        else :
+            custom_prompt = payload.custom_prompt
+
+        activity.custom_prompt = custom_prompt
+        activity_data['custom_prompt'] = custom_prompt
         
         if payload.ai_model == 'gpt':
-            activity_data = {
-                'title': payload.title or f"Activity for {course.title}",
-                'description': payload.description or '',
-                'course_title': course.title,
-                'expert_mode': payload.expert_mode,
-                'custom_prompt': payload.custom_prompt,
-                'questions': options.get('questions', []),
-                'agent_attitude': options.get('agent_attitude', 'friendly'),
-                'subjects': options.get('subjects', ''),
-                'restrict_to_subject': options.get('restrict_to_subject', False),
-                'allow_questions': options.get('allow_questions', True),
-                'never_answer_directly': options.get('never_answer_directly', True),
-                'allow_emojis': options.get('allow_emojis', True),
-                'trust_document': options.get('trust_document', True),
-                'word_limit': options.get('word_limit', 0),
-                'start_date': payload.start_date,
-                'end_date': payload.end_date
-            }
             
             files_to_upload = []
             if payload.files:
@@ -449,7 +479,7 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
                         return HTTPStatus.BAD_REQUEST, {"message": f"Invalid file format at position {i+1}. Expected 'filename:content_type:base64_content'"}
             
             logger.info(f"Creating OpenAI assistant for activity with {len(files_to_upload)} files")
-            assistant_result = openai_assistant.create_assistant(activity_data, files_to_upload)
+            assistant_result = openai_assistant.create_assistant(activity_data, files_to_upload, user_language)
             
             if not assistant_result['success']:
                 error_msg = assistant_result.get('error', 'Unknown error')
@@ -461,31 +491,16 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
             logger.info(f"Successfully created OpenAI assistant: {assistant_id}, vector_store: {vector_store_id}")
         else:
             logger.info(f"Creating activity with {payload.ai_model} model - no OpenAI assistant needed")
-
-        activity = Activity.objects.create(
-            course=course,
-            owner=user,
-            title=payload.title if payload.title else f"Activity for {course.title}",
-            description=payload.description,
-            expert_mode=payload.expert_mode,
-            custom_prompt=payload.custom_prompt,
-            start_date=payload.start_date,
-            end_date=payload.end_date,
-            is_visible=payload.is_visible,
-            allow_redo=payload.allow_redo,
-            ai_model=payload.ai_model,
-            openai_assistant_id=assistant_id,
-            vector_store_id=vector_store_id,
-            options=options
-        )
         
+        activity.save()
+
         createdActivity(user, activity.id, {
             "course": payload.course_id,
             "owner": user_id,
             "title": activity.title,
             "description": payload.description,
             "expert_mode": payload.expert_mode,
-            "custom_prompt": payload.custom_prompt,
+            "custom_prompt": custom_prompt,
             "start_date": payload.start_date,
             "end_date": payload.end_date,
             "is_visible": payload.is_visible,
@@ -560,29 +575,40 @@ def update_activity_api(request, activity_id: str, payload: ActivityUpdateSchema
             updated_options['trust_document'] = payload.trust_document
         if payload.word_limit is not None:
             updated_options['word_limit'] = payload.word_limit
-        
+
         activity.options = updated_options
+
+        activity_data = {
+            'title': activity.title or f"Activity for {activity.course.title}",
+            'description': activity.description or '',
+            'course_title': activity.course.title,
+            'expert_mode': activity.expert_mode,
+            'custom_prompt': activity.custom_prompt,
+            'questions': updated_options.get('questions', []),
+            'agent_attitude': updated_options.get('agent_attitude', 'friendly'),
+            'subjects': updated_options.get('subjects', ''),
+            'restrict_to_subject': updated_options.get('restrict_to_subject', False),
+            'allow_questions': updated_options.get('allow_questions', True),
+            'never_answer_directly': updated_options.get('never_answer_directly', True),
+            'allow_emojis': updated_options.get('allow_emojis', True),
+            'trust_document': updated_options.get('trust_document', True),
+            'word_limit': updated_options.get('word_limit', 0),
+            'start_date': activity.start_date,
+            'end_date': activity.end_date
+        }
+
+        user_language = updated_options.get("language","en")
+
+        if not(payload.custom_prompt) or payload.custom_prompt == "":
+            custom_prompt = build_system_prompt(activity_data, logger, user_language)
+        else :
+            custom_prompt = payload.custom_prompt
+
+        activity.custom_prompt = custom_prompt
+        activity_data["custom_prompt"] = custom_prompt
         
         if activity.ai_model == 'gpt':
-            activity_data = {
-                'title': activity.title or f"Activity for {activity.course.title}",
-                'description': activity.description or '',
-                'course_title': activity.course.title,
-                'expert_mode': activity.expert_mode,
-                'custom_prompt': activity.custom_prompt,
-                'questions': updated_options.get('questions', []),
-                'agent_attitude': updated_options.get('agent_attitude', 'friendly'),
-                'subjects': updated_options.get('subjects', ''),
-                'restrict_to_subject': updated_options.get('restrict_to_subject', False),
-                'allow_questions': updated_options.get('allow_questions', True),
-                'never_answer_directly': updated_options.get('never_answer_directly', True),
-                'allow_emojis': updated_options.get('allow_emojis', True),
-                'trust_document': updated_options.get('trust_document', True),
-                'word_limit': updated_options.get('word_limit', 0),
-                'start_date': activity.start_date,
-                'end_date': activity.end_date
-            }
-            
+        
             files_to_upload = []
             if payload.files:
                 for file_base64 in payload.files:
@@ -603,7 +629,7 @@ def update_activity_api(request, activity_id: str, payload: ActivityUpdateSchema
                     files_to_upload
                 )
             else:
-                assistant_result = openai_assistant.create_assistant(activity_data, files_to_upload)
+                assistant_result = openai_assistant.create_assistant(activity_data, files_to_upload, user_language)
             
             if not assistant_result['success']:
                 return HTTPStatus.BAD_REQUEST, {"message": f"Failed to update OpenAI assistant: {assistant_result.get('error', 'Unknown error')}"}
@@ -1678,7 +1704,7 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
             }
         }
         
-        user_language = request.session.get('django_language', 'en')
+        user_language = all_options.get('language', 'en')
         
         session_data = {
             'session_id': session_id,
@@ -1704,6 +1730,8 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
             is_consumed=False
         )
         
+        logger.info(f"created session data :{session_data}")
+
         # Track event
         openedChat(user, thread.id, time.time())
         
@@ -1738,6 +1766,7 @@ def get_next_chainlit_session(request):
             valid_session.save()
             
             # Return the stored session data
+            logger.info(f"sent session data : {valid_session.session_data}")
             return HTTPStatus.OK, valid_session.session_data
         else:
             return HTTPStatus.NOT_FOUND, {"message": "No pending sessions."}
@@ -1808,7 +1837,7 @@ def init_chainlit_session(request, payload: ChainlitSessionInitSchema):
             }
         }
         
-        user_language = request.session.get('django_language', 'en')
+        user_language = all_options.get('language', 'en')
         
         session_data = {
             'session_id': session_id,

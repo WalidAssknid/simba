@@ -64,6 +64,7 @@ class ChainlitSessionResponseSchema(Schema):
     user_id: str
     username: str
     thread_id: str
+    language: str
     activity_data: Dict[str, Any]
 
 # --- Input Schemas ---

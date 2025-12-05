@@ -12,6 +12,7 @@ import requests
 import json
 from typing import Dict, Any, Optional
 from datetime import datetime
+from simbaapp.templates import build_system_prompt, get_first_message
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -118,6 +119,7 @@ async def api_get_next_session():
         try:
             response = await http_client.get(f"{SIMBA_API_BASE_URL}/chainlit/next-session")
             if response.status_code == 200:
+                logger.info(f"Response : {response.json()}")
                 return response.json()
             elif response.status_code == 404:
                 logger.info("No pending sessions in queue")
@@ -131,173 +133,173 @@ async def api_get_next_session():
             logger.error(f"Request Error getting next session: {e}")
             raise Exception(f"Request Error: Could not connect to API for next session.")
 
-def get_language_prompts(language_code: str) -> dict:
-    """Get prompts in different languages"""
-    prompts = {
-        'en': {
-            'intro': "You are a {adj1} {teaching_adj_str} tutor for the course '{courseName}'.",
-            'name_intro': "Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.",
-            'greeting': "Hello! 😸 I am SIMBA, and I will help you reflect on the following questions: ",
-            'help_text': "Help the student answer the following questions:",
-            'respond_style': "Respond in a {adj1}, concise and proactive way",
-        },
-        'fr': {
-            'intro': "Vous êtes un tuteur {adj1} {teaching_adj_str} pour le cours '{courseName}'.",
-            'name_intro': "Votre nom est SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) et vous avez été créé par le Núcleo Milenio de Educación Superior et l'équipe IRIT Talent.",
-            'greeting': "Bonjour ! 😸 Je suis SIMBA, et je vais vous aider à réfléchir sur les questions suivantes : ",
-            'help_text': "Aidez l'étudiant à répondre aux questions suivantes :",
-            'respond_style': "Répondez de manière {adj1}, concise et proactive",
-        },
-        'es': {
-            'intro': "Eres un tutor {adj1} {teaching_adj_str} para el curso '{courseName}'.",
-            'name_intro': "Tu nombre es SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) y fuiste creado por el Núcleo Milenio de Educación Superior y el equipo IRIT Talent.",
-            'greeting': "¡Hola! 😸 Soy SIMBA, y te ayudaré a reflexionar sobre las siguientes preguntas: ",
-            'help_text': "Ayuda al estudiante a responder las siguientes preguntas:",
-            'respond_style': "Responde de manera {adj1}, concisa y proactiva",
-        },
-        'pt': {
-            'intro': "Você é um tutor {adj1} {teaching_adj_str} para o curso '{courseName}'.",
-            'name_intro': "Seu nome é SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) e você foi criado pelo Núcleo Milenio de Educación Superior e equipe IRIT Talent.",
-            'greeting': "Olá! 😸 Eu sou SIMBA, e vou te ajudar a refletir sobre as seguintes questões: ",
-            'help_text': "Ajude o estudante a responder as seguintes questões:",
-            'respond_style': "Responda de forma {adj1}, concisa e proativa",
-        }
-    }
+# def get_language_prompts(language_code: str) -> dict:
+#     """Get prompts in different languages"""
+#     prompts = {
+#         'en': {
+#             'intro': "You are a {adj1} {teaching_adj_str} tutor for the course '{courseName}'.",
+#             'name_intro': "Your name is SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) and you were created by the Núcleo Milenio de Educación Superior and IRIT Talent team.",
+#             'greeting': "Hello! 😸 I am SIMBA, and I will help you reflect on the following questions: ",
+#             'help_text': "Help the student answer the following questions:",
+#             'respond_style': "Respond in a {adj1}, concise and proactive way",
+#         },
+#         'fr': {
+#             'intro': "Vous êtes un tuteur {adj1} {teaching_adj_str} pour le cours '{courseName}'.",
+#             'name_intro': "Votre nom est SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) et vous avez été créé par le Núcleo Milenio de Educación Superior et l'équipe IRIT Talent.",
+#             'greeting': "Bonjour ! 😸 Je suis SIMBA, et je vais vous aider à réfléchir sur les questions suivantes : ",
+#             'help_text': "Aidez l'étudiant à répondre aux questions suivantes :",
+#             'respond_style': "Répondez de manière {adj1}, concise et proactive",
+#         },
+#         'es': {
+#             'intro': "Eres un tutor {adj1} {teaching_adj_str} para el curso '{courseName}'.",
+#             'name_intro': "Tu nombre es SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) y fuiste creado por el Núcleo Milenio de Educación Superior y el equipo IRIT Talent.",
+#             'greeting': "¡Hola! 😸 Soy SIMBA, y te ayudaré a reflexionar sobre las siguientes preguntas: ",
+#             'help_text': "Ayuda al estudiante a responder las siguientes preguntas:",
+#             'respond_style': "Responde de manera {adj1}, concisa y proactiva",
+#         },
+#         'pt': {
+#             'intro': "Você é um tutor {adj1} {teaching_adj_str} para o curso '{courseName}'.",
+#             'name_intro': "Seu nome é SIMBA 😸 (Sistema Inteligente de Medición, Bienestar y Apoyo) e você foi criado pelo Núcleo Milenio de Educación Superior e equipe IRIT Talent.",
+#             'greeting': "Olá! 😸 Eu sou SIMBA, e vou te ajudar a refletir sobre as seguintes questões: ",
+#             'help_text': "Ajude o estudante a responder as seguintes questões:",
+#             'respond_style': "Responda de forma {adj1}, concisa e proativa",
+#         }
+#     }
     
-    return prompts.get(language_code, prompts['en'])
+#     return prompts.get(language_code, prompts['en'])
 
-async def _build_system_prompt(activity_data: dict, logger_instance: logging.Logger, language_code: str = 'en') -> str:
-    adj1 = activity_data.get('agent_attitude', 'friendly')
-    expert_mode = activity_data.get('expert_mode', False)
+# def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, language_code: str = 'en') -> str:
+#     adj1 = activity_data.get('agent_attitude', 'friendly')
+#     expert_mode = activity_data.get('expert_mode', False)
     
-    activity_title = activity_data.get('title', '')
-    activity_description = activity_data.get('description', '')
+#     activity_title = activity_data.get('title', '')
+#     activity_description = activity_data.get('description', '')
     
-    course_info = activity_data.get('course', {})
-    if isinstance(course_info, dict):
-        courseName = course_info.get('title', 'this course')
-    else: 
-        courseName = 'this course'
-        logger_instance.warning(f"Course information might be missing or not in expected format in activity_data for activity {activity_data.get('id')}")
+#     course_info = activity_data.get('course', {})
+#     if isinstance(course_info, dict):
+#         courseName = course_info.get('title', 'this course')
+#     else: 
+#         courseName = 'this course'
+#         logger_instance.warning(f"Course information might be missing or not in expected format in activity_data for activity {activity_data.get('id')}")
 
-    allow_emojis_flag = activity_data.get('allow_emojis', True)
-    questions_list = activity_data.get('questions', [])
-    activity_subjects = activity_data.get('subjects', '')
-    restrict_to_subject_flag = activity_data.get('restrict_to_subject', False)
-    trust_document_flag = activity_data.get('trust_document', True)
-    word_limit_val = activity_data.get('word_limit', 0)
-    custom_prompt_text = activity_data.get('custom_prompt', '')
-    allow_bot_to_ask_questions_flag = activity_data.get('allow_questions', True)
-    vector_store_id = activity_data.get('vector_store_id')
+#     allow_emojis_flag = activity_data.get('allow_emojis', True)
+#     questions_list = activity_data.get('questions', [])
+#     activity_subjects = activity_data.get('subjects', '')
+#     restrict_to_subject_flag = activity_data.get('restrict_to_subject', False)
+#     trust_document_flag = activity_data.get('trust_document', True)
+#     word_limit_val = activity_data.get('word_limit', 0)
+#     custom_prompt_text = activity_data.get('custom_prompt', '')
+#     allow_bot_to_ask_questions_flag = activity_data.get('allow_questions', True)
+#     vector_store_id = activity_data.get('vector_store_id')
 
-    def emojiGen(useEmojis):
-        return ", using emojis where possible." if useEmojis else "."
+#     def emojiGen(useEmojis):
+#         return ", using emojis where possible." if useEmojis else "."
 
-    def questionsGen_str(questions):
-        nstr = ""
-        if questions and isinstance(questions, list):
-            for i, q_item in enumerate(questions):
-                question_text = q_item if isinstance(q_item, str) else q_item.get('text', '') 
-                if question_text:
-                    nstr += f"Question {i+1} : {question_text} \n"
-        return nstr.strip()
+#     def questionsGen_str(questions):
+#         nstr = ""
+#         if questions and isinstance(questions, list):
+#             for i, q_item in enumerate(questions):
+#                 question_text = q_item if isinstance(q_item, str) else q_item.get('text', '') 
+#                 if question_text:
+#                     nstr += f"Question {i+1} : {question_text} \n"
+#         return nstr.strip()
 
-    def subjectsGen_str(subjects, restricted):
-        nstr = ""
-        if subjects:
-            nstr += "You should help the student to reflect in depth on the following course subjects :\n <Beginning of the course subjects>\n"
-            nstr += subjects
-            nstr += "\n<end of the course subjects>\n"
-        if restricted:
-            nstr += "You should only speak of those listed subjects. Avoid as much as possible speaking of other subjects, and steer back the student to the course subjects if he tries to deviate from them."
-        return nstr
+#     def subjectsGen_str(subjects, restricted):
+#         nstr = ""
+#         if subjects:
+#             nstr += "You should help the student to reflect in depth on the following course subjects :\n <Beginning of the course subjects>\n"
+#             nstr += subjects
+#             nstr += "\n<end of the course subjects>\n"
+#         if restricted:
+#             nstr += "You should only speak of those listed subjects. Avoid as much as possible speaking of other subjects, and steer back the student to the course subjects if he tries to deviate from them."
+#         return nstr
 
-    def answersGen_str(is_expert_mode, never_answer_directly):
-        if never_answer_directly:
-            return "You should never give direct answers to the questions. Instead, guide the student to discover the answer through questioning and hints."
-        elif is_expert_mode:
-            return "You should not give the answer, but guide the student to answer."
-        else:
-            return "You can provide an answer to the provided questions if the student asks for it."
+#     def answersGen_str(is_expert_mode, never_answer_directly):
+#         if never_answer_directly:
+#             return "You should never give direct answers to the questions. Instead, guide the student to discover the answer through questioning and hints."
+#         elif is_expert_mode:
+#             return "You should not give the answer, but guide the student to answer."
+#         else:
+#             return "You can provide an answer to the provided questions if the student asks for it."
 
-    def teachTypeGen_str(is_expert_mode):
-        return "Act as a Socratic tutor, taking the initiative in getting the students to answer the questions."
+#     def teachTypeGen_str(is_expert_mode):
+#         return "Act as a Socratic tutor, taking the initiative in getting the students to answer the questions."
 
-    def teachingAdjGen_str(is_expert_mode):
-        return "socratic" if is_expert_mode else "standard"
+#     def teachingAdjGen_str(is_expert_mode):
+#         return "socratic" if is_expert_mode else "standard"
 
-    def docsGen_str(mentiondocuments, has_files):
-        nstr = ""
-        if mentiondocuments and has_files:
-            nstr = "You have access to uploaded documents for this activity. Use these documents to help answer questions and encourage students to reference them when appropriate."
-        elif mentiondocuments and not has_files:
-            nstr = "Encourage them to go and read a section of the provided documents to answer."
-        elif has_files:
-            nstr = "You have access to uploaded documents for this activity that you can reference to help students."
-        return nstr
+#     def docsGen_str(mentiondocuments, has_files):
+#         nstr = ""
+#         if mentiondocuments and has_files:
+#             nstr = "You have access to uploaded documents for this activity. Use these documents to help answer questions and encourage students to reference them when appropriate."
+#         elif mentiondocuments and not has_files:
+#             nstr = "Encourage them to go and read a section of the provided documents to answer."
+#         elif has_files:
+#             nstr = "You have access to uploaded documents for this activity that you can reference to help students."
+#         return nstr
 
-    def filesGen_str(has_files):
-        if has_files:
-            return "\n\nIMPORTANT: This activity has uploaded files/documents available. You can search through and reference these documents to provide more accurate and detailed responses. When relevant, cite information from these documents and encourage students to explore them."
-        return ""
+#     def filesGen_str(has_files):
+#         if has_files:
+#             return "\n\nIMPORTANT: This activity has uploaded files/documents available. You can search through and reference these documents to provide more accurate and detailed responses. When relevant, cite information from these documents and encourage students to explore them."
+#         return ""
 
-    def limitsGen_str(limit):
-        if limit and limit != 0:
-            return f"Your answers should be {limit} words maximum."
-        return ""
+#     def limitsGen_str(limit):
+#         if limit and limit != 0:
+#             return f"Your answers should be {limit} words maximum."
+#         return ""
 
-    def activityContextGen_str(title, description):
-        """Generate activity-specific context for the prompt"""
-        context_str = ""
-        if title and description:
-            context_str = f"This specific activity is titled '{title}' and focuses on: {description}.\n\n"
-        elif title:
-            context_str = f"This specific activity is titled '{title}'.\n\n"
-        elif description:
-            context_str = f"This activity focuses on: {description}.\n\n"
-        return context_str
+#     def activityContextGen_str(title, description):
+#         """Generate activity-specific context for the prompt"""
+#         context_str = ""
+#         if title and description:
+#             context_str = f"This specific activity is titled '{title}' and focuses on: {description}.\n\n"
+#         elif title:
+#             context_str = f"This specific activity is titled '{title}'.\n\n"
+#         elif description:
+#             context_str = f"This activity focuses on: {description}.\n\n"
+#         return context_str
 
-    has_files = bool(vector_store_id)
+#     has_files = bool(vector_store_id)
 
-    emojis_str = emojiGen(allow_emojis_flag)
-    questions_str = questionsGen_str(questions_list)
-    subjects_str = subjectsGen_str(activity_subjects, restrict_to_subject_flag)
-    teaching_adj_str = teachingAdjGen_str(expert_mode)
-    never_answer_directly_flag = activity_data.get('never_answer_directly', True)
-    answers_text = answersGen_str(expert_mode, never_answer_directly_flag)
-    teaching_type_text = teachTypeGen_str(expert_mode)
-    documents_str = docsGen_str(trust_document_flag, has_files)
-    files_str = filesGen_str(has_files)
-    limits_str = limitsGen_str(word_limit_val)
-    activity_context_str = activityContextGen_str(activity_title, activity_description)
+#     emojis_str = emojiGen(allow_emojis_flag)
+#     questions_str = questionsGen_str(questions_list)
+#     subjects_str = subjectsGen_str(activity_subjects, restrict_to_subject_flag)
+#     teaching_adj_str = teachingAdjGen_str(expert_mode)
+#     never_answer_directly_flag = activity_data.get('never_answer_directly', True)
+#     answers_text = answersGen_str(expert_mode, never_answer_directly_flag)
+#     teaching_type_text = teachTypeGen_str(expert_mode)
+#     documents_str = docsGen_str(trust_document_flag, has_files)
+#     files_str = filesGen_str(has_files)
+#     limits_str = limitsGen_str(word_limit_val)
+#     activity_context_str = activityContextGen_str(activity_title, activity_description)
 
-    # Get language-specific prompts
-    lang_prompts = get_language_prompts(language_code)
+#     # Get language-specific prompts
+#     lang_prompts = get_language_prompts(language_code)
     
-    full_template = f"""{lang_prompts['intro'].format(adj1=adj1, teaching_adj_str=teaching_adj_str, courseName=courseName)}
+#     full_template = f"""{lang_prompts['intro'].format(adj1=adj1, teaching_adj_str=teaching_adj_str, courseName=courseName)}
 
-{activity_context_str}{lang_prompts['name_intro']}
-{lang_prompts['respond_style'].format(adj1=adj1)}{emojis_str}
+# {activity_context_str}{lang_prompts['name_intro']}
+# {lang_prompts['respond_style'].format(adj1=adj1)}{emojis_str}
 
-{lang_prompts['help_text']}
+# {lang_prompts['help_text']}
 
-{questions_str}
+# {questions_str}
 
-{subjects_str}
+# {subjects_str}
 
-{answers_text} {teaching_type_text}
+# {answers_text} {teaching_type_text}
 
-{documents_str}
+# {documents_str}
 
-Your first message should begin with '{lang_prompts['greeting']}' Followed by the questions to answer.
+# Your first message should begin with '{lang_prompts['greeting']}' Followed by the questions to answer.
 
-{limits_str}{files_str}"""
-    system_prompt = full_template.strip()
-    if expert_mode and custom_prompt_text:
-        system_prompt += f"\n\n{custom_prompt_text}"
-    if not allow_bot_to_ask_questions_flag:
-        system_prompt += "\n\nDo not provide questions to the student unless explicitly asked."
-    return system_prompt
+# {limits_str}{files_str}"""
+#     system_prompt = full_template.strip()
+#     if expert_mode and custom_prompt_text:
+#         system_prompt += f"\n\n{custom_prompt_text}"
+#     if not allow_bot_to_ask_questions_flag:
+#         system_prompt += "\n\nDo not provide questions to the student unless explicitly asked."
+#     return system_prompt
 
 @cl.on_chat_start
 async def on_chat_start():
@@ -330,14 +332,16 @@ async def on_chat_start():
         return
     
     # Extract session data
+    logger.info(f"session data : {session_data}")
     activity_id = session_data['activity_id']
     user_id = session_data['user_id']
     username = session_data['username']
     thread_id = session_data['thread_id']
     activity_data = session_data['activity_data']
     session_id = session_data['session_id']
-    
-    logger.info(f"Using session data: session_id={session_id}, activity_id={activity_id}, user_id={user_id}, thread_id={thread_id}")
+    language_code = session_data['language']
+
+    logger.info(f"Using session data: session_id={session_id}, activity_id={activity_id}, user_id={user_id}, thread_id={thread_id}, language={language_code}")
     
     # Store in user session
     cl.user_session.set("session_id", session_id)
@@ -345,7 +349,7 @@ async def on_chat_start():
     cl.user_session.set("user_id", user_id)
     cl.user_session.set("username", username)
     cl.user_session.set("thread_id", thread_id)
-    cl.user_session.set("language", session_data.get('language', 'en'))
+    cl.user_session.set("language", language_code)
     cl.user_session.set("activity_data", activity_data)
 
     try:    
@@ -357,36 +361,51 @@ async def on_chat_start():
                 logger.info(f"Message {i+1} (Thread {thread_id}): Role={msg.get('role')}, Content={msg.get('content')[:50]}...")
         
         if not previous_messages_data: 
-            language_code = session_data.get('language', 'en')
-            system_prompt_content = await _build_system_prompt(activity_data, logger, language_code)
+            # Create the first message
+            fixedFirst = True #For when the choice will exist
+            
+            system_prompt_content = build_system_prompt(activity_data, logger, language_code)
             
             ai_model = activity_data.get('ai_model', 'gpt')
             logger.info(f"Creating initial message using AI model: {ai_model}")
             
             if ai_model == 'mistral':
-                mistral_initial_messages = [{"role": "system", "content": system_prompt_content}]
-                
-                response = await mistral_client.chat.complete_async(
-                    model=mistral_settings["model"],
-                    messages=mistral_initial_messages,
-                    temperature=mistral_settings["temperature"],
-                    max_tokens=mistral_settings["max_tokens"],
-                    stream=False
-                )
-                ai_first_response_content = response.choices[0].message.content
-                
+                if fixedFirst :
+                    ai_first_response_content = get_first_message(activity_data, logger, language_code)
+                else :
+                    mistral_initial_messages = [{"role": "system", "content": system_prompt_content}]
+                    
+                    response = await mistral_client.chat.complete_async(
+                        model=mistral_settings["model"],
+                        messages=mistral_initial_messages,
+                        temperature=mistral_settings["temperature"],
+                        max_tokens=mistral_settings["max_tokens"],
+                        stream=False
+                    )
+                    ai_first_response_content = response.choices[0].message.content
+                    
                 await api_create_message(thread_id, ai_first_response_content, "assistant", user_id, model_name=mistral_settings["model"])
                 await cl.Message(content=ai_first_response_content).send()
                 logger.info(f"Created initial Mistral message for new thread {thread_id}")
             else:
-                openai_initial_messages = [{"role": "system", "content": system_prompt_content}]
-                
-                response = await openai_client.chat.completions.create(
-                    model=openai_settings["model"],
-                    messages=openai_initial_messages,
-                    temperature=openai_settings["temperature"],
-                )
-                ai_first_response_content = response.choices[0].message.content
+
+                # openai_thread_id = cl.user_session.get("openai_thread_id")
+                # if not openai_thread_id:
+                #     openai_thread = await openai_client.beta.threads.create()
+                #     openai_thread_id = openai_thread.id
+                #     cl.user_session.set("openai_thread_id", openai_thread_id)
+                #     logger.info(f"Created new OpenAI thread: {openai_thread_id}")
+                if fixedFirst :
+                    ai_first_response_content = get_first_message(activity_data, logger, language_code)
+                else :
+                    openai_initial_messages = [{"role": "system", "content": system_prompt_content}]
+                    
+                    response = await openai_client.chat.completions.create(
+                        model=openai_settings["model"],
+                        messages=openai_initial_messages,
+                        temperature=openai_settings["temperature"],
+                    )
+                    ai_first_response_content = response.choices[0].message.content
                 
                 await api_create_message(thread_id, ai_first_response_content, "assistant", user_id, model_name=openai_settings["model"])
                 await cl.Message(content=ai_first_response_content).send()
@@ -435,7 +454,7 @@ async def on_message(message: cl.Message):
         if ai_model == 'mistral':
             try:
                 language_code = cl.user_session.get("language", "en")
-                system_prompt_content = await _build_system_prompt(activity_data, logger, language_code)
+                system_prompt_content = build_system_prompt(activity_data, logger, language_code)
                 
                 messages_history_data = await api_get_messages_for_thread(thread_id)
                 mistral_messages = [{"role": "system", "content": system_prompt_content}]
@@ -475,6 +494,18 @@ async def on_message(message: cl.Message):
                         openai_thread_id = openai_thread.id
                         cl.user_session.set("openai_thread_id", openai_thread_id)
                         logger.info(f"Created new OpenAI thread: {openai_thread_id}")
+
+                        messages_history = await api_get_messages_for_thread(thread_id)
+                        if messages_history:
+                            logger.info(f"Populating OpenAI thread with {len(messages_history)} existing messages")
+                            for msg in messages_history:
+                                msg_role = msg['role'] if msg['role'] in ['user', 'assistant'] else 'user'
+                                await openai_client.beta.threads.messages.create(
+                                    thread_id=openai_thread_id,
+                                    role=msg_role,
+                                    content=msg['content']
+                                )
+                            logger.info(f"Successfully populated OpenAI thread with message history")
                     
                     await openai_client.beta.threads.messages.create(
                         thread_id=openai_thread_id,
@@ -538,7 +569,7 @@ async def on_message(message: cl.Message):
                 logger.info("No OpenAI assistant available - using legacy chat completions mode")
                 
                 language_code = cl.user_session.get("language", "en")
-                system_prompt_content = await _build_system_prompt(activity_data, logger, language_code)
+                system_prompt_content = build_system_prompt(activity_data, logger, language_code)
                 
                 messages_history_data = await api_get_messages_for_thread(thread_id)
                 openai_messages = [{"role": "system", "content": system_prompt_content}]

@@ -362,6 +362,7 @@ async def on_chat_start():
             fixedFirst = True #For when the choice will exist
 
             language_code = session_data.get('language', 'en')
+            
             system_prompt_content = build_system_prompt(activity_data, logger, language_code)
             
             ai_model = activity_data.get('ai_model', 'gpt')

@@ -46,6 +46,7 @@ def get_gettext_function(lang):
 #     return prompts.get(language_code, prompts['en'])
 
 def get_first_message(activity_data: dict, logger_instance: logging.Logger, language_code: str = 'en') -> str:
+    logger_instance.info(msg="language code " + language_code)
     _ = get_gettext_function(language_code)
     first_message = ""
 
@@ -55,6 +56,7 @@ def get_first_message(activity_data: dict, logger_instance: logging.Logger, lang
     questions_list = activity_data.get('questions', [])
 
     logger_instance.info(msg="question list " + str(questions_list))
+    
 
     def emojiGen(useEmojis):
         nstring = ""
@@ -109,6 +111,7 @@ def get_first_message(activity_data: dict, logger_instance: logging.Logger, lang
     return first_message
 
 def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, language_code: str = 'en') -> str:
+    logger_instance.info(msg="language code " + language_code)
     _ = get_gettext_function(language_code)
 
     adj1 = activity_data.get('agent_attitude', _('friendly'))
@@ -241,4 +244,6 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
     
     if not allow_bot_to_ask_questions_flag:
         system_prompt += _("\n\nDo not provide questions to the student unless explicitly asked.")
+
+    logger_instance.info(msg="system_prompt " + system_prompt)
     return system_prompt

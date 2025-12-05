@@ -433,7 +433,7 @@ def create_course_view(request):
     try:
         user = User.objects.get(id=user_id)
         if not user.can_create_course():
-            messages.error(request, f"You can only create up to 3 courses. You currently have {user.get_owned_courses_count()} courses.")
+            messages.error(request, _("You can only create up to 3 courses. You currently have {ccount} courses.").format(ccount=user.get_owned_courses_count()))
             return redirect('courses')
     except User.DoesNotExist:
         messages.error(request, "User not found.")
@@ -626,7 +626,8 @@ def create_activity_view(request, course_id):
             "is_visible": request.POST.get('is_visible') == 'on',
             "allow_redo": request.POST.get('allow_redo') == 'on',
             "ai_model": request.POST.get('ai_model', 'gpt'),
-            "files": files_data
+            "files": files_data,
+            "options" : {"language" : userLanguage}
         }
         
         api_url = request.build_absolute_uri(reverse('api-1.0.0:create_activity_api') + f"?user_id={user_id}")

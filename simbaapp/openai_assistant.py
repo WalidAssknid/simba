@@ -135,7 +135,7 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
     
 #     return system_prompt
 
-def create_assistant(activity_data: Dict[str, Any], files: List[Dict[str, Any]] = None, language = "en") -> Dict[str, Any]:
+def create_assistant(activity_data: Dict[str, Any], files: List[Dict[str, Any]] = None, language: str = "en") -> Dict[str, Any]:
     """Create a new OpenAI assistant for an activity"""
     try:
         instructions = build_system_prompt(activity_data, logger, language)

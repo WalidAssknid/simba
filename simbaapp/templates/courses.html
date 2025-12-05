@@ -15,8 +15,8 @@
             <div class="card-options">
                 <button class="dropdown-toggle"><i class="fas fa-angle-down"></i></button>
                 <div class="dropdown-menu">
-                    <a href="#" class="dropdown-item edit-course" data-course-id="{{ course.id }}" data-course-title="{{ course.title }}" data-course-description="{{ course.description|default:'' }}">Edit course</a>
-                    <a href="#" class="dropdown-item delete-course" data-course-id="{{ course.id }}" data-course-title="{{ course.title }}">Delete course</a>
+                    <a href="#" class="dropdown-item edit-course" data-course-id="{{ course.id }}" data-course-title="{{ course.title }}" data-course-description="{{ course.description|default:'' }}">{% trans 'Edit course' %}</a>
+                    <a href="#" class="dropdown-item delete-course" data-course-id="{{ course.id }}" data-course-title="{{ course.title }}">{% trans 'Delete course' %}</a>
                 </div>
             </div>
             {% endif %}

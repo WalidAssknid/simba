@@ -119,6 +119,7 @@ async def api_get_next_session():
         try:
             response = await http_client.get(f"{SIMBA_API_BASE_URL}/chainlit/next-session")
             if response.status_code == 200:
+                logger.info(f"Response : {response.json()}")
                 return response.json()
             elif response.status_code == 404:
                 logger.info("No pending sessions in queue")
@@ -331,14 +332,16 @@ async def on_chat_start():
         return
     
     # Extract session data
+    logger.info(f"session data : {session_data}")
     activity_id = session_data['activity_id']
     user_id = session_data['user_id']
     username = session_data['username']
     thread_id = session_data['thread_id']
     activity_data = session_data['activity_data']
     session_id = session_data['session_id']
-    
-    logger.info(f"Using session data: session_id={session_id}, activity_id={activity_id}, user_id={user_id}, thread_id={thread_id}")
+    language_code = session_data['language']
+
+    logger.info(f"Using session data: session_id={session_id}, activity_id={activity_id}, user_id={user_id}, thread_id={thread_id}, language={language_code}")
     
     # Store in user session
     cl.user_session.set("session_id", session_id)
@@ -346,7 +349,7 @@ async def on_chat_start():
     cl.user_session.set("user_id", user_id)
     cl.user_session.set("username", username)
     cl.user_session.set("thread_id", thread_id)
-    cl.user_session.set("language", session_data.get('language', 'en'))
+    cl.user_session.set("language", language_code)
     cl.user_session.set("activity_data", activity_data)
 
     try:    
@@ -360,8 +363,6 @@ async def on_chat_start():
         if not previous_messages_data: 
             # Create the first message
             fixedFirst = True #For when the choice will exist
-
-            language_code = session_data.get('language', 'en')
             
             system_prompt_content = build_system_prompt(activity_data, logger, language_code)
             

@@ -450,7 +450,7 @@ def create_activity_api(request, payload: ActivityCreateSchema, user_id: str):
             'end_date': payload.end_date
         }
 
-        user_language = request.session.get('django_language', 'en')
+        user_language = options.get("language","en")
 
         if not(payload.custom_prompt) or payload.custom_prompt == "":
             custom_prompt = build_system_prompt(activity_data, logger, user_language)
@@ -597,7 +597,7 @@ def update_activity_api(request, activity_id: str, payload: ActivityUpdateSchema
             'end_date': activity.end_date
         }
 
-        user_language = request.session.get('django_language', 'en')
+        user_language = updated_options.get("language","en")
 
         if not(payload.custom_prompt) or payload.custom_prompt == "":
             custom_prompt = build_system_prompt(activity_data, logger, user_language)
@@ -1704,7 +1704,7 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
             }
         }
         
-        user_language = request.session.get('django_language', 'en')
+        user_language = all_options.get('language', 'en')
         
         session_data = {
             'session_id': session_id,
@@ -1730,6 +1730,8 @@ def create_chainlit_session(request, payload: ChainlitSessionInitSchema):
             is_consumed=False
         )
         
+        logger.info(f"created session data :{session_data}")
+
         # Track event
         openedChat(user, thread.id, time.time())
         
@@ -1764,6 +1766,7 @@ def get_next_chainlit_session(request):
             valid_session.save()
             
             # Return the stored session data
+            logger.info(f"sent session data : {valid_session.session_data}")
             return HTTPStatus.OK, valid_session.session_data
         else:
             return HTTPStatus.NOT_FOUND, {"message": "No pending sessions."}
@@ -1834,7 +1837,7 @@ def init_chainlit_session(request, payload: ChainlitSessionInitSchema):
             }
         }
         
-        user_language = request.session.get('django_language', 'en')
+        user_language = all_options.get('language', 'en')
         
         session_data = {
             'session_id': session_id,

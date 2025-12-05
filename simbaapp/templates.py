@@ -114,7 +114,7 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
     logger_instance.info(msg="language code " + language_code)
     _ = get_gettext_function(language_code)
 
-    adj1 = activity_data.get('agent_attitude', _('friendly'))
+    AttAdj = activity_data.get('agent_attitude', _('friendly'))
     expert_mode = activity_data.get('expert_mode', False)
     
     activity_title = activity_data.get('title', '')
@@ -141,6 +141,16 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
 
     def emojiGen(useEmojis):
         return _(", using emojis where possible.") if useEmojis else "."
+    
+    def adj1Gen(adj1):
+        stradj1 = "friendly"
+        if adj1 == "friendly":
+            stradj1 =  _("friendly")
+        elif adj1 == "informal":
+            stradj1 = _("informal")
+        elif adj1 == "formal":
+            stradj1 =  _("formal")
+        return stradj1
 
     def questionsGen_str(questions):
         nstr = ""
@@ -214,6 +224,7 @@ def build_system_prompt(activity_data: dict, logger_instance: logging.Logger, la
     # files_str = filesGen_str(trust_document_flag)
     limits_str = limitsGen_str(word_limit_val)
     activity_context_str = activityContextGen_str(activity_title, activity_description)
+    adj1 = adj1Gen(AttAdj)
 
     full_template = _("""You are a {adj1} {teaching_adj_str} tutor for the course '{courseName}'.
 

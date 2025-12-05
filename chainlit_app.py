@@ -12,7 +12,7 @@ import requests
 import json
 from typing import Dict, Any, Optional
 from datetime import datetime
-from simbaapp.templates import get_language_prompts, build_system_prompt, get_first_message
+from simbaapp.templates import build_system_prompt, get_first_message
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

@@ -1,0 +1,258 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIMBA — Dashboard Étudiant{% if activity %} · {{ activity.title }}{% endif %}</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+    :root {
+        --good: #2E7D5E; --warn: #D4820A; --bad: #C0392B; --accent: #4A90D9; --purple: #7B2FC9;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0; padding: 0; background: #0D1B2A; color: #E8EDF2;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    .wrap { max-width: 1000px; margin: 0 auto; padding: 28px 20px 60px 20px; }
+    .back-link {
+        display: inline-flex; align-items: center; gap: 6px; color: #7A9BBF;
+        text-decoration: none; font-size: 0.82rem; margin-bottom: 18px;
+    }
+    .back-link:hover { color: #A8C4DC; }
+    .header {
+        background: linear-gradient(90deg, #132036 0%, #0D1B2A 100%);
+        border-left: 4px solid var(--accent); border-radius: 0 10px 10px 0;
+        padding: 18px 22px; margin-bottom: 26px;
+    }
+    .header h1 { margin: 0; font-size: 1.5rem; }
+    .header p { margin: 4px 0 0 0; color: #7A9BBF; font-size: 0.85rem; }
+    .section-title {
+        font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+        color: var(--accent); border-bottom: 1px solid #1E3A5A; padding-bottom: 8px;
+        margin: 32px 0 16px 0;
+    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .card {
+        background: linear-gradient(135deg, #132036 0%, #1A2E48 100%);
+        border: 1px solid #1E3A5A; border-radius: 12px; padding: 16px 18px;
+    }
+    .cursor-label {
+        font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+        color: #A8C4DC; display: flex; align-items: center; justify-content: space-between;
+    }
+    .info-toggle {
+        cursor: pointer; color: #5A7A9A; font-size: 0.78rem; border: 1px solid #2A4060;
+        border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center;
+        justify-content: center; user-select: none;
+    }
+    .info-toggle:hover { color: #E8EDF2; border-color: #4A90D9; }
+    .cursor-track {
+        position: relative; height: 10px; border-radius: 5px; margin: 10px 0 8px 0;
+        background: linear-gradient(90deg, var(--bad) 0%, var(--warn) 50%, var(--good) 100%);
+        opacity: 0.35;
+    }
+    .cursor-marker {
+        position: absolute; top: -4px; width: 18px; height: 18px; border-radius: 50%;
+        background: #fff; border: 2px solid #0D1B2A; transform: translateX(-50%);
+        box-shadow: 0 0 0 3px currentColor;
+    }
+    .status-text { font-size: 0.82rem; font-weight: 600; margin-bottom: 4px; }
+    .explain {
+        display: none; font-size: 0.76rem; line-height: 1.5; color: #A8C4DC;
+        background: #0A1520; border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0;
+        padding: 8px 10px; margin-top: 8px;
+    }
+    .explain.open { display: block; }
+    .plot-card { background: #0D1B2A; border: 1px solid #1E3A5A; border-radius: 12px; padding: 8px; }
+    .percentile-box { text-align: center; padding: 22px 10px; }
+    .percentile-box .big { font-size: 2.1rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+    .percentile-track {
+        position: relative; height: 10px; border-radius: 5px; background: #1A2E48;
+        margin: 22px 10px 30px 10px;
+    }
+    .percentile-marker {
+        position: absolute; top: -12px; transform: translateX(-50%);
+        display: flex; flex-direction: column; align-items: center; font-size: 0.65rem;
+    }
+    .percentile-marker .pin { width: 14px; height: 14px; border-radius: 50%; margin-top: 4px; }
+    .empty-state { text-align: center; color: #7A9BBF; padding: 60px 20px; font-size: 0.95rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <a class="back-link" href="javascript:history.back()">← Retour au chat</a>
+
+    <div class="header">
+        <h1>Dashboard Étudiant{% if not is_own_dashboard %} — {{ student.username }}{% endif %}</h1>
+        <p>{% if activity %}Activité : {{ activity.title }}{% else %}Toutes activités confondues{% endif %} · Mis à jour en temps réel</p>
+    </div>
+
+    <div id="empty-state" class="empty-state" style="display:none;">
+        Pas encore assez d'échanges avec l'IA pour calculer ton profil. Continue la conversation, il apparaîtra ici automatiquement.
+    </div>
+
+    <div id="dashboard-content" style="display:none;">
+
+        <div class="section-title">Ton profil d'utilisation de l'IA</div>
+        <div class="grid" id="cursors-grid"></div>
+
+        <div class="section-title">Profil métacognitif</div>
+        <div class="grid">
+            <div class="plot-card" style="grid-column: span 2;"><div id="radar-chart" style="height:340px;"></div></div>
+            <div class="plot-card"><div id="depth-chart" style="height:340px;"></div></div>
+        </div>
+
+        <div class="section-title">Ta position dans la classe</div>
+        <div class="grid">
+            <div class="card" id="class-position-card"></div>
+            <div class="plot-card"><div id="donut-chart" style="height:280px;"></div></div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+const STATUS_COLOR = { good: 'var(--good)', warn: 'var(--warn)', bad: 'var(--bad)' };
+const STATUS_HEX   = { good: '#2E7D5E', warn: '#D4820A', bad: '#C0392B' };
+const STATUS_POS   = { bad: 12, warn: 50, good: 88 };
+
+const EXPLANATIONS = {
+    autonomie: "Mesure si tu demandes surtout à l'IA de faire le travail à ta place (rédiger, résumer) ou plutôt de t'expliquer comment faire en gardant le contrôle. Plus tu restes autonome, plus tu développes tes propres compétences.",
+    esprit_critique: "Mesure si tu remets en question ce que dit l'IA : corriges-tu ses erreurs ? Lui demandes-tu ses sources ? Une IA peut se tromper ou halluciner une source — la questionner est un réflexe clé.",
+    verif_source: "Sous-partie de l'esprit critique : exiges-tu une référence ou une justification pour ce que l'IA affirme, plutôt que de l'accepter tel quel ?",
+    auto_evaluation: "Mesure si tu utilises l'IA pour vérifier et évaluer ta propre production (longueur, structure, compréhension), plutôt que seulement pour produire du contenu.",
+    qualite_prompts: "Mesure si tu reformules et affines volontairement tes questions pour obtenir de meilleures réponses, signe d'une utilisation stratégique de l'IA.",
+};
+
+const LABELS = {
+    autonomie: "Autonomie face à l'IA",
+    esprit_critique: "Esprit critique",
+    auto_evaluation: "Auto-évaluation",
+    qualite_prompts: "Qualité de tes prompts",
+};
+
+function cursorCard(key, label, statusObj) {
+    if (!statusObj) return '';
+    const pos = STATUS_POS[statusObj.level] ?? 50;
+    const color = STATUS_HEX[statusObj.level] ?? '#7A9BBF';
+    return `
+    <div class="card">
+        <div class="cursor-label">
+            <span>${label}</span>
+            <span class="info-toggle" onclick="this.parentElement.parentElement.querySelector('.explain').classList.toggle('open')">i</span>
+        </div>
+        <div class="cursor-track">
+            <div class="cursor-marker" style="left:${pos}%; color:${color};"></div>
+        </div>
+        <div class="status-text" style="color:${color};">${statusObj.text}</div>
+        <div class="explain">${EXPLANATIONS[key] || ''}</div>
+    </div>`;
+}
+
+async function loadDashboard() {
+    const userId = "{{ student_id }}";
+    const activityId = "{{ activity_id }}";
+    const url = `/api/student-dashboard/scores/${userId}/${activityId ? '?activity_id=' + activityId : ''}`;
+
+    let payload;
+    try {
+        const res = await fetch(url);
+        payload = await res.json();
+    } catch (e) {
+        document.getElementById('empty-state').style.display = 'block';
+        document.getElementById('empty-state').textContent = "Impossible de charger le dashboard pour le moment.";
+        return;
+    }
+
+    const scores = payload.scores;
+    if (!scores || !scores.has_data) {
+        document.getElementById('empty-state').style.display = 'block';
+        return;
+    }
+    document.getElementById('dashboard-content').style.display = 'block';
+
+    const status = scores.status;
+    const grid = document.getElementById('cursors-grid');
+    grid.innerHTML =
+        cursorCard('autonomie', LABELS.autonomie, status.reliance) +
+        cursorCard('esprit_critique', "Vigilance envers les erreurs de l'IA", status.verif_epistemique) +
+        cursorCard('verif_source', "Vérification des sources", status.verif_source) +
+        cursorCard('auto_evaluation', LABELS.auto_evaluation, status.selfeval) +
+        cursorCard('qualite_prompts', LABELS.qualite_prompts, status.prompt_qual);
+
+    // Radar métacognitif
+    const r = scores.radar;
+    const cats = ["Autonomie", "Vigilance épist.", "Vérif. source", "Auto-éval.", "Qualité prompts", "Autonomie"];
+    const vals = [r.autonomie, r.vigilance_epistemique, r.verif_source, r.auto_evaluation, r.qualite_prompts, r.autonomie];
+    Plotly.newPlot('radar-chart', [
+        { type: 'scatterpolar', r: [0.7,0.7,0.7,0.7,0.7,0.7], theta: cats, fill: 'toself',
+          fillcolor: 'rgba(46,125,94,0.08)', line: {color: '#2E7D5E', width: 1, dash: 'dot'}, name: 'Zone idéale', hoverinfo: 'skip' },
+        { type: 'scatterpolar', r: vals, theta: cats, fill: 'toself',
+          fillcolor: 'rgba(74,144,217,0.18)', line: {color: '#4A90D9', width: 2}, name: 'Ton profil' },
+    ], {
+        polar: { bgcolor: '#0D1B2A',
+            radialaxis: { visible: true, range: [0,1], showticklabels: false, gridcolor: '#1A2E48' },
+            angularaxis: { gridcolor: '#1A2E48', tickfont: { color: '#A8C4DC', size: 10 } } },
+        showlegend: true, legend: { font: { color: '#A8C4DC', size: 10 }, orientation: 'h', y: -0.15 },
+        paper_bgcolor: 'rgba(0,0,0,0)', margin: { t: 20, b: 20, l: 30, r: 30 },
+        font: { color: '#E8EDF2' },
+    }, { displayModeBar: false, responsive: true });
+
+    // Shallow vs Deep (données propres à l'étudiant)
+    const shallow = scores.indicators.shallow, deep = scores.indicators.deep;
+    Plotly.newPlot('depth-chart', [{
+        x: ['Questions superficielles', 'Questions approfondies'], y: [shallow, deep], type: 'bar',
+        marker: { color: ['#C0392B', '#2E7D5E'] },
+    }], {
+        paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: '#0D1B2A',
+        font: { color: '#A8C4DC', size: 10 },
+        margin: { t: 30, b: 40, l: 30, r: 10 },
+        title: { text: 'Répartition de tes questions', font: { size: 12, color: '#7A9BBF' } },
+        yaxis: { gridcolor: '#1A2E48' },
+    }, { displayModeBar: false, responsive: true });
+
+    // Donut répartition des types d'interactions
+    const c = scores.counts;
+    const donutLabels = ['Exécutif', 'Instrumental', 'Vigilance épist.', 'Vérif. source', 'Auto-éval.', 'Amélio. prompts'];
+    const donutValues = [c.E, c.I, c.V, c.S, c.A + c.Mb + c.Md, c.Am];
+    const donutColors = ['#C0392B', '#2E7D5E', '#7B2FC9', '#4A90D9', '#D4820A', '#27AE60'];
+    const filtered = donutLabels.map((l,i) => ({l, v: donutValues[i], col: donutColors[i]})).filter(x => x.v > 0);
+    Plotly.newPlot('donut-chart', [{
+        labels: filtered.map(x => x.l), values: filtered.map(x => x.v), type: 'pie', hole: 0.6,
+        marker: { colors: filtered.map(x => x.col) }, textfont: { size: 10, color: '#A8C4DC' },
+    }], {
+        paper_bgcolor: 'rgba(0,0,0,0)', showlegend: false,
+        title: { text: 'Répartition de tes échanges', font: { size: 12, color: '#7A9BBF' } },
+        margin: { t: 30, b: 10, l: 10, r: 10 },
+        annotations: [{ text: `${scores.N}<br><span style="font-size:9px">échanges</span>`, showarrow: false, font: { size: 16, color: '#E8EDF2' } }],
+    }, { displayModeBar: false, responsive: true });
+
+    // Position dans la classe — percentile uniquement, jamais les scores des autres étudiants
+    const pos = payload.class_position;
+    const card = document.getElementById('class-position-card');
+    if (pos && pos.available) {
+        card.innerHTML = `
+            <div class="percentile-box">
+                <div class="big" style="color:#4A90D9;">${pos.percentile}<span style="font-size:1rem;">e</span></div>
+                <div style="font-size:0.78rem; color:#A8C4DC;">percentile d'autonomie sur ${pos.class_size} étudiants</div>
+            </div>
+            <div class="percentile-track">
+                <div class="percentile-marker" style="left:${Math.round(pos.median_autonomy*100)}%; color:#5A7A9A;">
+                    <span>médiane</span><span class="pin" style="background:#5A7A9A;"></span>
+                </div>
+                <div class="percentile-marker" style="left:${Math.round(pos.my_autonomy*100)}%; color:#4A90D9;">
+                    <span>toi</span><span class="pin" style="background:#4A90D9;"></span>
+                </div>
+            </div>
+            <div style="font-size:0.72rem; color:#7A9BBF; text-align:center;">Position calculée uniquement à partir de ton autonomie relative — les scores des autres étudiants ne sont jamais affichés individuellement.</div>`;
+    } else {
+        card.innerHTML = `<div class="empty-state" style="padding:20px 0;">Pas encore assez d'étudiants classifiés dans ce cours pour te positionner.</div>`;
+    }
+}
+
+loadDashboard();
+</script>
+</body>
+</html>

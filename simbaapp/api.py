@@ -74,6 +74,8 @@ from django.shortcuts import get_object_or_404
 from http import HTTPStatus
 from . import cluster_students
 from . import openai_assistant
+from . import cognitive_classifier
+from . import cognitive_scores
 from .templates import build_system_prompt
 
 # Configure logging
@@ -854,6 +856,11 @@ def create_message_api(request, thread_id: str, payload: MessageCreateSchema):
             message_number=last_num + 1,
             metadata=metadata
         )
+
+        # Classification cognitive temps réel (SIMBA Dashboard Étudiant) —
+        # tourne en tâche de fond, ne bloque jamais la réponse du chat.
+        if payload.role == 'user':
+            cognitive_classifier.classify_message_async(str(message.id))
 
         sentMessage(user, message.id, payload.content, time.time())
         return HTTPStatus.CREATED, message
@@ -1907,6 +1914,84 @@ def get_chainlit_session(request, session_id: str):
 
 api.add_router("/chainlit", chainlit_router, tags=["Chainlit"])
 api.add_router("/dashboard", dashboard_router, tags=["Dashboard"])
+
+# --- Cognitive Dashboard (SIMBA "Dashboard Étudiant") API Endpoints ---
+student_dashboard_router = Router()
+
+
+@student_dashboard_router.get("/scores/{user_id}/", response={200: dict, 404: ErrorSchema, 400: ErrorSchema})
+def get_student_cognitive_scores(request, user_id: str, activity_id: str = None, course_id: str = None):
+    """
+    Renvoie tous les indicateurs cognitifs calculés en temps réel pour un
+    étudiant (page de détail 'Dashboard Étudiant'). Filtrable par activité
+    ou par cours ; sans filtre, agrège sur l'ensemble des messages classifiés
+    de l'étudiant.
+    """
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "User not found."}
+
+    activity = None
+    course = None
+    try:
+        if activity_id:
+            activity = Activity.objects.get(id=activity_id)
+        if course_id:
+            course = Course.objects.get(id=course_id)
+    except (Activity.DoesNotExist, Course.DoesNotExist):
+        return HTTPStatus.NOT_FOUND, {"message": "Activity or course not found."}
+
+    scores = cognitive_scores.compute_scores_for_student(user, activity=activity, course=course)
+    percentile = cognitive_scores.compute_class_percentile(user, activity=activity, course=course)
+
+    return HTTPStatus.OK, {
+        "user_id": str(user.id),
+        "username": user.username,
+        "activity_id": str(activity.id) if activity else None,
+        "scores": scores,
+        "class_position": percentile,
+    }
+
+
+@student_dashboard_router.get("/scores/{user_id}/summary/", response={200: dict, 404: ErrorSchema})
+def get_student_cognitive_summary(request, user_id: str, activity_id: str = None):
+    """
+    Version allégée pour le widget toujours-visible du chatbot : seulement les
+    niveaux (good/warn/bad) de 3 indicateurs, jamais les valeurs numériques
+    brutes (cf. décision produit : pas de chiffres dans le widget persistant).
+    """
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return HTTPStatus.NOT_FOUND, {"message": "User not found."}
+
+    activity = None
+    if activity_id:
+        try:
+            activity = Activity.objects.get(id=activity_id)
+        except Activity.DoesNotExist:
+            pass
+
+    scores = cognitive_scores.compute_scores_for_student(user, activity=activity)
+    if not scores["has_data"]:
+        return HTTPStatus.OK, {"has_data": False}
+
+    status = scores["status"]
+    level_rank = {"bad": 0, "warn": 1, "good": 2}
+    ve, vs = status["verif_epistemique"], status["verif_source"]
+    esprit_critique = ve if level_rank[ve["level"]] <= level_rank[vs["level"]] else vs
+
+    return HTTPStatus.OK, {
+        "has_data": True,
+        "N": scores["N"],
+        "autonomie": status["reliance"],
+        "esprit_critique": esprit_critique,
+        "qualite_prompts": status["prompt_qual"],
+    }
+
+
+api.add_router("/student-dashboard", student_dashboard_router, tags=["Cognitive Dashboard"])
 
 @api.post("/courses/{course_id}/invite-tokens", response={201: dict, 403: ErrorSchema, 404: ErrorSchema, 500: ErrorSchema})
 def generate_invite_token(request, course_id: str, role: str):

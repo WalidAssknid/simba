@@ -370,6 +370,43 @@ def chainlit_view(request):
         messages.error(request, "Activity not found.")
         return redirect('courses')
 
+
+def student_cognitive_dashboard_view(request):
+    """
+    SIMBA — Dashboard Étudiant (page de détail).
+    Rendu léger : la page ne fait que passer user_id / activity_id / api_base
+    au template ; toutes les données sont récupérées côté client en JS via
+    /api/student-dashboard/scores/{user_id}/, pour rester réactif en temps réel.
+    """
+    if not request.session.get('user_id'):
+        return redirect('login')
+
+    viewer_id = request.session.get('user_id')
+    student_id = request.GET.get('user_id', viewer_id)
+    activity_id = request.GET.get('activity_id')
+
+    try:
+        student = User.objects.get(id=student_id)
+    except User.DoesNotExist:
+        messages.error(request, "Student not found.")
+        return redirect('courses')
+
+    activity = None
+    if activity_id:
+        try:
+            activity = Activity.objects.get(id=activity_id)
+        except Activity.DoesNotExist:
+            activity = None
+
+    context = {
+        'student': student,
+        'student_id': str(student.id),
+        'activity': activity,
+        'activity_id': str(activity.id) if activity else '',
+        'is_own_dashboard': str(student.id) == str(viewer_id),
+    }
+    return render(request, 'student_dashboard.html', context)
+
 def courses_view(request):
     if not request.session.get('user_id'):
         return redirect('login')

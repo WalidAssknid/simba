@@ -40,8 +40,12 @@ COGNITIVE_CODES = {
     "I": {
         "label": "Aide instrumentale",
         "definition": (
-            "L'étudiant demande comment faire ou quelle méthode utiliser, "
-            "en gardant le contrôle de la production lui-même."
+            "L'étudiant demande une méthode, une stratégie ou une marche à suivre pour AGIR "
+            "lui-même (comment faire, quelle approche utiliser), en gardant le contrôle de la "
+            "production. Ne pas confondre avec Pb/Pp : si l'étudiant énonce seulement son "
+            "objectif ou le sujet sans demander de méthode, ce n'est PAS I. "
+            "Exemples positifs : « Comment structurer mon plan ? », « Quelle méthode utiliser "
+            "pour comparer ces deux pays ? »."
         ),
     },
     "V": {
@@ -70,22 +74,53 @@ COGNITIVE_CODES = {
     },
     "Mb": {
         "label": "Monitoring — compréhension basique",
-        "definition": "L'étudiant vérifie sa compréhension de base du contenu.",
+        "definition": (
+            "L'étudiant vérifie s'il a bien compris UN SEUL fait ou UNE SEULE notion, de façon "
+            "simple et immédiate, SANS aller plus loin (pas d'implication, pas de nuance, pas de "
+            "raisonnement conditionnel). Si le message s'arrête à « c'est quoi / est-ce que j'ai "
+            "bien compris X », c'est Mb, PAS Md. "
+            "Exemples : « C'est quoi une externalité en gros ? », « Je n'ai pas bien compris "
+            "cette partie, réexplique simplement. »"
+        ),
     },
     "Md": {
         "label": "Monitoring — compréhension approfondie",
         "definition": (
-            "L'étudiant vérifie une compréhension plus profonde, avec "
-            "réflexivité (implications, liens, nuances)."
+            "L'étudiant va au-delà d'un simple fait : il teste une implication, une nuance, un "
+            "lien logique, une exception, ou se demande si un raisonnement tiendrait dans un "
+            "autre contexte. Signal fort : « si je comprends bien... alors », « est-ce que ça "
+            "voudrait dire que », « dans quelle mesure », un raisonnement conditionnel/hypothétique. "
+            "Ne mets PAS Md pour une simple demande de définition ou de ré-explication basique "
+            "(c'est Mb dans ce cas). "
+            "Exemples : « Si je comprends bien, cette cause agirait aussi en sens inverse ? », "
+            "« Est-ce que ce raisonnement tiendrait encore dans un autre contexte historique ? »"
         ),
     },
     "Pb": {
         "label": "Définition des buts",
-        "definition": "L'étudiant définit ou clarifie ses objectifs pour la tâche.",
+        "definition": (
+            "L'étudiant exprime CE QU'IL VEUT accomplir ou produire lui-même : son objectif "
+            "personnel, un livrable, une contrainte de forme/longueur/délai. Signal : « mon "
+            "objectif », « je veux », « j'aimerais arriver à ». Ne PAS confondre avec Pp : Pb ne "
+            "décrit jamais le sujet/l'énoncé donné par l'enseignant, seulement ce que l'étudiant "
+            "vise. "
+            "Exemples : « Mon objectif est d'avoir un plan en trois parties pour vendredi. », "
+            "« Je veux que mon introduction fasse une demi-page. »"
+        ),
     },
     "Pp": {
         "label": "Définition du problème",
-        "definition": "L'étudiant définit ou reformule le problème à résoudre.",
+        "definition": (
+            "L'étudiant énonce ou reformule LE SUJET, L'ÉNONCÉ ou LA QUESTION DE RECHERCHE qui "
+            "lui a été donné à traiter — ce qu'on lui DEMANDE de faire, pas ce que lui veut y "
+            "arriver. Signal : « le sujet », « la question », « ce que je dois "
+            "démontrer/traiter/comparer ». Si le message décrit l'énoncé du travail donné par "
+            "l'enseignant, c'est Pp, PAS Pb, même s'il n'y a pas de contrainte de temps ou de "
+            "forme. "
+            "Exemples : « Le sujet me demande de comparer les causes de la révolution "
+            "industrielle en France et en Angleterre. », « Le problème que je dois traiter, "
+            "c'est l'impact de l'exode rural sur l'urbanisation. »"
+        ),
     },
     "Am": {
         "label": "Amélioration des prompts",
@@ -97,11 +132,27 @@ COGNITIVE_CODES = {
     },
     "Cd": {
         "label": "Clarification approfondie",
-        "definition": "Demande de clarification qui approfondit la réflexion.",
+        "definition": (
+            "L'étudiant demande de CREUSER, DÉVELOPPER ou APPROFONDIR un point déjà abordé "
+            "(plus de détails, de nuances, de développement sur un sujet déjà en discussion). "
+            "Signal : « développer », « approfondir », « plus en détail/en profondeur ». Ne PAS "
+            "utiliser Cd si l'étudiant demande juste de répéter ou reformuler parce qu'il n'a pas "
+            "compris (c'est Cs dans ce cas, même si la phrase contient un mot comme « expliquer »). "
+            "Exemples : « Peux-tu m'expliquer plus en profondeur pourquoi cette cause est la plus "
+            "importante ? », « Tu peux développer davantage le lien entre ces deux phénomènes ? »"
+        ),
     },
     "Cs": {
         "label": "Clarification simple",
-        "definition": "Demande de clarification simple, de surface.",
+        "definition": (
+            "L'étudiant demande de RÉPÉTER ou REFORMULER un propos qu'il n'a PAS COMPRIS ou PAS "
+            "ENTENDU — porte sur la forme/clarté du message précédent, pas sur un contenu à "
+            "explorer davantage. Signal : « répète », « reformule », « qu'est-ce que tu veux dire "
+            "par », « je n'ai pas compris ce mot/cette phrase ». Différence avec Cd : Cs porte sur "
+            "un message déjà pas clair ; Cd porte sur un point déjà compris qu'on veut explorer "
+            "plus loin. "
+            "Exemples : « Tu peux répéter stp ? », « Qu'est-ce que tu veux dire par là ? »"
+        ),
     },
 }
 
@@ -113,6 +164,15 @@ codes, ou aucun.
 
 Codes :
 {json.dumps({k: v['definition'] for k, v in COGNITIVE_CODES.items()}, ensure_ascii=False, indent=2)}
+
+Attention, ces paires de codes sont proches et souvent confondues — relis leur \
+définition avant de répondre :
+- Mb vs Md : Mb = un seul fait simple, sans aller plus loin. Md = implication, nuance, \
+raisonnement conditionnel.
+- Pb vs Pp : Pb = ce que L'ÉTUDIANT veut accomplir (son objectif). Pp = LE SUJET/ÉNONCÉ \
+donné par l'enseignant.
+- Cd vs Cs : Cs = redemander de répéter/reformuler un message pas clair. Cd = creuser \
+plus loin un point déjà compris.
 
 Réponds STRICTEMENT en JSON, avec une clé par code, valeur booléenne. Aucun \
 texte hors JSON."""
@@ -179,11 +239,11 @@ def classify_and_store(message_id: str) -> None:
 
 def classify_message_async(message_id: str) -> None:
     """
-    Lance classify_and_store dans un thread daemon pour ne jamais ralentir la
-    réponse HTTP de création de message (donc ne jamais ralentir le chat).
+    Lance classify_and_store dans un thread daemon pour ne jamais ralentir la 
+    réponse HTTP de création de message (donc ne jamais bloquer le chat).
 
-    NB pour une VM de prod avec plusieurs workers Gunicorn, un vrai système de
-    tâches (Celery/RQ) serait préférable à terme ; un thread suffit pour le
+    NB pour une VM de prod avec plusieurs workers Gunicorn, un vrai système de 
+    tâches (Celery/RQ) serait préférable à terme ; un thread suffit pour le 
     prototype et le volume actuel de SIMBA.
     """
     thread = threading.Thread(

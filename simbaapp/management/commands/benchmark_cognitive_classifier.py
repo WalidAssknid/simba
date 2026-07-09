@@ -20,6 +20,7 @@ import json
 import os
 import time
 from collections import defaultdict
+from pathlib import Path
 
 from django.core.management.base import BaseCommand
 
@@ -183,6 +184,7 @@ class Command(BaseCommand):
 
         # ── Rapport Markdown (optionnel) ──────────────────────────────────
         if output_path:
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
             self._write_markdown_report(output_path, dataset, per_code_metrics, exact_match_ratio,
                                          hamming_accuracy, macro_precision, macro_recall, macro_f1_avg,
                                          api_errors, avg_latency, mismatches)
@@ -190,6 +192,7 @@ class Command(BaseCommand):
 
         # ── Rapport JSON (optionnel) ───────────────────────────────────────
         if options["json"]:
+            Path(options["json"]).parent.mkdir(parents=True, exist_ok=True)
             json_report = {
                 "summary": {
                     "n_examples": len(dataset),

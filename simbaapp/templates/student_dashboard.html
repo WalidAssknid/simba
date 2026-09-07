@@ -130,6 +130,31 @@ const COG_LABELS = {
     qualite_prompts: "Qualité de tes prompts",
 };
 
+// Correspondance entre la clé utilisée côté affichage et le nom du champ
+// réellement stocké côté serveur (DashboardInteraction / raw data enseignant).
+const COG_BACKEND_FIELD = {
+    autonomie: "reliance",
+    esprit_critique: "verif_epistemique",
+    verif_source: "verif_source",
+    auto_evaluation: "selfeval",
+    qualite_prompts: "prompt_qual",
+};
+
+function simbaLogDashboardClick(key) {
+    const userId = "{{ student_id }}";
+    const activityId = "{{ activity_id }}";
+    if (!userId) return;
+    fetch(`/api/student-dashboard/log-click/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            user_id: userId,
+            activity_id: activityId || null,
+            element_clicked: COG_BACKEND_FIELD[key] || key,
+        }),
+    }).catch(e => console.warn('SIMBA dashboard click log failed', e));
+}
+
 function cogCursorCard(key, label, statusObj) {
     if (!statusObj) return '';
     const pos = COG_STATUS_POS[statusObj.level] ?? 50;
@@ -138,7 +163,7 @@ function cogCursorCard(key, label, statusObj) {
     <div class="cog-card">
         <div class="cog-cursor-label">
             <span>${label}</span>
-            <span class="cog-info-toggle" onclick="this.parentElement.parentElement.querySelector('.cog-explain').classList.toggle('open')">i</span>
+            <span class="cog-info-toggle" onclick="this.parentElement.parentElement.querySelector('.cog-explain').classList.toggle('open'); simbaLogDashboardClick('${key}')">i</span>
         </div>
         <div class="cog-cursor-track">
             <div class="cog-cursor-marker" style="left:${pos}%; color:${color};"></div>

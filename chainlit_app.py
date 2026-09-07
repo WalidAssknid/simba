@@ -328,6 +328,7 @@ async def on_chat_start():
     
     if not session_data:
         logger.warning("No pending sessions found after all retry attempts")
+        cl.user_session.set("session_ready", False)
         await cl.Message(content="No chat session is currently available. Please try starting a new chat from the course page.").send()
         return
     
@@ -351,6 +352,7 @@ async def on_chat_start():
     cl.user_session.set("thread_id", thread_id)
     cl.user_session.set("language", language_code)
     cl.user_session.set("activity_data", activity_data)
+    cl.user_session.set("session_ready", True)
 
     try:    
         previous_messages_data = await api_get_messages_for_thread(thread_id)
@@ -440,9 +442,13 @@ async def on_message(message: cl.Message):
     
     logger.info(f"Parameters for message - Activity: {activity_id}, User: {user_id}, Thread: {thread_id}, Session: {session_id}")
 
+    if not cl.user_session.get("session_ready", False):
+        logger.warning("Ignoring message because no Chainlit session was initialized")
+        return
+
     if not all([activity_id, user_id, thread_id, activity_data]):
-        logger.error(f"Missing required parameters - Activity: {activity_id}, User: {user_id}, Thread: {thread_id}")
-        await cl.Message(content="Session error. Please refresh and try again.").send()
+        logger.error(f"Invalid Chainlit session - Activity: {activity_id}, User: {user_id}, Thread: {thread_id}")
+        await cl.Message(content="Session error. Please start the chat again from the course page.").send()
         return
 
     # SIMBA — Indicateur "en train de réfléchir" : on envoie tout de suite un

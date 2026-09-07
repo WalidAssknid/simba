@@ -233,6 +233,11 @@
         font-size: 0.71rem; line-height: 1.4; color: #555555;
         background: var(--hover-color, #f8f8f8); border-radius: 8px; padding: 6px 9px;
     }
+    .simba-definition-box {
+        font-size: 0.68rem; line-height: 1.45; color: #666666;
+        background: #ffffff; border: 1px solid var(--border-color, #e0e0e0);
+        border-radius: 8px; padding: 6px 9px; margin-top: 4px;
+    }
     #simba-cog-sidebar .simba-cta {
         display: block; text-align: center; margin-top: 4px;
         font-size: 0.74rem; font-weight: 600; color: var(--primary-color, #d64000);
@@ -264,11 +269,17 @@
     const LEVEL_POS   = { bad: 14, warn: 50, good: 86 };
     const SIMBA_USER_ID = '{{ request.session.user_id }}';
 
+    const INDICATOR_DEFINITIONS = {
+        autonomie: "Indique si tu demandes à l'IA de faire le travail à ta place, ou plutôt de t'expliquer comment faire toi-même. Rester autonome t'aide à mieux apprendre.",
+        esprit_critique: "Indique si tu vérifies ce que dit l'IA : corriges-tu ses erreurs ? Lui demandes-tu ses sources ? Une IA peut se tromper, la questionner est important.",
+        qualite_prompts: "Indique si tu reformules tes questions pour obtenir de meilleures réponses, plutôt que de garder toujours la même formulation.",
+    };
+
     function apiBase() {
         return window.location.origin + '/api';
     }
 
-    function cursorHtml(label, statusObj) {
+    function cursorHtml(label, statusObj, definitionText) {
         if (!statusObj) return '';
         const color = LEVEL_COLOR[statusObj.level] || '#7A9BBF';
         const pos = LEVEL_POS[statusObj.level] ?? 50;
@@ -279,6 +290,7 @@
                     <div class="simba-cursor-marker" style="left:${pos}%; color:${color};"></div>
                 </div>
                 <div class="simba-info-box">${statusObj.text}</div>
+                <div class="simba-definition-box">${definitionText || ''}</div>
             </div>`;
     }
 
@@ -303,9 +315,9 @@
             }
 
             body.innerHTML =
-                cursorHtml('Autonomie face à l’IA', data.autonomie) +
-                cursorHtml('Esprit critique', data.esprit_critique) +
-                cursorHtml('Qualité de tes prompts', data.qualite_prompts);
+                cursorHtml('Autonomie face à l’IA', data.autonomie, INDICATOR_DEFINITIONS.autonomie) +
+                cursorHtml('Esprit critique', data.esprit_critique, INDICATOR_DEFINITIONS.esprit_critique) +
+                cursorHtml('Qualité de tes prompts', data.qualite_prompts, INDICATOR_DEFINITIONS.qualite_prompts);
         } catch (e) {
             console.warn('SIMBA cognitive dashboard: refresh failed', e);
         }
@@ -316,6 +328,32 @@
             window.simbaRefreshCogWidget();
         }
     }, 12000);
+
+    // SIMBA — journal des clics sur le dashboard cognitif (raw data enseignant).
+    window.simbaLogDashboardClick = function (elementClicked) {
+        const userId = SIMBA_USER_ID;
+        const activityId = window.currentActivity ? window.currentActivity.id : null;
+        if (!userId) return;
+        fetch(`${apiBase()}/student-dashboard/log-click/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, activity_id: activityId, element_clicked: elementClicked }),
+        }).catch(e => console.warn('SIMBA dashboard click log failed', e));
+    };
+
+    function attachDashboardLinkLogger() {
+        const link = document.getElementById('simba-cog-link');
+        if (link) {
+            link.addEventListener('click', function () {
+                window.simbaLogDashboardClick('dashboard_complet');
+            });
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', attachDashboardLinkLogger);
+    } else {
+        attachDashboardLinkLogger();
+    }
 })();
 </script>
 
@@ -861,6 +899,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     .then(activity => {
                         console.log('Activity data received:', activity);
                         
+                        // Retire toute modale d'édition déjà présente (ex. fermeture précédente
+                        // ratée) pour éviter d'avoir deux éléments avec le même id en même temps.
+                        const staleEditModal = document.getElementById('editActivityModal');
+                        if (staleEditModal) {
+                            staleEditModal.remove();
+                        }
+
                         const createModal = document.getElementById('activityModal');
                         const editModal = createModal.cloneNode(true);
                         editModal.id = 'editActivityModal';
@@ -913,6 +958,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         form.querySelector('#subjects').value = activity.subjects || '';
                         form.querySelector('#restrict-to-subject').checked = activity.restrict_to_subject;
                         form.querySelector('#allow-questions').checked = activity.allow_questions;
+                        form.querySelector('#never-answer-directly').checked = activity.never_answer_directly;
                         form.querySelector('#allow-emojis').checked = activity.allow_emojis;
                         form.querySelector('#trust-document').checked = activity.trust_document;
                         form.querySelector('#word-limit').value = activity.word_limit || 0;
@@ -934,6 +980,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 subjects: form.querySelector('#subjects').value,
                                 restrict_to_subject: form.querySelector('#restrict-to-subject').checked,
                                 allow_questions: form.querySelector('#allow-questions').checked,
+                                never_answer_directly: form.querySelector('#never-answer-directly').checked,
                                 allow_emojis: form.querySelector('#allow-emojis').checked,
                                 trust_document: form.querySelector('#trust-document').checked,
                                 word_limit: parseInt(form.querySelector('#word-limit').value) || 0
@@ -961,7 +1008,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                     activityItem.querySelector('.activity-title').textContent = updatedActivity.title;
                                 }
                                 
-                                document.body.removeChild(editModal);
+                                // .remove() ne leve jamais d'exception, meme si l'element
+                                // n'est deja plus dans le DOM (contrairement a
+                                // parentNode.removeChild(), qui plantait ici et empechait
+                                // le message de succes + le rechargement de s'executer).
+                                editModal.remove();
                                 
                                 alert( gettext('Activity updated successfully!'));
                                 
@@ -975,7 +1026,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         const closeBtn = editModal.querySelector('.close');
                         closeBtn.addEventListener('click', function() {
-                            document.body.removeChild(editModal);
+                            editModal.remove();
                         });
                         
                         setupEditModalEventListeners(editModal);
@@ -1280,7 +1331,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         window.addEventListener('click', function(event) {
             if (event.target === modal) {
-                document.body.removeChild(modal);
+                modal.remove();
             }
         });
     }
